@@ -1,10 +1,19 @@
 [package]
 name = "relayer-engine"
-version = "0.1.0"
-edition = "2021"
-license = "MIT"
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
+serde.workspace = true
+url.workspace = true
+solana-sdk.workspace = true
+eyre.workspace = true
+tracing.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true

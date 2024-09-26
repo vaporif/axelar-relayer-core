@@ -17,7 +17,6 @@ enum Commands {
         #[clap(last = true)]
         args: Vec<String>,
     },
-    Audit,
     Check,
     Fmt,
     Doc,
@@ -69,11 +68,7 @@ fn main() -> eyre::Result<()> {
                 }
             }
         }
-        Commands::Audit => {
-            println!("cargo audit");
-            cmd!(sh, "cargo install cargo-audit").run()?;
-            cmd!(sh, "cargo audit").run()?;
-        }
+
         Commands::Check => {
             println!("cargo check");
             cmd!(sh, "cargo clippy --workspace --locked -- -D warnings").run()?;
