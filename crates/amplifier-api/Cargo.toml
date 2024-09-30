@@ -1,0 +1,29 @@
+[package]
+name = "amplifier-api"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde.workspace = true
+simd-json.workspace = true
+reqwest.workspace = true
+base64.workspace = true
+tracing.workspace = true
+redact.workspace = true
+thiserror.workspace = true
+url.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+bnum.workspace = true
+typed-builder.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+rstest.workspace = true
+
+[lints]
+workspace = true

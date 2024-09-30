@@ -50,6 +50,7 @@ expect_used = "allow"
 pub_with_shorthand = "allow"
 redundant_pub_crate = "allow"
 option_if_let_else = "allow"
+self_named_module_files = "allow"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = -1 }
@@ -69,15 +70,32 @@ xshell = "0.2"
 # Utils
 url = { version = "2.5", features = ["serde"] }
 temp-env = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["serde", "clock", "std"] }
+base64 = "0.22"
+redact = { version = "0.1", features = ["serde"] }
+thiserror = "1"
+uuid = { version = "1.2", features = ["v4", "serde"] }
+typed-builder = "0.18"
+bnum = "0.12"
+hex = "0.4"
 
 # Serde
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 serde_json = "1"
+simd-json = "0.13"
+
+# Tests
+rstest = { version = "0.21" }
+test-log = { version = "0.2", features = ["trace"], default-features = false }
+pretty_assertions = "1"
 
 # Errors
 eyre = "0.6"
 color-eyre = "0.6"
+
+# HTTP
+reqwest = { version = "0.12", default-features = false, features = ["json", "gzip", "deflate", "rustls-tls", "stream", "http2"] }
 
 # Solana
 solana-client = "2"
@@ -111,3 +129,10 @@ panic = "abort"
 [profile.dev]
 debug = 0
 # codegen-backend = "cranelift" (not supported on m1 mac)
+
+[patch.crates-io]
+# curve25519-dalek 3.x pin zeroize to <1.4
+# which conflicts with other dependencies requiring zeroize ^1.5.
+# We’re patching it here to unpin zeroize, using commit from a PR, see
+# https://github.com/dalek-cryptography/curve25519-dalek/pull/606
+curve25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek", rev = "8274d5cbb6fc3f38cdc742b4798173895cd2a290" }
