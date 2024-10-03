@@ -62,6 +62,8 @@ unused_must_use = { level = "deny", priority = -1 }
 [workspace.dependencies]
 # Our crates
 relayer-engine = { path = "crates/relayer-engine" }
+relayer-amplifier-api-integration = { path = "crates/relayer-amplifier-api-integration" }
+amplifier-api = { path = "crates/amplifier-api" }
 
 # CLI
 clap = { version = "4", features = ["derive"] }
@@ -78,6 +80,7 @@ uuid = { version = "1.2", features = ["v4", "serde"] }
 typed-builder = "0.18"
 bnum = "0.12"
 hex = "0.4"
+quanta = "0.12"
 
 # Serde
 serde = { version = "1", features = ["derive"] }
@@ -106,7 +109,11 @@ solana-sdk = "2"
 solana-transaction-status = "2"
 
 # Async
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt", "signal", "rt-multi-thread", "macros"] }
+tokio-stream = { version = "0.1" }
+futures-concurrency = "7.4"
+futures-util = "0.3"
+futures = "0.3"
 
 # tracing
 tracing = "0.1"

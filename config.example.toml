@@ -1,0 +1,16 @@
+[amplifier_component]
+# pem format cert
+identity = '''
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+'''
+url = "https://amplifier-devnet-amplifier.devnet.axelar.dev/"
+chain = "solana-devnet"
+
+[relayer_engine_config]
+[relayer_engine_config.health_check]
+bind_addr = "0.0.0.0:3000"

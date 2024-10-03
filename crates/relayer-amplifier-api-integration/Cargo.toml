@@ -1,0 +1,25 @@
+[package]
+name = "relayer-amplifier-api-integration"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+amplifier-api.workspace = true
+typed-builder.workspace = true
+futures.workspace = true
+tracing.workspace = true
+futures-concurrency.workspace = true
+tokio.workspace = true
+eyre.workspace = true
+url.workspace = true
+quanta.workspace = true
+serde.workspace = true
+relayer-engine.workspace = true
+tokio-stream.workspace = true
+
+[lints]
+workspace = true

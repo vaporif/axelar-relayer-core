@@ -24,6 +24,12 @@ typed-builder.workspace = true
 [dev-dependencies]
 pretty_assertions.workspace = true
 rstest.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true
+
+[[example]]
+name = "healthcheck"
+path = "examples/healthcheck.rs"
+doc-scrape-examples = true

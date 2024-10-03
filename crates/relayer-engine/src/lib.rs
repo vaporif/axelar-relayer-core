@@ -1,22 +1,30 @@
 //! # Axelar Relayer engine
 //! It's repsonible for relaying packets form the Amplifier API to the configured edge chain
 
-pub mod config;
+mod config;
+pub use config::{Config, HealthCheckConfig, RelayerComponent};
 use tokio::task::JoinSet;
-use tracing::Instrument;
+use tracing::{info_span, Instrument};
 pub use {solana_sdk, url};
+
+/// Generic array of components to be consumed by the engine
+pub type Components = Vec<Box<dyn config::RelayerComponent>>;
 
 /// The core engine that will route packets
 pub struct RelayerEngine {
-    #[expect(dead_code, reason = "will be used later")]
-    configuration: config::Config,
+    #[expect(
+        dead_code,
+        reason = "it will be used when spawning the HTTP health check"
+    )]
+    config: Config,
+    components: Components,
 }
 
 impl RelayerEngine {
     #[must_use]
     /// Initialise a new [`RelayerEngine`] based on the provided configuration
-    pub const fn new(configuration: config::Config) -> Self {
-        Self { configuration }
+    pub const fn new(config: Config, components: Components) -> Self {
+        Self { config, components }
     }
 
     /// Main entrypoint to spawn all the services according to the configuration
@@ -58,9 +66,24 @@ impl RelayerEngine {
     }
 
     #[tracing::instrument(skip_all)]
-    async fn spawn_tasks(self, _set: &mut JoinSet<eyre::Result<()>>) -> eyre::Result<()> {
-        // todo spawn handlers for amplifier chain on the join set
-        //  - run them in concurrently with message passing between each other
+    async fn spawn_tasks(self, set: &mut JoinSet<eyre::Result<()>>) -> eyre::Result<()> {
+        // spawn the provided components
+        for component in self.components {
+            let process = component.process();
+            set.spawn(process);
+        }
+
+        // -- internal utility tasks
+        set.spawn(
+            async {
+                tracing::info!("spawning global shutdown signal processor");
+                tokio::signal::ctrl_c().await?;
+                eyre::bail!("Ctrl-c received, shutting down");
+            }
+            .instrument(info_span!("Ctrl-c signal handler")),
+        );
+
+        // todo spawn /health endpoint using axum
 
         Ok(())
     }

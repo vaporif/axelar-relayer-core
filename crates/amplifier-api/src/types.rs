@@ -62,6 +62,15 @@ mod id {
     /// for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct RequestId(pub String);
+    #[expect(
+        clippy::min_ident_chars,
+        reason = "don't rename variable names from the trait"
+    )]
+    impl core::fmt::Display for RequestId {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            f.write_str(self.0.as_str())
+        }
+    }
 }
 
 mod serde_utils {
@@ -376,7 +385,7 @@ pub struct PublishEventErrorResult {
     pub base: PublishEventResultItemBase,
     /// error message
     pub error: String,
-    /// weather we can retru publishing the event
+    /// weather we can retry publishing the event
     pub retriable: bool,
 }
 
@@ -485,13 +494,15 @@ pub struct GetTasksResult {
 }
 
 /// Represents an error response.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, thiserror::Error, PartialEq, Eq, Serialize, Deserialize)]
+#[error("Amplifier API Error: {error}")]
 pub struct ErrorResponse {
     /// error message
     pub error: String,
     /// the request id
     #[serde(rename = "requestID")]
-    pub request_id: RequestId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<RequestId>,
 }
 
 mod big_int {
@@ -912,5 +923,16 @@ mod tests {
         });
 
         test_serialization(&type_in_rust, reference_json);
+    }
+
+    #[test]
+    fn can_deserialize_error() {
+        let reference_json = br#"{"error":"no matching operation was found"}"#;
+        let type_in_rust = ErrorResponse {
+            error: "no matching operation was found".to_owned(),
+            request_id: None,
+        };
+
+        test_serialization(&type_in_rust, reference_json.to_vec());
     }
 }

@@ -1,7 +1,9 @@
 pub mod requests;
+use core::marker::PhantomData;
+
 use requests::AmplifierApiRequest;
 use reqwest::header;
-use tracing::{info_span, Instrument};
+use tracing::instrument;
 
 use crate::error::AmplifierApiError;
 
@@ -34,57 +36,135 @@ impl AmplifierApiClient {
     }
 
     /// Send a request to Axelars Amplifier API
-    #[tracing::instrument(skip_all, fields(req = ?request))]
-    pub async fn send_request<'a, T>(
+    #[instrument(name = "build_request", skip(self, request))]
+    pub fn build_request<T>(
         &self,
         request: &T,
-    ) -> Result<Result<T::Res, T::Error>, AmplifierApiError>
+    ) -> Result<AmplifierRequest<T::Res, T::Error>, AmplifierApiError>
     where
-        T: AmplifierApiRequest<'a> + core::fmt::Debug,
+        T: AmplifierApiRequest + core::fmt::Debug,
     {
         let endpoint = request.path(&self.url)?;
         let method = T::METHOD;
+        let client = self.inner.clone();
+        let payload = simd_json::to_vec(&request.payload())?;
+        let reqwest_req = client
+            .request(method, endpoint.as_str())
+            .body(payload)
+            .build()?;
 
-        async {
-            let payload = simd_json::to_vec(&request.payload())?;
-            let response = self
-                .inner
-                .request(T::METHOD, endpoint.as_str())
-                .body(payload)
-                .send()
-                .await?;
-            let status = response.status();
-            let mut bytes = response
-                .bytes()
-                .await?
-                .try_into_mut()
-                .expect("not holding unique data on the buffer");
-            if status.is_success() {
-                {
-                    let json = String::from_utf8_lossy(bytes.as_ref());
-                    tracing::info!(response_body = ?json, "Response JSON");
-                };
-                let result = simd_json::from_slice::<T::Res>(bytes.as_mut())?;
-                Ok(Ok(result))
-            } else {
-                {
-                    let json = String::from_utf8_lossy(bytes.as_ref());
-                    tracing::error!(
-                        status = %status,
-                        body = %json,
-                        "Failed to execute request"
-                    );
-                };
-
-                let error = simd_json::from_slice::<T::Error>(bytes.as_mut())?;
-                Ok(Err(error))
-            }
-        }
-        .instrument(info_span!("amplifir api request", ?method, ?endpoint).or_current())
-        .await
+        Ok(AmplifierRequest {
+            request: reqwest_req,
+            client,
+            result: PhantomData,
+            err: PhantomData,
+        })
     }
 }
 
+/// Encalpsulated HTTP request for the Amplifier API
+pub struct AmplifierRequest<T, E> {
+    request: reqwest::Request,
+    client: reqwest::Client,
+    result: PhantomData<T>,
+    err: PhantomData<E>,
+}
+
+impl<T, E> AmplifierRequest<T, E> {
+    /// execute an Amplifier API request
+    #[instrument(name = "execute_request", skip(self), fields(method = %self.request.method(), url = %self.request.url()))]
+    pub async fn execute(self) -> Result<AmplifierResponse<T, E>, AmplifierApiError> {
+        let response = self.client.execute(self.request).await?;
+
+        // Capture the current span
+        let span = tracing::Span::current();
+
+        Ok(AmplifierResponse {
+            response,
+            result: PhantomData,
+            err: PhantomData,
+            span,
+        })
+    }
+}
+
+/// The raw response of the Amplifier API request
+pub struct AmplifierResponse<T, E> {
+    response: reqwest::Response,
+    result: PhantomData<T>,
+    err: PhantomData<E>,
+    // this span carries the context of the `AmplifierRequest`
+    span: tracing::Span,
+}
+
+impl<T, E> AmplifierResponse<T, E> {
+    /// Only check if the returtned HTTP response is of error type; don't parse the data
+    ///
+    /// Useful when you don't care about the actual response besides if it was an error.
+    #[instrument(name = "response_ok", skip(self), err, parent = &self.span)]
+    pub fn ok(self) -> Result<(), AmplifierApiError> {
+        self.response.error_for_status()?;
+        Ok(())
+    }
+
+    /// Check if the returned HTTP result is an error;
+    /// Only parse the error type if we received an error.
+    ///
+    /// Useful when you don't care about the actual response besides if it was an error.
+    #[instrument(name = "parse_response_json_err", skip(self), err, parent = &self.span)]
+    pub async fn json_err(self) -> Result<Result<(), E>, AmplifierApiError>
+    where
+        E: serde::de::DeserializeOwned,
+    {
+        let status = self.response.status();
+        if status.is_success() {
+            Ok(Ok(()))
+        } else {
+            let bytes = self.response.bytes().await?.to_vec();
+            let res = parse_amplifier_error::<E>(bytes, status)?;
+            Ok(Err(res))
+        }
+    }
+
+    /// Parse the response json
+    #[instrument(name = "parse_response_json", skip(self), err, parent = &self.span)]
+    pub async fn json(self) -> Result<Result<T, E>, AmplifierApiError>
+    where
+        T: serde::de::DeserializeOwned,
+        E: serde::de::DeserializeOwned,
+    {
+        let status = self.response.status();
+        let mut bytes = self.response.bytes().await?.to_vec();
+        if status.is_success() {
+            let json = String::from_utf8_lossy(bytes.as_ref());
+            tracing::debug!(response_body = %json, "Response JSON");
+
+            let result = simd_json::from_slice::<T>(bytes.as_mut())?;
+            Ok(Ok(result))
+        } else {
+            let res = parse_amplifier_error::<E>(bytes, status)?;
+            Ok(Err(res))
+        }
+    }
+}
+
+fn parse_amplifier_error<E>(
+    mut bytes: Vec<u8>,
+    status: reqwest::StatusCode,
+) -> Result<E, AmplifierApiError>
+where
+    E: serde::de::DeserializeOwned,
+{
+    let json = String::from_utf8_lossy(bytes.as_ref());
+    tracing::error!(
+        status = %status,
+        body = %json,
+        "Failed to execute request"
+    );
+
+    let error = simd_json::from_slice::<E>(bytes.as_mut())?;
+    Ok(error)
+}
 fn authenticated_client(
     identity: &identity::Identity,
 ) -> Result<reqwest::Client, AmplifierApiError> {
@@ -122,11 +202,30 @@ pub mod identity {
         pub  redact::Secret<reqwest::Identity>,
     );
 
+    impl PartialEq for Identity {
+        fn eq(&self, _other: &Self) -> bool {
+            // Note: we don't have any access to reqwest::Identity internal fields.
+            // So we'll just assume that "if Identity is valid, then all of them are equal".
+            // And "validity" is defined by the ability to parse it.
+            true
+        }
+    }
+
     impl Identity {
         /// Creates a new [`Identity`].
         #[must_use]
         pub const fn new(identity: reqwest::Identity) -> Self {
             Self(redact::Secret::new(identity))
+        }
+
+        /// Creates a new [`Identity`].
+        ///
+        /// # Errors
+        ///
+        /// When the pem file is invalid
+        pub fn new_from_pem_bytes(identity: &[u8]) -> reqwest::Result<Self> {
+            let identity = reqwest::Identity::from_pem(identity)?;
+            Ok(Self::new(identity))
         }
     }
 
@@ -156,6 +255,10 @@ pub mod identity {
 
         use super::*;
 
+        fn identity_fixture() -> String {
+            include_str!("../fixtures/example_cert.pem").to_owned()
+        }
+
         #[test]
         fn test_deserialize_identity() {
             #[derive(Debug, Deserialize)]
@@ -164,53 +267,7 @@ pub mod identity {
                 identity: Identity,
             }
 
-            let identity_str = "
------BEGIN CERTIFICATE-----
-MIIC3zCCAcegAwIBAgIJALAul9kzR0W/MA0GCSqGSIb3DQEBBQUAMA0xCzAJBgNV
-BAYTAmx2MB4XDTIyMDgwMjE5MTE1NloXDTIzMDgwMjE5MTE1NlowDTELMAkGA1UE
-BhMCbHYwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC8WWPaghYJcXQp
-W/GAoFqKrQIwxy+h8vdZiURVzzqDKt/Mz45x0Zqj8RVSe4S0lLfkRxcgrLz7ZYSc
-TKsVcur8P66F8A2AJaC4KDiYj4azkTtYQDs+RDLRJUCz5xf/Nw7m+6Y0K7p/p2m8
-bPSm6osefz0orQqpwGogqOwI0FKMkU+BpYjMb+k29xbOec6aHxlaPlHLBPa+n3WC
-V96KwmzSMPEN6Fn/G6PZ5PtwmNg769PiXKk02p+hbnx5OCKvi94mn8vVBGgXF6JR
-Vq9IQQvfFm6G6tf7q+yxMdR2FBR2s03t1daJ3RLGdHzXWTAaNRS7E93OWx+ZyTkd
-kIVM16HTAgMBAAGjQjBAMAkGA1UdEwQCMAAwEQYJYIZIAYb4QgEBBAQDAgeAMAsG
-A1UdDwQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDAjANBgkqhkiG9w0BAQUFAAOC
-AQEAU/uQHjntyIVR4uQCRoSO5VKyQcXXFY5pbx4ny1yrn0Uxb9P6bOxY5ojcs0r6
-z8ApT3sUfww7kzhle/G5DRtP0cELq7N2YP+qsFx8UO1GYZ5SLj6xm81vk3c0+hrO
-Q3yoS60xKd/7nVsPZ3ch6+9ND0vVUOkefy0aeNix9YgbYjS11rTj7FNiHD25zOJd
-VpZtHkvYDpHcnwUCd0UAuu9ntKKMFGwc9GMqzfY5De6nITvlqzH8YM4AjKO26JsU
-7uMSyHtGF0vvyzhkwCqcuy7r9lQr9m1jTsJ5pSaVasIOJe+/JBUEJm5E4ppdslnW
-1PkfLWOJw34VKkwibWLlwAwTDQ==
------END CERTIFICATE-----
------BEGIN PRIVATE KEY-----
-MIIEpAIBAAKCAQEAvFlj2oIWCXF0KVvxgKBaiq0CMMcvofL3WYlEVc86gyrfzM+O
-cdGao/EVUnuEtJS35EcXIKy8+2WEnEyrFXLq/D+uhfANgCWguCg4mI+Gs5E7WEA7
-PkQy0SVAs+cX/zcO5vumNCu6f6dpvGz0puqLHn89KK0KqcBqIKjsCNBSjJFPgaWI
-zG/pNvcWznnOmh8ZWj5RywT2vp91glfeisJs0jDxDehZ/xuj2eT7cJjYO+vT4lyp
-NNqfoW58eTgir4veJp/L1QRoFxeiUVavSEEL3xZuhurX+6vssTHUdhQUdrNN7dXW
-id0SxnR811kwGjUUuxPdzlsfmck5HZCFTNeh0wIDAQABAoIBAQCNJFNukCMhanKI
-98xu/js7RlCo6urn6mGvJ+0cfJE1b/CL01HEOzUt+2BmEgetJvDy0M8k/i0UGswY
-MF/YT+iFpNcMqYoEaK4aspFOyedAMuoMxP1gOMz363mkFt3ls4WoVBYFbGtyc6sJ
-t4BSgNpFvUXAcIPYF0ewN8XBCRODH6v7Z6CrbvtjlUXMuU02r5vzMh8a4znIJmZY
-40x6oNIss3YDCGe8J6qMWHByMDZbO63gBoBYayTozzCzl1TG0RZ1oTTL4z36wRto
-uAhjoRek2kiO5axIgKPR/tYlyKzwLkS5v1W09K+pvsabAU6gQlC8kUPk7/+GOaeI
-wGMI9FAZAoGBAOJN8mqJ3zHKvkyFW0uFMU14dl8SVrCZF1VztIooVgnM6bSqNZ3Y
-nKE7wk1DuFjqKAi/mgXTr1v8mQtr40t5dBEMdgDpfRf/RrMfQyhEgQ/m1WqBQtPx
-Suz+EYMpcH05ynrfSbxCDNYM4OHNJ1QfIvHJ/Q9wt5hT7w+MOH5h5TctAoGBANUQ
-cXF4QKU6P+dLUYNjrYP5Wjg4194i0fh/I9NVoUE9Xl22J8l0lybV2phkuODMp1I+
-rBi9AON9skjdCnwtH2ZbRCP6a8Zjv7NMLy4b4dQqfoHwTdCJ0FBfgZXhH4i+AXMb
-XsKotxKGqCWgFKY8LB3UJ0qakK6h9Ze+/zbnZ9z/AoGBAJwrQkD3SAkqakyQMsJY
-9f8KRFWzaBOSciHMKSi2UTmOKTE9zKZTFzPE838yXoMtg9cVsgqXXIpUNKFHIKGy
-/L/PI5fZiTQIPBfcWRHuxEne+CP5c86i0xvc8OTcsf4Y5XwJnu7FfeoxFPd+Bcft
-fMXyqCoBlREPywelsk606+M5AoGAfXLICJJQJbitRYbQQLcgw/K+DxpQ54bC8DgT
-pOvnHR2AAVcuB+xwzrndkhrDzABTiBZEh/BIpKkunr4e3UxID6Eu9qwMZuv2RCBY
-KyLZjW1TvTf66Q0rrRb+mnvJcF7HRbnYym5CFFNaj4S4g8QsCYgPdlqZU2kizCz1
-4aLQQYsCgYAGKytrtHi2BM4Cnnq8Lwd8wT8/1AASIwg2Va1Gcfp00lamuy14O7uz
-yvdFIFrv4ZPdRkf174B1G+FDkH8o3NZ1cf+OuVIKC+jONciIJsYLPTHR0pgWqE4q
-FAbbOyAg51Xklqm2Q954WWFmu3lluHCWUGB9eSHshIurTmDd+8o15A==
------END PRIVATE KEY-----
-";
+            let identity_str = identity_fixture();
 
             let mut data = simd_json::to_string(&simd_json::json!({
                 "identity": identity_str
