@@ -11,6 +11,9 @@ identity = '''
 url = "https://amplifier-devnet-amplifier.devnet.axelar.dev/"
 chain = "solana-devnet"
 
-[relayer_engine_config]
-[relayer_engine_config.health_check]
+[relayer_engine]
+[relayer_engine.health_check]
 bind_addr = "0.0.0.0:3000"
+
+[solana_listener_component]
+solana_rpc = "https://api.devnet.solana.com"

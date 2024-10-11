@@ -74,6 +74,9 @@ feature-depth = 1
 ignore = [
   { id = "RUSTSEC-2024-0370", reason = "porc-macro-error: not an issue: unmaintanined but very popular" },
   { id = "RUSTSEC-2022-0093", reason = "ed25519-dalek: need to wait for solana to upgrade internally" },
+  { id = "RUSTSEC-2024-0375", reason = "dependency of solana lib" },
+  { id = "RUSTSEC-2021-0145", reason = "dependency of solana lib" },
+  { id = "RUSTSEC-2021-0139", reason = "dependency of solana lib" },
   # { id = "RUSTSEC-2024-0344", reason = "ed25519-dalek: need to wait for solana to upgrade internally" },
   # "a-crate-that-is-yanked@0.1.1", # you can also ignore yanked crate versions if you wish
   # { crate = "a-crate-that-is-yanked@0.1.1", reason = "you can specify why you are ignoring the yanked crate" },
@@ -100,6 +103,8 @@ allow = [
   "ISC",
   "OpenSSL",
   "MPL-2.0",
+  "CC0-1.0",
+  "0BSD",
 ]
 # The confidence threshold for detecting a license from license text.
 # The higher the value, the more closely the license text must be to the
@@ -119,6 +124,23 @@ exceptions = [
 # Some crates don't have (easily) machine readable licensing information,
 # adding a clarification entry for it allows you to manually specify the
 # licensing information
+[[licenses.clarify]]
+crate = "gmp-gateway"
+expression = "MIT"
+license-files = []
+[[licenses.clarify]]
+crate = "axelar-rkyv-encoding"
+expression = "MIT"
+license-files = []
+[[licenses.clarify]]
+crate = "program-utils"
+expression = "MIT"
+license-files = []
+[[licenses.clarify]]
+crate = "axelar-message-primitives"
+expression = "MIT"
+license-files = []
+
 [[licenses.clarify]]
 # The package spec the clarification applies to
 crate = "ring"

@@ -93,7 +93,7 @@ async fn process_task_request(
         match task_item.task {
             Verify(_) => unimplemented!("this will be supported in the future"),
             GatewayTx(gateway_tx_task) => {
-                tracing::info!(?gateway_tx_task, "handle gateway task");
+                tracing::info!(incoming_gateway_tx_len = ?gateway_tx_task.execute_data.len(), "handle gateway task");
                 // TODO: Send this to a pre-registered handler
             }
             Execute(_) => unimplemented!("this will be supported in the future"),

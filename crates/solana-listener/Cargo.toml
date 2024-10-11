@@ -1,5 +1,5 @@
 [package]
-name = "relayer-amplifier-api-integration"
+name = "solana-listener"
 version.workspace = true
 authors.workspace = true
 repository.workspace = true
@@ -8,7 +8,6 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-amplifier-api.workspace = true
 typed-builder.workspace = true
 futures.workspace = true
 tracing.workspace = true
@@ -16,11 +15,21 @@ futures-concurrency.workspace = true
 tokio.workspace = true
 eyre.workspace = true
 url.workspace = true
-quanta.workspace = true
 serde.workspace = true
 relayer-engine.workspace = true
-tokio-stream.workspace = true
+thiserror.workspace = true
+backoff.workspace = true
+async-trait.workspace = true
+serde_json.workspace = true
+
+gmp-gateway.workspace = true
 common-serde-utils.workspace = true
+
+solana-client.workspace = true
+solana-rpc-client.workspace = true
+solana-rpc-client-api.workspace = true
+solana-sdk.workspace = true
+solana-transaction-status.workspace = true
 
 [lints]
 workspace = true

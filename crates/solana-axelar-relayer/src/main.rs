@@ -25,8 +25,13 @@ async fn main() {
     let config = toml::from_str::<Config>(&config_file).expect("invalid config file");
 
     let (amplifier_component, _amplifier_client) = Amplifier::new(config.amplifier_component);
-    let components: Vec<Box<dyn RelayerComponent>> = vec![Box::new(amplifier_component)];
-    RelayerEngine::new(config.relayer_engine_config, components)
+    let (solana_listener_component, _solana_listener_client) =
+        solana_listener::SolanaListener::new(config.solana_listener_component);
+    let components: Vec<Box<dyn RelayerComponent>> = vec![
+        Box::new(amplifier_component),
+        Box::new(solana_listener_component),
+    ];
+    RelayerEngine::new(config.relayer_engine, components)
         .start_and_wait_for_shutdown()
         .await;
 }
@@ -44,8 +49,10 @@ pub(crate) const fn get_service_name() -> &'static str {
 pub struct Config {
     /// Configuration for the Amplifier API processor
     pub amplifier_component: relayer_amplifier_api_integration::Config,
-    /// Health check server configuration.
-    pub relayer_engine_config: relayer_engine::Config,
+    /// Configuration for the Solana transaction listener processor
+    pub solana_listener_component: solana_listener::Config,
+    /// Meta-configuration on the engine
+    pub relayer_engine: relayer_engine::Config,
 }
 
 #[expect(
@@ -56,9 +63,11 @@ pub struct Config {
 mod tests {
     use core::net::SocketAddr;
     use core::str::FromStr;
+    use core::time::Duration;
 
     use amplifier_api::identity::Identity;
     use pretty_assertions::assert_eq;
+    use solana_listener::solana_sdk::pubkey::Pubkey;
 
     use crate::Config;
 
@@ -67,21 +76,31 @@ mod tests {
         let amplifier_url = "https://examlple.com".parse()?;
         let healthcheck_bind_addr = "127.0.0.1:8000";
         let chain = "solana-devnet";
+        let gateway_program_address = Pubkey::new_unique();
+        let gateway_program_address_as_str = gateway_program_address.to_string();
+        let solana_rpc = "https://solana-devnet.com".parse()?;
+        let solana_tx_scan_poll_period = Duration::from_millis(42);
+        let solana_tx_scan_poll_period_ms = solana_tx_scan_poll_period.as_millis();
+        let max_concurrent_rpc_requests = 100;
         let identity = identity_fixture();
-        let input = format!(
-            r#"
-[amplifier_component]
-identity = '''
-{identity}
-'''
-url = "{amplifier_url}"
-chain = "{chain}"
+        let input = indoc::formatdoc! {r#"
+            [amplifier_component]
+            identity = '''
+            {identity}
+            '''
+            url = "{amplifier_url}"
+            chain = "{chain}"
 
-[relayer_engine_config]
-[relayer_engine_config.health_check]
-bind_addr = "{healthcheck_bind_addr}"
-"#,
-        );
+            [relayer_engine]
+            [relayer_engine.health_check]
+            bind_addr = "{healthcheck_bind_addr}"
+
+            [solana_listener_component]
+            gateway_program_address = "{gateway_program_address_as_str}"
+            solana_rpc = "{solana_rpc}"
+            tx_scan_poll_period_in_milliseconds = {solana_tx_scan_poll_period_ms}
+            max_concurrent_rpc_requests = {max_concurrent_rpc_requests}
+        "#};
 
         let parsed: Config = toml::from_str(&input)?;
         let expected = Config {
@@ -90,10 +109,16 @@ bind_addr = "{healthcheck_bind_addr}"
                 .url(amplifier_url)
                 .chain(chain.to_owned())
                 .build(),
-            relayer_engine_config: relayer_engine::Config {
+            relayer_engine: relayer_engine::Config {
                 health_check: relayer_engine::HealthCheckConfig {
                     bind_addr: SocketAddr::from_str(healthcheck_bind_addr)?,
                 },
+            },
+            solana_listener_component: solana_listener::Config {
+                gateway_program_address,
+                solana_rpc,
+                tx_scan_poll_period: solana_tx_scan_poll_period,
+                max_concurrent_rpc_requests,
             },
         };
         assert_eq!(parsed, expected);

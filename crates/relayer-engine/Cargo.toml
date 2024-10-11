@@ -10,7 +10,6 @@ edition = { workspace = true }
 [dependencies]
 serde.workspace = true
 url.workspace = true
-solana-sdk.workspace = true
 eyre.workspace = true
 tracing.workspace = true
 tokio.workspace = true

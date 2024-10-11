@@ -15,8 +15,9 @@ pub struct Config {
     /// The interval between polling Amplifier API for new tasks
     #[builder(default = config_defaults::get_chains_poll_interval())]
     #[serde(
-        rename = "get_chains_poll_interval_in_seconds",
-        default = "config_defaults::get_chains_poll_interval"
+        rename = "get_chains_poll_interval_in_milliseconds",
+        default = "config_defaults::get_chains_poll_interval",
+        deserialize_with = "common_serde_utils::duration_ms_decode"
     )]
     pub get_chains_poll_interval: core::time::Duration,
 
@@ -29,8 +30,9 @@ pub struct Config {
     /// How often we check the liveliness of the Amplifier API
     #[builder(default = config_defaults::healthcheck_interval())]
     #[serde(
-        rename = "healthcheck_interval_in_seconds",
-        default = "config_defaults::healthcheck_interval"
+        rename = "healthcheck_interval_in_milliseconds",
+        default = "config_defaults::healthcheck_interval",
+        deserialize_with = "common_serde_utils::duration_ms_decode"
     )]
     pub healthcheck_interval: core::time::Duration,
 

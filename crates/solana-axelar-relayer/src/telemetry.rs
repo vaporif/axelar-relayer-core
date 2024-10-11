@@ -101,9 +101,12 @@ fn setup_subscriber(
         .add_directive("solana_axelar_relayer=info".parse()?)
         .add_directive("relayer_amplifier_api_integration=info".parse()?)
         .add_directive("amplifier_api=info".parse()?)
+        .add_directive("solana_listener=debug".parse()?)
         .add_directive("hyper=error".parse()?)
         .add_directive("tonic=error".parse()?)
-        .add_directive("reqwest=error".parse()?);
+        .add_directive("reqwest=error".parse()?)
+        .add_directive(EnvFilter::from_default_env().to_string().parse()?);
+
     let output_layer = tracing_subscriber::fmt::layer()
         .with_line_number(true)
         .with_ansi(true)
