@@ -31,19 +31,24 @@ mod id {
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct TokenId(pub String);
 
-    /// `NewType` for tracking message ids.
+    /// Indicates a type in format of `TxHash-LogIndex`
     ///
-    /// Indicates the `ContractCall` event that corresponds to the payment, and has the format
     /// TxHash-LogIndex. for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct MessageId(pub String);
+    pub struct TxEvent(pub String);
+    impl TxEvent {
+        /// construct a new event identifier from the tx hash and the log index
+        #[must_use]
+        pub fn new(tx_hash: &str, log_index: usize) -> Self {
+            Self(format!("{tx_hash}-{log_index}"))
+        }
+    }
 
-    /// `NewType` for tracking event ids.
-    ///
+    /// `NewType` for tracking message ids
+    pub type MessageId = TxEvent;
+
     /// Id of chain `NativeGasPaidForContractCall`/ `NativeGasAdded` event in format
-    /// TxHash-LogIndex. for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct EventId(pub String);
+    pub type EventId = TxEvent;
 
     /// `NewType` for tracking task ids
     ///
@@ -129,7 +134,7 @@ pub struct EventMetadata {
     /// timestamp of the underlying event
     #[serde(rename = "timestamp", skip_serializing_if = "Option::is_none")]
     pub timestamp: Option<DateTime<Utc>>,
-    /// sendere address
+    /// sender address
     #[serde(rename = "fromAddress", skip_serializing_if = "Option::is_none")]
     pub from_address: Option<Address>,
     /// weather the event is finalized or not
@@ -608,9 +613,9 @@ mod tests {
         .into_bytes();
         let type_in_rust = GasCreditEvent {
             base: EventBase {
-                event_id: EventId(
-                    "0x1fbe533b3bed6e6be3a74734042b3ae0836cabfdc2b646358080db75e9fe9ba8-1"
-                        .to_owned(),
+                event_id: EventId::new(
+                    "0x1fbe533b3bed6e6be3a74734042b3ae0836cabfdc2b646358080db75e9fe9ba8",
+                    1,
                 ),
                 meta: Some(EventMetadata {
                     tx_id: Some(TxId(
@@ -624,8 +629,9 @@ mod tests {
                     finalized: Some(true),
                 }),
             },
-            message_id: MessageId(
-                "0x1fbe533b3bed6e6be3a74734042b3ae0836cabfdc2b646358080db75e9fe9ba8-2".to_owned(),
+            message_id: MessageId::new(
+                "0x1fbe533b3bed6e6be3a74734042b3ae0836cabfdc2b646358080db75e9fe9ba8",
+                2,
             ),
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
@@ -660,9 +666,9 @@ mod tests {
 
         let type_in_rust = GasCreditEvent {
             base: EventBase {
-                event_id: EventId(
-                    "0x1fbe533b3bed6e6be3a74734042b3ae0836cabfdc2b646358080db75e9fe9ba8-1"
-                        .to_owned(),
+                event_id: MessageId::new(
+                    "0x1fbe533b3bed6e6be3a74734042b3ae0836cabfdc2b646358080db75e9fe9ba8",
+                    1,
                 ),
                 meta: Some(EventMetadata {
                     tx_id: Some(TxId(
@@ -676,8 +682,9 @@ mod tests {
                     finalized: Some(true),
                 }),
             },
-            message_id: MessageId(
-                "0x1fbe533b3bed6e6be3a74734042b3ae0836cabfdc2b646358080db75e9fe9ba8-2".to_owned(),
+            message_id: MessageId::new(
+                "0x1fbe533b3bed6e6be3a74734042b3ae0836cabfdc2b646358080db75e9fe9ba8",
+                2,
             ),
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
@@ -709,11 +716,11 @@ mod tests {
 
         let type_in_rust = CallEvent {
             base: EventBase {
-                event_id: EventId("0xe432150cce91c13a887f7D836923d5597adD8E31-2".to_owned()),
+                event_id: EventId::new("0xe432150cce91c13a887f7D836923d5597adD8E31", 2),
                 meta: None,
             },
             message: GatewayV2Message {
-                message_id: MessageId("0xe432150cce91c13a887f7D836923d5597adD8E31-2".to_owned()),
+                message_id: MessageId::new("0xe432150cce91c13a887f7D836923d5597adD8E31", 2),
                 source_chain: "ethereum".to_owned(),
                 source_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
                 destination_address: "0xf4ff91f79E35E7dF460A6B259fD971Ec85E933CF".to_owned(),
@@ -747,11 +754,11 @@ mod tests {
 
         let type_in_rust = Event::Call(CallEvent {
             base: EventBase {
-                event_id: EventId("0xe432150cce91c13a887f7D836923d5597adD8E31-2".to_owned()),
+                event_id: EventId::new("0xe432150cce91c13a887f7D836923d5597adD8E31", 2),
                 meta: None,
             },
             message: GatewayV2Message {
-                message_id: MessageId("0xe432150cce91c13a887f7D836923d5597adD8E31-2".to_owned()),
+                message_id: MessageId::new("0xe432150cce91c13a887f7D836923d5597adD8E31", 2),
                 source_chain: "ethereum".to_owned(),
                 source_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
                 destination_address: "0xf4ff91f79E35E7dF460A6B259fD971Ec85E933CF".to_owned(),
@@ -827,9 +834,9 @@ mod tests {
         let type_in_rust = PublishEventsRequest {
             events: vec![Event::Call(CallEvent {
                 base: EventBase {
-                    event_id: EventId(
-                        "0x9b447614be654eeea0c5de0319b3f2c243ab45bebd914a1f7319f4bb599d8968-1"
-                            .to_owned(),
+                    event_id: EventId::new(
+                        "0x9b447614be654eeea0c5de0319b3f2c243ab45bebd914a1f7319f4bb599d8968",
+                        1,
                     ),
                     meta: Some(EventMetadata {
                         tx_id: Some(TxId(
@@ -844,9 +851,9 @@ mod tests {
                     }),
                 },
                 message: GatewayV2Message {
-                    message_id: MessageId(
-                        "0x9b447614be654eeea0c5de0319b3f2c243ab45bebd914a1f7319f4bb599d8968-1"
-                            .to_owned(),
+                    message_id: MessageId::new(
+                        "0x9b447614be654eeea0c5de0319b3f2c243ab45bebd914a1f7319f4bb599d8968",
+                        1,
                     ),
                     source_chain: "test-sepolia".to_owned(),
                     source_address: "0x9e3e785dD9EA3826C9cBaFb1114868bc0e79539a".to_owned(),
@@ -866,11 +873,11 @@ mod tests {
         // Setup
         let type_in_rust = CallEvent {
             base: EventBase {
-                event_id: EventId("event123".to_owned()),
+                event_id: TxEvent("event123".to_owned()),
                 meta: None,
             },
             message: GatewayV2Message {
-                message_id: MessageId("message123".to_owned()),
+                message_id: TxEvent("message123".to_owned()),
                 source_chain: "chainA".to_owned(),
                 source_address: "0xSourceAddress".to_owned(),
                 destination_address: "0xDestinationAddress".to_owned(),
@@ -913,7 +920,7 @@ mod tests {
 
         let type_in_rust = Event::CannotExecuteMessage(CannotExecuteMessageEvent {
             base: EventBase {
-                event_id: EventId("event123".to_owned()),
+                event_id: TxEvent("event123".to_owned()),
                 meta: None,
             },
             task_item_id: TaskItemId("550e8400-e29b-41d4-a716-446655440000".parse().unwrap()),

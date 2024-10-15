@@ -24,12 +24,22 @@ async fn main() {
     let config_file = std::fs::read_to_string(config_file).expect("cannot read config file");
     let config = toml::from_str::<Config>(&config_file).expect("invalid config file");
 
-    let (amplifier_component, _amplifier_client) = Amplifier::new(config.amplifier_component);
-    let (solana_listener_component, _solana_listener_client) =
+    let event_forwarder_config = solana_event_forwarder::Config::new(
+        &config.solana_listener_component,
+        &config.amplifier_component,
+    );
+    let (amplifier_component, amplifier_client) = Amplifier::new(config.amplifier_component);
+    let (solana_listener_component, solana_listener_client) =
         solana_listener::SolanaListener::new(config.solana_listener_component);
+    let solana_event_forwarder_component = solana_event_forwarder::SolanaEventForwarder::new(
+        event_forwarder_config,
+        solana_listener_client,
+        amplifier_client,
+    );
     let components: Vec<Box<dyn RelayerComponent>> = vec![
         Box::new(amplifier_component),
         Box::new(solana_listener_component),
+        Box::new(solana_event_forwarder_component),
     ];
     RelayerEngine::new(config.relayer_engine, components)
         .start_and_wait_for_shutdown()

@@ -6,3 +6,4 @@ pub use client::*;
 mod error;
 pub use error::AmplifierApiError;
 pub mod types;
+pub use chrono;

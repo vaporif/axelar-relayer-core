@@ -14,22 +14,22 @@ use tokio::task::JoinSet;
 
 use crate::config;
 
+/// Typical message with the produced work.
+/// Contains the handle to a task that resolves into a
+/// [`SolanaTransaction`].
 #[derive(Debug, Clone)]
 pub struct SolanaTransaction {
+    /// signature of the transaction (id)
     pub signature: Signature,
+    /// The raw transaction logs
     pub logs: Vec<String>,
+    /// the regisetred timestamp of the tx
     pub block_time: Option<i64>,
+    /// the slot number of the tx
     pub slot: u64,
 }
 
-pub enum TransactionScannerMessage {
-    /// Typical message with the produced work.
-    /// Contains the handle to a task that resolves into a
-    /// [`SolanaTransaction`].
-    Message(SolanaTransaction),
-}
-
-pub(crate) type MessageSender = futures::channel::mpsc::UnboundedSender<TransactionScannerMessage>;
+pub(crate) type MessageSender = futures::channel::mpsc::UnboundedSender<SolanaTransaction>;
 
 /// The listener component that has the core functionality:
 /// - monitor (poll) the solana blockchain for new signatures coming from the gateway program
@@ -45,7 +45,7 @@ pub struct SolanaListener {
 #[derive(Debug)]
 pub struct SolanaListenerClient {
     /// Receive transaction messagese from `SolanaListener` instance
-    pub messages_sender: futures::channel::mpsc::UnboundedReceiver<TransactionScannerMessage>,
+    pub log_receiver: futures::channel::mpsc::UnboundedReceiver<SolanaTransaction>,
 }
 
 impl relayer_engine::RelayerComponent for SolanaListener {
@@ -69,7 +69,7 @@ impl SolanaListener {
             sender: tx_outgoing,
         };
         let client = SolanaListenerClient {
-            messages_sender: rx_outgoing,
+            log_receiver: rx_outgoing,
         };
         (this, client)
     }
@@ -132,6 +132,7 @@ pub(crate) mod signature_scanner {
         let rpc_client = Arc::new(RpcClient::new(url.to_string()));
         let max_concurrent_rpc_requests = u32::try_from(max_concurrent_rpc_requests)?;
 
+        let mut last_processed_signature = None;
         loop {
             // Greedly ask for all available permits from this semaphore, to ensure this
             // task will not concur with `transaction_retriever::fetch` tasks.
@@ -141,12 +142,12 @@ pub(crate) mod signature_scanner {
 
             trace!("acquired all semaphore permits (exclusive access)");
 
-            // Now that we have all permits, scan for signatures while waiting for the
-            // cancelation signal.
+            // Now that we have all permits, scan for signatures
             collect_and_process_signatures(
                 address,
                 Arc::clone(&rpc_client),
                 signature_sender.clone(),
+                &mut last_processed_signature,
             )
             .await?;
 
@@ -166,9 +167,15 @@ pub(crate) mod signature_scanner {
         address: Pubkey,
         rpc_client: Arc<RpcClient>,
         mut signature_sender: UnboundedSender<Signature>,
+        last_processed_signature: &mut Option<Signature>,
     ) -> eyre::Result<()> {
-        let collected_signatures =
-            fetch_signatures_until_exhaustion(Arc::clone(&rpc_client), address, None).await?;
+        let collected_signatures = fetch_signatures_until_exhaustion(
+            Arc::clone(&rpc_client),
+            address,
+            None,
+            last_processed_signature,
+        )
+        .await?;
 
         // Iterate backwards so oldest signatures are picked up first on the other end.
         for signature in collected_signatures.into_iter().rev() {
@@ -188,6 +195,7 @@ pub(crate) mod signature_scanner {
         rpc_client: Arc<RpcClient>,
         address: Pubkey,
         until: Option<Signature>,
+        last_visited: &mut Option<Signature>,
     ) -> eyre::Result<Vec<Signature>> {
         /// This is the max number of signatures returned by the Solana RPC. It
         /// is used as an indicator to tell if we need to continue
@@ -196,24 +204,25 @@ pub(crate) mod signature_scanner {
 
         // Helper function to setup the configuration at each loop
         let config = |before: Option<Signature>| GetConfirmedSignaturesForAddress2Config {
+            // Only signatures before the specified signature.
             before,
+            // Only signatures after the specified signature.
             until,
             limit: Some(LIMIT),
             commitment: Some(CommitmentConfig::finalized()),
         };
 
         let mut collected_signatures = vec![];
-        let mut last_visited: Option<Signature> = None;
         loop {
             let batch = rpc_client
-                .get_signatures_for_address_with_config(&address, config(last_visited))
+                .get_signatures_for_address_with_config(&address, config(*last_visited))
                 .await?;
 
             // Get the last (oldest) signature on this batch or break if it is empty
             let Some(oldest) = batch.last() else { break };
 
             // Set up following calls to start from the point this one had left
-            last_visited = Some(Signature::from_str(&oldest.signature)?);
+            last_visited.replace(Signature::from_str(&oldest.signature)?);
 
             let batch_size = batch.len();
             collected_signatures.extend(batch.into_iter());
@@ -241,7 +250,7 @@ pub(crate) mod transaction_retriever {
     use eyre::Context;
     use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
     use futures::stream::FusedStream;
-    use futures::{SinkExt, StreamExt};
+    use futures::StreamExt;
     use solana_client::client_error::ClientError;
     use solana_client::rpc_client::RpcClientConfig;
     use solana_client::rpc_config::RpcTransactionConfig;
@@ -251,7 +260,7 @@ pub(crate) mod transaction_retriever {
     };
     use thiserror::Error;
     use tokio::sync::{AcquireError, Semaphore};
-    use tracing::debug;
+    use tracing::{debug, info_span, Instrument};
     use url::Url;
 
     use super::*;
@@ -306,7 +315,7 @@ pub(crate) mod transaction_retriever {
     pub async fn run(
         url: Url,
         signature_receiver: UnboundedReceiver<Signature>,
-        transaction_sender: UnboundedSender<TransactionScannerMessage>,
+        transaction_sender: UnboundedSender<SolanaTransaction>,
         semaphore: Arc<Semaphore>,
     ) -> eyre::Result<()> {
         let rpc_client = {
@@ -320,26 +329,26 @@ pub(crate) mod transaction_retriever {
         let mut signature_receiver = signature_receiver.fuse();
         let mut task = futures::stream::poll_fn(move |cx| {
             match signature_receiver.poll_next_unpin(cx) {
-                core::task::Poll::Ready(Some(signature)) => {
+                Poll::Ready(Some(signature)) => {
                     join_set.spawn({
                         let semaphore = Arc::clone(&semaphore);
                         let rpc_client = Arc::clone(&rpc_client);
-                        let mut transaction_sender = transaction_sender.clone();
+                        let transaction_sender = transaction_sender.clone();
                         async move {
                             let tx_result =
                                 fetch_with_permit(signature, rpc_client, semaphore).await;
 
                             match tx_result {
                                 Ok(tx) => {
-                                    tracing::info!(?tx, "solana tx retrieved");
+                                    tracing::debug!(?tx, "solana tx retrieved");
+                                    tracing::info!(?tx.signature, "solana tx retrieved");
                                     transaction_sender
-                                        .send(TransactionScannerMessage::Message(tx))
-                                        .await
+                                        .unbounded_send(tx)
                                         .wrap_err("transaction sender failed")?;
                                 }
                                 Err(err) => match err {
                                     TransactionRetrieverError::NonFatal(non_fatal_error) => {
-                                        tracing::debug!(
+                                        tracing::warn!(
                                             ?non_fatal_error,
                                             "tx scanner returned non-fatal error"
                                         );
@@ -356,6 +365,7 @@ pub(crate) mod transaction_retriever {
 
                             Ok(())
                         }
+                        .instrument(info_span!("fetching tx data from signature"))
                     });
                 }
                 Poll::Pending => (),

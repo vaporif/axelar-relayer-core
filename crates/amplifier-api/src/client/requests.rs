@@ -128,7 +128,7 @@ impl<'a, 'b> AmplifierApiRequest for PostEvents<'a, 'b> {
     type Payload = PublishEventsRequest;
     type Error = ErrorResponse;
 
-    const METHOD: reqwest::Method = reqwest::Method::GET;
+    const METHOD: reqwest::Method = reqwest::Method::POST;
 
     fn path(&self, base_url: &url::Url) -> Result<url::Url, AmplifierApiError> {
         let url = base_url

@@ -6,5 +6,6 @@ mod healthcheck;
 mod listener;
 mod subscriber;
 
-pub use component::{Amplifier, AmplifierClient};
+pub use amplifier_api;
+pub use component::{Amplifier, AmplifierClient, AmplifierCommand};
 pub use config::Config;

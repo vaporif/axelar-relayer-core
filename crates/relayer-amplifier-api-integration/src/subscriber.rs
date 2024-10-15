@@ -25,6 +25,7 @@ pub(crate) async fn process_msgs_to_amplifier(
         match receiver.poll_next_unpin(cx) {
             Poll::Ready(Some(command)) => {
                 // spawn the command on the joinset, returning the error
+                tracing::info!(?command, "sending message to amplifier api");
                 let res = internal(command, &chain_with_trailing_slash, &client, &mut join_set);
                 cx.waker().wake_by_ref();
                 return Poll::Ready(Some(Ok(res)));
@@ -96,7 +97,8 @@ async fn process_publish_events_request(
     for item in res.results {
         use amplifier_api::types::PublishEventResultItem::{Accepted, Error};
         match item {
-            Accepted(_accepted) => {
+            Accepted(accepted) => {
+                tracing::info!(?accepted, "event registered");
                 // no op
             }
             Error(err) => {

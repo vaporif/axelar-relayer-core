@@ -18,7 +18,7 @@ pub(crate) async fn process_healthcheck(
             .is_ok();
         let t2 = clock.recent();
         let delta = t2.saturating_duration_since(t1);
-        tracing::info!(execution_duration = ?delta, "helatnhceck duration");
+        tracing::info!(execution_duration = ?delta, "healthcheck duration");
 
         // check if amplifier api is unreachable for a long time already
         let Some(invalid_healthchecks_before_shutdown) =

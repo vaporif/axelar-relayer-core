@@ -8,8 +8,10 @@ use tracing::{info_span, Instrument};
 
 use crate::{config, healthcheck, listener, subscriber};
 
+/// A valid command that the Amplifier component can act upon
 #[derive(Debug)]
 pub enum AmplifierCommand {
+    /// Publish events to the Amplifier API
     PublishEvents(PublishEventsRequest),
 }
 
