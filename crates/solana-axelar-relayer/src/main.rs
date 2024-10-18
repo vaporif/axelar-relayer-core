@@ -78,6 +78,8 @@ mod tests {
     use amplifier_api::identity::Identity;
     use pretty_assertions::assert_eq;
     use solana_listener::solana_sdk::pubkey::Pubkey;
+    use solana_listener::solana_sdk::signature::Signature;
+    use solana_listener::MissedSignatureCatchupStrategy;
 
     use crate::Config;
 
@@ -88,11 +90,14 @@ mod tests {
         let chain = "solana-devnet";
         let gateway_program_address = Pubkey::new_unique();
         let gateway_program_address_as_str = gateway_program_address.to_string();
-        let solana_rpc = "https://solana-devnet.com".parse()?;
+        let solana_rpc = "https://api.solana-devnet.com".parse()?;
+        let solana_ws = "wss://api.solana-devnet.com".parse()?;
         let solana_tx_scan_poll_period = Duration::from_millis(42);
         let solana_tx_scan_poll_period_ms = solana_tx_scan_poll_period.as_millis();
         let max_concurrent_rpc_requests = 100;
+        let latest_processed_signature = Signature::new_unique().to_string();
         let identity = identity_fixture();
+        let missed_signature_catchup_strategy = "until_beginning";
         let input = indoc::formatdoc! {r#"
             [amplifier_component]
             identity = '''
@@ -107,9 +112,12 @@ mod tests {
 
             [solana_listener_component]
             gateway_program_address = "{gateway_program_address_as_str}"
-            solana_rpc = "{solana_rpc}"
+            solana_http_rpc = "{solana_rpc}"
+            solana_ws = "{solana_ws}"
             tx_scan_poll_period_in_milliseconds = {solana_tx_scan_poll_period_ms}
             max_concurrent_rpc_requests = {max_concurrent_rpc_requests}
+            missed_signature_catchup_strategy = "{missed_signature_catchup_strategy}"
+            latest_processed_signature = "{latest_processed_signature}"
         "#};
 
         let parsed: Config = toml::from_str(&input)?;
@@ -126,9 +134,12 @@ mod tests {
             },
             solana_listener_component: solana_listener::Config {
                 gateway_program_address,
-                solana_rpc,
+                solana_http_rpc: solana_rpc,
                 tx_scan_poll_period: solana_tx_scan_poll_period,
                 max_concurrent_rpc_requests,
+                solana_ws,
+                missed_signature_catchup_strategy: MissedSignatureCatchupStrategy::UntilBeginning,
+                latest_processed_signature: Some(Signature::from_str(&latest_processed_signature)?),
             },
         };
         assert_eq!(parsed, expected);

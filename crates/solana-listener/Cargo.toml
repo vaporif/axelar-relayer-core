@@ -11,16 +11,15 @@ edition.workspace = true
 typed-builder.workspace = true
 futures.workspace = true
 tracing.workspace = true
-futures-concurrency.workspace = true
 tokio.workspace = true
 eyre.workspace = true
 url.workspace = true
 serde.workspace = true
 relayer-engine.workspace = true
-thiserror.workspace = true
 backoff.workspace = true
 async-trait.workspace = true
 serde_json.workspace = true
+chrono.workspace = true
 
 gmp-gateway.workspace = true
 common-serde-utils.workspace = true

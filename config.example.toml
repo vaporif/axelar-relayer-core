@@ -16,4 +16,10 @@ chain = "solana-devnet"
 bind_addr = "0.0.0.0:3000"
 
 [solana_listener_component]
-solana_rpc = "https://api.devnet.solana.com"
+solana_http_rpc = "https://api.devnet.solana.com"
+
+# the officia ws endpoints hosted by solana sometimes refuse to accept new connections / drop the connection frequently.
+# using helius hosted nodes (even the free tier) often at times yields better results.
+solana_ws = "wss://api.devnet.solana.com"
+# solana_ws = "wss://devnet.helius-rpc.com/?{your api key}"
+missed_signature_catchup_strategy = "until_beginning"

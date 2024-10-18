@@ -3,7 +3,6 @@ use core::pin::Pin;
 
 use futures::{SinkExt, StreamExt};
 use gmp_gateway::events::{EventContainer, GatewayEvent};
-use relayer_amplifier_api_integration::amplifier_api::chrono::DateTime;
 use relayer_amplifier_api_integration::amplifier_api::types::{
     CallEvent, Event, EventBase, EventId, EventMetadata, GatewayV2Message, MessageId,
     PublishEventsRequest, TxId,
@@ -200,9 +199,7 @@ fn map_gateway_event_to_amplifier_event(
                     event_id,
                     meta: Some(EventMetadata {
                         tx_id: Some(tx_id),
-                        timestamp: message
-                            .block_time
-                            .and_then(|date_time| DateTime::from_timestamp(date_time, 0)),
+                        timestamp: message.timestamp,
                         from_address: Some(source_address.clone()),
                         finalized: Some(true),
                     }),

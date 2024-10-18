@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use backoff::future::retry;
@@ -10,6 +11,7 @@ use solana_rpc_client::http_sender::HttpSender;
 use solana_rpc_client::rpc_sender::RpcSender;
 use solana_rpc_client_api::client_error::Result as ClientResult;
 use solana_rpc_client_api::request::RpcRequest;
+use tokio::sync::Semaphore;
 use tracing::error;
 
 /// The maximum elapsed time for retrying failed requests.
@@ -17,12 +19,19 @@ const TWO_MINUTES: Duration = Duration::from_millis(2 * 60 * 1_000);
 
 /// A wrapper around `HttpSender` that adds retry logic for sending RPC
 /// requests.
-pub(crate) struct RetryingHttpSender(HttpSender);
+pub(crate) struct RetryingHttpSender {
+    http_client: HttpSender,
+    request_permit: Arc<Semaphore>,
+}
 
 impl RetryingHttpSender {
-    pub(crate) fn new(url: String) -> Self {
+    pub(crate) fn new(url: String, max_concurrent_requests: usize) -> Self {
         let http = HttpSender::new(url);
-        Self(http)
+        let request_permit = Arc::new(Semaphore::new(max_concurrent_requests));
+        Self {
+            http_client: http,
+            request_permit,
+        }
     }
 
     async fn send_internal(
@@ -33,7 +42,14 @@ impl RetryingHttpSender {
         use ClientErrorKind::{
             Custom, Io, Middleware, Reqwest, RpcError, SerdeJson, SigningError, TransactionError,
         };
-        self.0
+        // get the permit to make the request
+        let _permit = Arc::clone(&self.request_permit)
+            .acquire_owned()
+            .await
+            .expect("the semaphore will never be closed");
+
+        // make the actual request
+        self.http_client
             .send(request, params.clone())
             .await
             .inspect_err(|error| error!(%error))
@@ -61,10 +77,10 @@ impl RpcSender for RetryingHttpSender {
     }
 
     fn get_transport_stats(&self) -> RpcTransportStats {
-        self.0.get_transport_stats()
+        self.http_client.get_transport_stats()
     }
 
     fn url(&self) -> String {
-        self.0.url()
+        self.http_client.url()
     }
 }
