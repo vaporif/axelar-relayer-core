@@ -51,6 +51,7 @@ pub_with_shorthand = "allow"
 redundant_pub_crate = "allow"
 option_if_let_else = "allow"
 self_named_module_files = "allow"
+shadow_unrelated = "allow"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = -1 }
@@ -67,28 +68,38 @@ amplifier-api = { path = "crates/amplifier-api" }
 solana-listener = { path = "crates/solana-listener" }
 common-serde-utils = { path = "crates/common-serde-utils" }
 solana-event-forwarder = { path = "crates/solana-event-forwarder" }
+solana-tx-pusher = { path = "crates/solana-tx-pusher" }
+retrying-solana-http-sender = { path = "crates/retrying-solana-http-sender" }
+solana-gateway-task-processor = { path = "crates/solana-gateway-task-processor" }
+effective-tx-sender = { path = "crates/effective-tx-sender" }
 
 # Solana Gateway
 gmp-gateway = { git = "https://github.com/eigerco/solana-axelar.git", branch = "main", features = ["no-entrypoint"] }
+axelar-rkyv-encoding = { git = "https://github.com/eigerco/solana-axelar.git", branch = "main" }
+axelar-executable = { git = "https://github.com/eigerco/solana-axelar.git", branch = "main" }
 
 # CLI
 clap = { version = "4", features = ["derive"] }
 xshell = "0.2"
 
 # Utils
+arrayvec = "0.7"
 url = { version = "2.5", features = ["serde"] }
 temp-env = "0.3"
 chrono = { version = "0.4", default-features = false, features = ["serde", "clock", "std"] }
 base64 = "0.22"
+bs58 = "0.5"
 redact = { version = "0.1", features = ["serde"] }
 thiserror = "1"
 uuid = { version = "1.2", features = ["v4", "serde"] }
 typed-builder = "0.18"
+derive_builder = "0.20"
 bnum = "0.12"
 hex = "0.4"
 quanta = "0.12"
 backoff = { version = "0.4", features = ["tokio"] }
 indoc = "2"
+itertools = "0.12"
 
 # Serde
 serde = { version = "1", features = ["derive"] }
@@ -100,6 +111,7 @@ simd-json = "0.13"
 rstest = { version = "0.21" }
 test-log = { version = "0.2", features = ["trace"], default-features = false }
 pretty_assertions = "1"
+mockall = "0.13"
 
 # Errors
 eyre = "0.6"

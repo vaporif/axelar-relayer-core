@@ -3,7 +3,7 @@ use opentelemetry::metrics::MetricsError;
 use opentelemetry::trace::TraceError;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::{ExportConfig, WithExportConfig};
+use opentelemetry_otlp::{ExportConfig, WithExportConfig as _};
 use opentelemetry_sdk::logs::{Logger, LoggerProvider};
 use opentelemetry_sdk::trace::Config;
 use opentelemetry_sdk::{runtime, trace as sdktrace, Resource};
@@ -103,6 +103,8 @@ fn setup_subscriber(
         .add_directive("amplifier_api=info".parse()?)
         .add_directive("solana_listener=info".parse()?)
         .add_directive("solana_event_forwarder=info".parse()?)
+        .add_directive("solana_gateway_task_processor=info".parse()?)
+        .add_directive("effective_tx_sender=info".parse()?)
         .add_directive("hyper=error".parse()?)
         .add_directive("tonic=error".parse()?)
         .add_directive("reqwest=error".parse()?)

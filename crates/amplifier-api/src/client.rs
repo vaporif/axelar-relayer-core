@@ -8,10 +8,6 @@ use tracing::instrument;
 use crate::error::AmplifierApiError;
 
 /// Client for the Amplifier API
-#[expect(
-    clippy::module_name_repetitions,
-    reason = "makes the type easir to understand to the user of this crate"
-)]
 #[derive(Clone, Debug)]
 pub struct AmplifierApiClient {
     inner: reqwest::Client,
@@ -48,14 +44,10 @@ impl AmplifierApiClient {
         let method = T::METHOD;
         let client = self.inner.clone();
         let payload = simd_json::to_vec(&request.payload())?;
-        let reqwest_req = client
-            .request(method, endpoint.as_str())
-            .body(payload)
-            .build()?;
+        let reqwest_req = client.request(method, endpoint.as_str()).body(payload);
 
         Ok(AmplifierRequest {
             request: reqwest_req,
-            client,
             result: PhantomData,
             err: PhantomData,
         })
@@ -64,20 +56,25 @@ impl AmplifierApiClient {
 
 /// Encalpsulated HTTP request for the Amplifier API
 pub struct AmplifierRequest<T, E> {
-    request: reqwest::Request,
-    client: reqwest::Client,
+    request: reqwest::RequestBuilder,
     result: PhantomData<T>,
     err: PhantomData<E>,
 }
 
 impl<T, E> AmplifierRequest<T, E> {
     /// execute an Amplifier API request
-    #[instrument(name = "execute_request", skip(self), fields(method = %self.request.method(), url = %self.request.url()))]
+    #[instrument(name = "execute_request", skip(self))]
     pub async fn execute(self) -> Result<AmplifierResponse<T, E>, AmplifierApiError> {
-        let response = self.client.execute(self.request).await?;
+        let (client, request) = self.request.build_split();
+        let request = request?;
 
         // Capture the current span
         let span = tracing::Span::current();
+        span.record("method", request.method().as_str());
+        span.record("url", request.url().as_str());
+
+        // execute the request
+        let response = client.execute(request).await?;
 
         Ok(AmplifierResponse {
             response,
@@ -230,7 +227,7 @@ pub mod identity {
     }
 
     mod serde_utils {
-        use serde::{Deserialize, Deserializer};
+        use serde::{Deserialize as _, Deserializer};
 
         pub(crate) fn deserialize_identity<'de, D>(
             deserializer: D,

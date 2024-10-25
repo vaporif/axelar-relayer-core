@@ -11,10 +11,6 @@ use serde::{Deserialize, Deserializer, Serialize};
 pub type Address = String;
 
 /// Newtypes for different types of IDs so we don't mix them up in the future
-#[expect(
-    clippy::module_name_repetitions,
-    reason = "the id suffix makes it easier to distinguish the types"
-)]
 mod id {
 
     use super::*;
@@ -80,7 +76,7 @@ mod id {
 
 mod serde_utils {
     use base64::prelude::*;
-    use serde::{Deserialize, Deserializer, Serializer};
+    use serde::{Deserialize as _, Deserializer, Serializer};
 
     pub(crate) fn base64_decode<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
     where

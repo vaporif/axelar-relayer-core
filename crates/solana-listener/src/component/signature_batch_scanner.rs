@@ -1,4 +1,4 @@
-use core::str::FromStr;
+use core::str::FromStr as _;
 use std::sync::Arc;
 
 use solana_client::nonblocking::rpc_client::RpcClient;

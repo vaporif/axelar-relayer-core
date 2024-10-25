@@ -1,6 +1,6 @@
 //! Bindings for the Amplifier API REST [paths](https://github.com/axelarnetwork/axelar-eds-mirror/blob/3dcef3bc08ecb51af79c6223605d4fbc01660847/oapi/gmp/schema.yaml#L6-L77)
 
-use core::ops::Add;
+use core::ops::Add as _;
 
 use crate::error::AmplifierApiError;
 use crate::types::{
@@ -80,7 +80,7 @@ pub struct GetChains<'a> {
     pub limit: Option<u8>,
 }
 
-impl<'a> AmplifierApiRequest for GetChains<'a> {
+impl AmplifierApiRequest for GetChains<'_> {
     type Res = GetTasksResult;
     type Error = ErrorResponse;
     type Payload = ();
@@ -123,7 +123,7 @@ pub struct PostEvents<'a, 'b> {
     pub payload: &'b PublishEventsRequest,
 }
 
-impl<'a, 'b> AmplifierApiRequest for PostEvents<'a, 'b> {
+impl AmplifierApiRequest for PostEvents<'_, '_> {
     type Res = PublishEventsResult;
     type Payload = PublishEventsRequest;
     type Error = ErrorResponse;

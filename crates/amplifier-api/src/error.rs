@@ -1,8 +1,4 @@
 #![expect(missing_docs, reason = "the error macro already is descriptive enough")]
-#![expect(
-    clippy::module_name_repetitions,
-    reason = "This is fine for the error module"
-)]
 
 /// Error variants for the Amplifier API
 #[derive(thiserror::Error, Debug)]

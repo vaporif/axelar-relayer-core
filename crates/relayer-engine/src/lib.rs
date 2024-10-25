@@ -4,7 +4,7 @@
 mod config;
 pub use config::{Config, HealthCheckConfig, RelayerComponent};
 use tokio::task::JoinSet;
-use tracing::{info_span, Instrument};
+use tracing::{info_span, Instrument as _};
 pub use url;
 
 /// Generic array of components to be consumed by the engine

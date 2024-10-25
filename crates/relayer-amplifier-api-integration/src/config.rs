@@ -51,7 +51,7 @@ pub(crate) mod config_defaults {
     }
 
     pub(crate) const fn get_chains_poll_interval() -> Duration {
-        Duration::from_secs(3)
+        Duration::from_secs(60)
     }
 
     #[expect(clippy::unnecessary_wraps, reason = "fine for config defaults")]

@@ -30,10 +30,6 @@ pub struct Config {
     pub health_check: HealthCheckConfig,
 }
 
-#[expect(
-    clippy::module_name_repetitions,
-    reason = "makes it clearer that this is a config-only struct"
-)]
 /// Health check server configuration.
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct HealthCheckConfig {

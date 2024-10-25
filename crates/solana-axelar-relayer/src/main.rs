@@ -1,6 +1,7 @@
 //! Transaction relayer for Solana-Axelar integration
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use relayer_amplifier_api_integration::Amplifier;
 use relayer_engine::{RelayerComponent, RelayerEngine};
@@ -24,13 +25,22 @@ async fn main() {
     let config_file = std::fs::read_to_string(config_file).expect("cannot read config file");
     let config = toml::from_str::<Config>(&config_file).expect("invalid config file");
 
+    let rpc_client = retrying_solana_http_sender::new_client(&config.solana_rpc);
     let event_forwarder_config = solana_event_forwarder::Config::new(
         &config.solana_listener_component,
         &config.amplifier_component,
     );
-    let (amplifier_component, amplifier_client) = Amplifier::new(config.amplifier_component);
-    let (solana_listener_component, solana_listener_client) =
-        solana_listener::SolanaListener::new(config.solana_listener_component);
+    let (amplifier_component, amplifier_client, amplifier_task_receiver) =
+        Amplifier::new(config.amplifier_component);
+    let gateway_task_processor = solana_gateway_task_processor::SolanaTxPusher::new(
+        config.solana_gateway_task_processor,
+        Arc::clone(&rpc_client),
+        amplifier_task_receiver,
+    );
+    let (solana_listener_component, solana_listener_client) = solana_listener::SolanaListener::new(
+        config.solana_listener_component,
+        Arc::clone(&rpc_client),
+    );
     let solana_event_forwarder_component = solana_event_forwarder::SolanaEventForwarder::new(
         event_forwarder_config,
         solana_listener_client,
@@ -40,6 +50,7 @@ async fn main() {
         Box::new(amplifier_component),
         Box::new(solana_listener_component),
         Box::new(solana_event_forwarder_component),
+        Box::new(gateway_task_processor),
     ];
     RelayerEngine::new(config.relayer_engine, components)
         .start_and_wait_for_shutdown()
@@ -61,8 +72,12 @@ pub struct Config {
     pub amplifier_component: relayer_amplifier_api_integration::Config,
     /// Configuration for the Solana transaction listener processor
     pub solana_listener_component: solana_listener::Config,
+    /// Configuration for the Solana transaction listener processor
+    pub solana_gateway_task_processor: solana_gateway_task_processor::Config,
     /// Meta-configuration on the engine
     pub relayer_engine: relayer_engine::Config,
+    /// Shared configuration for the Solana RPC client
+    pub solana_rpc: retrying_solana_http_sender::Config,
 }
 
 #[expect(
@@ -72,13 +87,13 @@ pub struct Config {
 #[cfg(test)]
 mod tests {
     use core::net::SocketAddr;
-    use core::str::FromStr;
+    use core::str::FromStr as _;
     use core::time::Duration;
 
     use amplifier_api::identity::Identity;
     use pretty_assertions::assert_eq;
     use solana_listener::solana_sdk::pubkey::Pubkey;
-    use solana_listener::solana_sdk::signature::Signature;
+    use solana_listener::solana_sdk::signature::{Keypair, Signature};
     use solana_listener::MissedSignatureCatchupStrategy;
 
     use crate::Config;
@@ -95,6 +110,8 @@ mod tests {
         let solana_tx_scan_poll_period = Duration::from_millis(42);
         let solana_tx_scan_poll_period_ms = solana_tx_scan_poll_period.as_millis();
         let max_concurrent_rpc_requests = 100;
+        let signing_keypair = Keypair::new();
+        let signing_keypair_as_str = signing_keypair.to_base58_string();
         let latest_processed_signature = Signature::new_unique().to_string();
         let identity = identity_fixture();
         let missed_signature_catchup_strategy = "until_beginning";
@@ -112,12 +129,18 @@ mod tests {
 
             [solana_listener_component]
             gateway_program_address = "{gateway_program_address_as_str}"
-            solana_http_rpc = "{solana_rpc}"
             solana_ws = "{solana_ws}"
             tx_scan_poll_period_in_milliseconds = {solana_tx_scan_poll_period_ms}
-            max_concurrent_rpc_requests = {max_concurrent_rpc_requests}
             missed_signature_catchup_strategy = "{missed_signature_catchup_strategy}"
             latest_processed_signature = "{latest_processed_signature}"
+
+            [solana_gateway_task_processor]
+            signing_keypair = "{signing_keypair_as_str}"
+            gateway_program_address = "{gateway_program_address_as_str}"
+
+            [solana_rpc]            
+            max_concurrent_rpc_requests = {max_concurrent_rpc_requests}
+            solana_http_rpc = "{solana_rpc}"
         "#};
 
         let parsed: Config = toml::from_str(&input)?;
@@ -134,12 +157,18 @@ mod tests {
             },
             solana_listener_component: solana_listener::Config {
                 gateway_program_address,
-                solana_http_rpc: solana_rpc,
                 tx_scan_poll_period: solana_tx_scan_poll_period,
-                max_concurrent_rpc_requests,
                 solana_ws,
                 missed_signature_catchup_strategy: MissedSignatureCatchupStrategy::UntilBeginning,
                 latest_processed_signature: Some(Signature::from_str(&latest_processed_signature)?),
+            },
+            solana_gateway_task_processor: solana_gateway_task_processor::Config {
+                gateway_program_address,
+                signing_keypair,
+            },
+            solana_rpc: retrying_solana_http_sender::Config {
+                max_concurrent_rpc_requests,
+                solana_http_rpc: solana_rpc,
             },
         };
         assert_eq!(parsed, expected);

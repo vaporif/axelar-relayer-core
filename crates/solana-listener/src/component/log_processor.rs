@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use chrono::DateTime;
-use eyre::OptionExt;
-use futures::SinkExt;
+use eyre::OptionExt as _;
+use futures::SinkExt as _;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::Signature;

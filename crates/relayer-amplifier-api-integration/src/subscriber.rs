@@ -3,10 +3,10 @@ use core::task::Poll;
 use amplifier_api::requests::{self, WithTrailingSlash};
 use amplifier_api::types::{ErrorResponse, PublishEventsResult};
 use amplifier_api::AmplifierRequest;
-use futures::stream::FusedStream;
-use futures::StreamExt;
+use futures::stream::FusedStream as _;
+use futures::StreamExt as _;
 use tokio::task::JoinSet;
-use tracing::{info_span, Instrument};
+use tracing::{info_span, Instrument as _};
 
 use super::component::{AmplifierCommand, CommandReceiver};
 use super::config::Config;

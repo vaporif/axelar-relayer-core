@@ -1,12 +1,12 @@
-use core::str::FromStr;
+use core::str::FromStr as _;
 use std::sync::Arc;
 
-use futures::{SinkExt, StreamExt};
+use futures::{SinkExt as _, StreamExt as _};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::Signature;
-use tracing::{info_span, Instrument};
+use tracing::{info_span, Instrument as _};
 
 use super::MessageSender;
 use crate::component::signature_batch_scanner;

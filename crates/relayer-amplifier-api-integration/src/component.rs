@@ -1,10 +1,10 @@
 use core::future::Future;
 use core::pin::Pin;
 
-use amplifier_api::types::PublishEventsRequest;
-use futures_concurrency::future::FutureExt;
+use amplifier_api::types::{PublishEventsRequest, TaskItem};
+use futures_concurrency::future::FutureExt as _;
 use quanta::Upkeep;
-use tracing::{info_span, Instrument};
+use tracing::{info_span, Instrument as _};
 
 use crate::{config, healthcheck, listener, subscriber};
 
@@ -16,6 +16,7 @@ pub enum AmplifierCommand {
 }
 
 pub(crate) type CommandReceiver = futures::channel::mpsc::UnboundedReceiver<AmplifierCommand>;
+pub(crate) type AmplifierTaskSender = futures::channel::mpsc::UnboundedSender<TaskItem>;
 
 /// The core Amplifier API abstraction.
 ///
@@ -27,18 +28,26 @@ pub(crate) type CommandReceiver = futures::channel::mpsc::UnboundedReceiver<Ampl
 pub struct Amplifier {
     config: config::Config,
     receiver: CommandReceiver,
+    sender: AmplifierTaskSender,
 }
 
 /// Utility client used for communicating with the `Amplifier` instance
 #[derive(Debug, Clone)]
-pub struct AmplifierClient {
+pub struct AmplifierCommandClient {
     /// send commands to the `Amplifier` instance
     pub sender: futures::channel::mpsc::UnboundedSender<AmplifierCommand>,
 }
 
+/// Utility client used for getting data from the `Amplifier` instance
+#[derive(Debug)]
+pub struct AmplifierTaskReceiver {
+    /// send commands to the `Amplifier` instance
+    pub receiver: futures::channel::mpsc::UnboundedReceiver<TaskItem>,
+}
+
 impl relayer_engine::RelayerComponent for Amplifier {
     fn process(self: Box<Self>) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + Send>> {
-        use futures::FutureExt;
+        use futures::FutureExt as _;
 
         self.process_internal().boxed()
     }
@@ -50,14 +59,17 @@ impl Amplifier {
     /// The returned variable also returns a helper client that encompasses ways to communicate with
     /// the underlying Amplifier instance.
     #[must_use]
-    pub fn new(config: config::Config) -> (Self, AmplifierClient) {
-        let (tx, rx) = futures::channel::mpsc::unbounded();
+    pub fn new(config: config::Config) -> (Self, AmplifierCommandClient, AmplifierTaskReceiver) {
+        let (command_tx, command_rx) = futures::channel::mpsc::unbounded();
+        let (task_tx, task_rx) = futures::channel::mpsc::unbounded();
         let this = Self {
             config,
-            receiver: rx,
+            sender: task_tx,
+            receiver: command_rx,
         };
-        let client = AmplifierClient { sender: tx };
-        (this, client)
+        let client = AmplifierCommandClient { sender: command_tx };
+        let task_client = AmplifierTaskReceiver { receiver: task_rx };
+        (this, client, task_client)
     }
 
     #[tracing::instrument(skip_all, name = "Amplifier")]
@@ -78,10 +90,13 @@ impl Amplifier {
         )
         .instrument(info_span!("subscriber"))
         .in_current_span();
-        let from_amplifier_msgs =
-            listener::process_msgs_from_amplifier(self.config.clone(), client.clone())
-                .instrument(info_span!("listener"))
-                .in_current_span();
+        let from_amplifier_msgs = listener::process_msgs_from_amplifier(
+            self.config.clone(),
+            client.clone(),
+            self.sender.clone(),
+        )
+        .instrument(info_span!("listener"))
+        .in_current_span();
 
         // await tasks until one of them exits (fatal)
         healthcheck

@@ -1,31 +1,54 @@
+//! Simple HTTP client that will limit the amount of concurrent requests.
+//! It will also retry the HTTP calls if they failed with a an exponential backoff strategy.
+//! Intended to rate-limit Solana RPC calls.
+
 use core::time::Duration;
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use backoff::future::retry;
 use backoff::ExponentialBackoffBuilder;
+use serde::Deserialize;
 use serde_json::Value;
 use solana_client::client_error::{ClientError, ClientErrorKind};
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::rpc_client::RpcClientConfig;
 use solana_client::rpc_sender::RpcTransportStats;
 use solana_rpc_client::http_sender::HttpSender;
 use solana_rpc_client::rpc_sender::RpcSender;
 use solana_rpc_client_api::client_error::Result as ClientResult;
 use solana_rpc_client_api::request::RpcRequest;
+use solana_sdk::commitment_config::CommitmentConfig;
 use tokio::sync::Semaphore;
 use tracing::error;
+use typed_builder::TypedBuilder;
 
 /// The maximum elapsed time for retrying failed requests.
 const TWO_MINUTES: Duration = Duration::from_millis(2 * 60 * 1_000);
 
+/// Create a new Solana RPC client based on the provided config
+#[must_use]
+pub fn new_client(config: &Config) -> Arc<RpcClient> {
+    let sender = RetryingHttpSender::new(
+        config.solana_http_rpc.to_string(),
+        config.max_concurrent_rpc_requests,
+    );
+    let config = RpcClientConfig::with_commitment(CommitmentConfig::confirmed());
+    let client = RpcClient::new_sender(sender, config);
+    Arc::new(client)
+}
+
 /// A wrapper around `HttpSender` that adds retry logic for sending RPC
 /// requests.
-pub(crate) struct RetryingHttpSender {
+pub struct RetryingHttpSender {
     http_client: HttpSender,
     request_permit: Arc<Semaphore>,
 }
 
 impl RetryingHttpSender {
-    pub(crate) fn new(url: String, max_concurrent_requests: usize) -> Self {
+    /// Initialize a new
+    #[must_use]
+    pub fn new(url: String, max_concurrent_requests: usize) -> Self {
         let http = HttpSender::new(url);
         let request_permit = Arc::new(Semaphore::new(max_concurrent_requests));
         Self {
@@ -82,5 +105,26 @@ impl RpcSender for RetryingHttpSender {
 
     fn url(&self) -> String {
         self.http_client.url()
+    }
+}
+
+/// Configuration for initialising the [`RetryingHttpSender`]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, TypedBuilder)]
+pub struct Config {
+    /// How many rpc requests we process at the same time
+    #[builder(default = config_defaults::max_concurrent_rpc_requests())]
+    #[serde(
+        rename = "max_concurrent_rpc_requests",
+        default = "config_defaults::max_concurrent_rpc_requests"
+    )]
+    pub max_concurrent_rpc_requests: usize,
+
+    /// The rpc of the solana node
+    pub solana_http_rpc: url::Url,
+}
+
+mod config_defaults {
+    pub(crate) const fn max_concurrent_rpc_requests() -> usize {
+        5
     }
 }

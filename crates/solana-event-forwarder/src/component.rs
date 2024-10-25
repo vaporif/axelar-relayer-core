@@ -1,7 +1,7 @@
 use core::future::Future;
 use core::pin::Pin;
 
-use futures::{SinkExt, StreamExt};
+use futures::{SinkExt as _, StreamExt as _};
 use gmp_gateway::events::{EventContainer, GatewayEvent};
 use relayer_amplifier_api_integration::amplifier_api::types::{
     CallEvent, Event, EventBase, EventId, EventMetadata, GatewayV2Message, MessageId,
@@ -17,12 +17,12 @@ use solana_sdk::pubkey::Pubkey;
 pub struct SolanaEventForwarder {
     config: crate::Config,
     solana_listener_client: solana_listener::SolanaListenerClient,
-    amplifier_client: relayer_amplifier_api_integration::AmplifierClient,
+    amplifier_client: relayer_amplifier_api_integration::AmplifierCommandClient,
 }
 
 impl relayer_engine::RelayerComponent for SolanaEventForwarder {
     fn process(self: Box<Self>) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + Send>> {
-        use futures::FutureExt;
+        use futures::FutureExt as _;
 
         self.process_internal().boxed()
     }
@@ -34,7 +34,7 @@ impl SolanaEventForwarder {
     pub const fn new(
         config: crate::Config,
         solana_listener_client: solana_listener::SolanaListenerClient,
-        amplifier_client: relayer_amplifier_api_integration::AmplifierClient,
+        amplifier_client: relayer_amplifier_api_integration::AmplifierCommandClient,
     ) -> Self {
         Self {
             config,

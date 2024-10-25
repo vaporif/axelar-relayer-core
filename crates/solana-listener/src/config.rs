@@ -11,13 +11,10 @@ use typed_builder::TypedBuilder;
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, TypedBuilder)]
 pub struct Config {
     /// Gateway program id
-    #[serde(deserialize_with = "serde_utils::pubkey_decode")]
+    #[serde(deserialize_with = "common_serde_utils::pubkey_decode")]
     #[builder(default = config_defaults::gateway_program_address())]
     #[serde(default = "config_defaults::gateway_program_address")]
     pub gateway_program_address: Pubkey,
-
-    /// The rpc of the solana node
-    pub solana_http_rpc: url::Url,
 
     /// The websocket endpoint of the solana node
     pub solana_ws: url::Url,
@@ -38,14 +35,6 @@ pub struct Config {
         deserialize_with = "common_serde_utils::duration_ms_decode"
     )]
     pub tx_scan_poll_period: Duration,
-
-    /// How many rpc requests we process at the same time to get data attached to a signature
-    #[builder(default = config_defaults::max_concurrent_rpc_requests())]
-    #[serde(
-        rename = "max_concurrent_rpc_requests",
-        default = "config_defaults::max_concurrent_rpc_requests"
-    )]
-    pub max_concurrent_rpc_requests: usize,
 }
 
 /// The strategy which defines on how we want to handle parsing historical signatures.
@@ -75,31 +64,13 @@ pub(crate) mod config_defaults {
     pub(crate) const fn gateway_program_address() -> Pubkey {
         gmp_gateway::ID
     }
-
-    pub(crate) const fn max_concurrent_rpc_requests() -> usize {
-        5
-    }
 }
 
 mod serde_utils {
-    use core::str::FromStr;
+    use core::str::FromStr as _;
 
-    use serde::{Deserialize, Deserializer};
-    use solana_sdk::pubkey::Pubkey;
+    use serde::{Deserialize as _, Deserializer};
     use solana_sdk::signature::Signature;
-
-    pub(crate) fn pubkey_decode<'de, D>(deserializer: D) -> Result<Pubkey, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let raw_string = String::deserialize(deserializer)?;
-        let pubkey = Pubkey::from_str(raw_string.as_str())
-            .inspect_err(|err| {
-                tracing::error!(?err, "cannot parse base58 data");
-            })
-            .map_err(serde::de::Error::custom)?;
-        Ok(pubkey)
-    }
 
     pub(crate) fn signature_decode<'de, D>(deserializer: D) -> Result<Option<Signature>, D::Error>
     where

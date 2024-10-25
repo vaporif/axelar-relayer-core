@@ -3,10 +3,12 @@ use core::task::Poll;
 use amplifier_api::requests::{self, WithTrailingSlash};
 use amplifier_api::types::{ErrorResponse, GetTasksResult};
 use amplifier_api::AmplifierRequest;
-use futures::stream::StreamExt;
+use futures::stream::StreamExt as _;
+use futures::SinkExt as _;
 use tokio::task::JoinSet;
 use tokio_stream::wrappers::IntervalStream;
 
+use crate::component::AmplifierTaskSender;
 use crate::config::Config;
 
 // process incoming messages (aka `tasks`) coming in form Amplifier API
@@ -15,6 +17,7 @@ use crate::config::Config;
 pub(crate) async fn process_msgs_from_amplifier(
     config: Config,
     client: amplifier_api::AmplifierApiClient,
+    fan_out_sender: AmplifierTaskSender,
 ) -> eyre::Result<()> {
     tracing::info!(poll_interval =? config.get_chains_poll_interval, "spawned");
 
@@ -29,7 +32,13 @@ pub(crate) async fn process_msgs_from_amplifier(
         // periodically query new tasks
         match interval_stream.poll_next_unpin(cx) {
             Poll::Ready(Some(_res)) => {
-                let res = internal(&config, &chain_with_trailing_slash, &client, &mut join_set);
+                let res = internal(
+                    &config,
+                    &chain_with_trailing_slash,
+                    &client,
+                    fan_out_sender.clone(),
+                    &mut join_set,
+                );
                 // in case we were awoken by join_set being ready, let's re-run this function, while
                 // returning the result of `internal`.
                 cx.waker().wake_by_ref();
@@ -69,6 +78,7 @@ pub(crate) fn internal(
     config: &Config,
     chain_with_trailing_slash: &WithTrailingSlash,
     client: &amplifier_api::AmplifierApiClient,
+    fan_out_sender: AmplifierTaskSender,
     to_join_set: &mut JoinSet<eyre::Result<()>>,
 ) -> eyre::Result<()> {
     let request = requests::GetChains::builder()
@@ -76,29 +86,19 @@ pub(crate) fn internal(
         .limit(config.get_chains_limit)
         .build();
     let request = client.build_request(&request)?;
-    to_join_set.spawn(process_task_request(request));
+    to_join_set.spawn(process_task_request(request, fan_out_sender));
 
     Ok(())
 }
 
-#[expect(clippy::unimplemented, reason = "will be added in the future")]
 async fn process_task_request(
     request: AmplifierRequest<GetTasksResult, ErrorResponse>,
+    mut fan_out_sender: AmplifierTaskSender,
 ) -> eyre::Result<()> {
     let res = request.execute().await?;
     let res = res.json().await??;
     tracing::info!(task_count = ?res.tasks.len(), "received new tasks");
-    for task_item in res.tasks {
-        use amplifier_api::types::Task::{Execute, GatewayTx, Refund, Verify};
-        match task_item.task {
-            Verify(_) => unimplemented!("this will be supported in the future"),
-            GatewayTx(gateway_tx_task) => {
-                tracing::info!(incoming_gateway_tx_len = ?gateway_tx_task.execute_data.len(), "handle gateway task");
-                // TODO: Send this to a pre-registered handler
-            }
-            Execute(_) => unimplemented!("this will be supported in the future"),
-            Refund(_) => unimplemented!("this will be supported in the future"),
-        }
-    }
+    let mut iter = futures::stream::iter(res.tasks.into_iter().map(Ok));
+    fan_out_sender.send_all(&mut iter).await?;
     Ok(())
 }

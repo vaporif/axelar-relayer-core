@@ -1,5 +1,5 @@
 [package]
-name = "common-serde-utils"
+name = "effective-tx-sender"
 version.workspace = true
 authors.workspace = true
 repository.workspace = true
@@ -8,12 +8,13 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-serde.workspace = true
-solana-sdk = { workspace = true, optional = true }
+eyre.workspace = true
+thiserror.workspace = true
+solana-sdk.workspace = true
+solana-client.workspace = true
+itertools.workspace = true
+futures.workspace = true
 tracing.workspace = true
-
-[features]
-solana-sdk = ["dep:solana-sdk"]
 
 [lints]
 workspace = true

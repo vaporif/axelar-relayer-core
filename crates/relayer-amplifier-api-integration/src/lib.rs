@@ -7,5 +7,5 @@ mod listener;
 mod subscriber;
 
 pub use amplifier_api;
-pub use component::{Amplifier, AmplifierClient, AmplifierCommand};
+pub use component::{Amplifier, AmplifierCommand, AmplifierCommandClient, AmplifierTaskReceiver};
 pub use config::Config;
