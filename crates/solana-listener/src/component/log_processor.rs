@@ -37,13 +37,13 @@ pub(crate) async fn fetch_and_send(
     Ok(())
 }
 
-async fn fetch_logs(
+pub(crate) async fn fetch_logs(
     signature: Signature,
     rpc_client: &RpcClient,
 ) -> eyre::Result<SolanaTransaction> {
     use solana_client::rpc_config::RpcTransactionConfig;
     let config = RpcTransactionConfig {
-        encoding: Some(UiTransactionEncoding::Base64),
+        encoding: Some(UiTransactionEncoding::Binary),
         commitment: Some(CommitmentConfig::confirmed()),
         max_supported_transaction_version: Some(0),
     };
@@ -58,7 +58,7 @@ async fn fetch_logs(
 
     let meta = transaction_with_meta
         .meta
-        .ok_or_eyre("metadat not included with logs")?;
+        .ok_or_eyre("metadata not included with logs")?;
 
     let OptionSerializer::Some(logs) = meta.log_messages else {
         eyre::bail!("logs not included");
@@ -72,6 +72,7 @@ async fn fetch_logs(
         logs,
         slot,
         timestamp: block_time.and_then(|secs| DateTime::from_timestamp(secs, 0)),
+        cost_in_lamports: meta.fee,
     };
 
     Ok(transaction)

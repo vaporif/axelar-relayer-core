@@ -15,7 +15,10 @@ relayer-engine.workspace = true
 gmp-gateway.workspace = true
 tracing.workspace = true
 eyre.workspace = true
+bs58.workspace = true
 solana-sdk.workspace = true
+axelar-message-primitives.workspace = true
+axelar-rkyv-encoding.workspace = true
 
 [dev-dependencies]
 base64.workspace = true

@@ -140,6 +140,10 @@ license-files = []
 crate = "axelar-message-primitives"
 expression = "MIT"
 license-files = []
+[[licenses.clarify]]
+crate = "axelar-executable"
+expression = "MIT"
+license-files = []
 
 [[licenses.clarify]]
 # The package spec the clarification applies to

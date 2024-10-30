@@ -10,7 +10,10 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    Deny,
+    Deny {
+        #[clap(last = true)]
+        args: Vec<String>,
+    },
     Test {
         #[clap(short, long, default_value_t = false)]
         coverage: bool,
@@ -29,10 +32,10 @@ fn main() -> eyre::Result<()> {
     let args = Args::parse();
 
     match args.command {
-        Commands::Deny => {
+        Commands::Deny { args } => {
             println!("cargo deny");
             cmd!(sh, "cargo install cargo-deny").run()?;
-            cmd!(sh, "cargo deny check").run()?;
+            cmd!(sh, "cargo deny check {args...}").run()?;
         }
         Commands::Test { args, coverage } => {
             println!("cargo test");

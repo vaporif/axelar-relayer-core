@@ -30,10 +30,12 @@ async fn main() {
         &config.solana_listener_component,
         &config.amplifier_component,
     );
+    let name_on_amplifier = config.amplifier_component.chain.clone();
     let (amplifier_component, amplifier_client, amplifier_task_receiver) =
         Amplifier::new(config.amplifier_component);
     let gateway_task_processor = solana_gateway_task_processor::SolanaTxPusher::new(
         config.solana_gateway_task_processor,
+        name_on_amplifier.clone(),
         Arc::clone(&rpc_client),
         amplifier_task_receiver,
     );

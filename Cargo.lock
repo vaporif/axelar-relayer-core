@@ -656,6 +656,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
+name = "axelar-executable"
+version = "0.1.0"
+source = "git+https://github.com/eigerco/solana-axelar.git?branch=main#09c8619fb9dc3ea61cf855150886266f01f208a7"
+dependencies = [
+ "axelar-message-primitives",
+ "axelar-rkyv-encoding",
+ "borsh 1.5.1",
+ "gmp-gateway",
+ "solana-program",
+]
+
+[[package]]
 name = "axelar-message-primitives"
 version = "0.1.0"
 source = "git+https://github.com/eigerco/solana-axelar.git?branch=main#09c8619fb9dc3ea61cf855150886266f01f208a7"
@@ -5409,7 +5421,10 @@ dependencies = [
 name = "solana-event-forwarder"
 version = "0.1.0"
 dependencies = [
+ "axelar-message-primitives",
+ "axelar-rkyv-encoding",
  "base64 0.22.1",
+ "bs58",
  "eyre",
  "futures",
  "gmp-gateway",
@@ -5428,6 +5443,7 @@ version = "0.1.0"
 dependencies = [
  "amplifier-api",
  "async-trait",
+ "axelar-executable",
  "axelar-rkyv-encoding",
  "bs58",
  "common-serde-utils",
@@ -5436,6 +5452,7 @@ dependencies = [
  "futures",
  "gmp-gateway",
  "mockall",
+ "num-traits",
  "relayer-amplifier-api-integration",
  "relayer-engine",
  "serde",
@@ -7367,7 +7384,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]

@@ -76,6 +76,7 @@ effective-tx-sender = { path = "crates/effective-tx-sender" }
 # Solana Gateway
 gmp-gateway = { git = "https://github.com/eigerco/solana-axelar.git", branch = "main", features = ["no-entrypoint"] }
 axelar-rkyv-encoding = { git = "https://github.com/eigerco/solana-axelar.git", branch = "main" }
+axelar-message-primitives = { git = "https://github.com/eigerco/solana-axelar.git", branch = "main" }
 axelar-executable = { git = "https://github.com/eigerco/solana-axelar.git", branch = "main" }
 
 # CLI
@@ -100,6 +101,7 @@ quanta = "0.12"
 backoff = { version = "0.4", features = ["tokio"] }
 indoc = "2"
 itertools = "0.12"
+num-traits = "0.2"
 
 # Serde
 serde = { version = "1", features = ["derive"] }

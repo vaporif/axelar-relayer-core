@@ -25,6 +25,8 @@ pub struct SolanaTransaction {
     pub logs: Vec<String>,
     /// the slot number of the tx
     pub slot: u64,
+    /// How expensive was the transaction expressed in lamports
+    pub cost_in_lamports: u64,
 }
 
 pub(crate) type MessageSender = futures::channel::mpsc::UnboundedSender<SolanaTransaction>;

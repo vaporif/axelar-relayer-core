@@ -6,7 +6,7 @@ use futures_concurrency::future::FutureExt as _;
 use quanta::Upkeep;
 use tracing::{info_span, Instrument as _};
 
-use crate::{config, healthcheck, listener, subscriber};
+use crate::{config, from_amplifier, healthcheck, to_amplifier};
 
 /// A valid command that the Amplifier component can act upon
 #[derive(Debug)]
@@ -83,20 +83,14 @@ impl Amplifier {
             healthcheck::process_healthcheck(self.config.clone(), clock, client.clone())
                 .instrument(info_span!("healthcheck"))
                 .in_current_span();
-        let to_amplifier_msgs = subscriber::process_msgs_to_amplifier(
-            self.config.clone(),
-            self.receiver,
-            client.clone(),
-        )
-        .instrument(info_span!("subscriber"))
-        .in_current_span();
-        let from_amplifier_msgs = listener::process_msgs_from_amplifier(
-            self.config.clone(),
-            client.clone(),
-            self.sender.clone(),
-        )
-        .instrument(info_span!("listener"))
-        .in_current_span();
+        let to_amplifier_msgs =
+            to_amplifier::process(self.config.clone(), self.receiver, client.clone())
+                .instrument(info_span!("to amplifier"))
+                .in_current_span();
+        let from_amplifier_msgs =
+            from_amplifier::process(self.config.clone(), client.clone(), self.sender.clone())
+                .instrument(info_span!("from amplifier"))
+                .in_current_span();
 
         // await tasks until one of them exits (fatal)
         healthcheck

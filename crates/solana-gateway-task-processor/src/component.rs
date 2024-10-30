@@ -12,6 +12,7 @@ use futures::StreamExt as _;
 use gmp_gateway::commands::OwnedCommand;
 use gmp_gateway::state::GatewayApprovedCommand;
 use gmp_gateway::{hasher_impl, instructions};
+use num_traits::FromPrimitive as _;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_response::RpcSimulateTransactionResult;
 use solana_sdk::instruction::{Instruction, InstructionError};
@@ -21,7 +22,7 @@ use solana_sdk::signature::{Keypair, Signature};
 use solana_sdk::signer::Signer as _;
 use solana_sdk::transaction::TransactionError;
 use tokio::task::JoinSet;
-use tracing::{instrument, Instrument as _};
+use tracing::{info_span, instrument, Instrument as _};
 
 use crate::config;
 
@@ -29,6 +30,7 @@ use crate::config;
 /// The transactions to push are dependant on the events that the Amplifier API will provide
 pub struct SolanaTxPusher {
     config: config::Config,
+    name_on_amplifier: String,
     rpc_client: Arc<RpcClient>,
     task_receiver: relayer_amplifier_api_integration::AmplifierTaskReceiver,
 }
@@ -46,11 +48,13 @@ impl SolanaTxPusher {
     #[must_use]
     pub const fn new(
         config: config::Config,
+        name_on_amplifier: String,
         rpc_client: Arc<RpcClient>,
         task_receiver: relayer_amplifier_api_integration::AmplifierTaskReceiver,
     ) -> Self {
         Self {
             config,
+            name_on_amplifier,
             rpc_client,
             task_receiver,
         }
@@ -120,12 +124,14 @@ impl SolanaTxPusher {
         let config_metadata = ConfigMetadata {
             gateway_root_pda,
             domain_separator: root_config.domain_separator,
+            name_of_the_solana_chain: self.name_on_amplifier.clone(),
         };
         Ok(config_metadata)
     }
 }
 
 struct ConfigMetadata {
+    name_of_the_solana_chain: String,
     gateway_root_pda: Pubkey,
     domain_separator: [u8; 32],
 }
@@ -145,6 +151,10 @@ async fn process_task(
     #[expect(
         clippy::todo,
         reason = "fine for the time being, will be refactored later"
+    )]
+    #[expect(
+        clippy::unreachable,
+        reason = "will be removed in the future, only there because of outdated gateway API"
     )]
     match task.task {
         Verify(_verify_task) => todo!(),
@@ -191,7 +201,86 @@ async fn process_task(
                 }
             }
         }
-        Execute(_execute_task) => todo!(),
+        Execute(execute_task) => {
+            // communicate with the destination program
+            async {
+                let payload = execute_task.payload;
+                let message = axelar_rkyv_encoding::types::Message::new(
+                    axelar_rkyv_encoding::types::CrossChainId::new(
+                        execute_task.message.source_chain,
+                        execute_task.message.message_id.0,
+                    ),
+                    execute_task.message.source_address,
+                    metadata.name_of_the_solana_chain.clone(),
+                    execute_task.message.destination_address,
+                    execute_task
+                        .message
+                        .payload_hash
+                        .try_into()
+                        .unwrap_or_default(),
+                );
+
+                // this interface will be refactored in the next gateway version
+                let command = OwnedCommand::ApproveMessage(message);
+                let (gateway_approved_message_pda, _, _) =
+                    GatewayApprovedCommand::pda(&gateway_root_pda, &command);
+                let OwnedCommand::ApproveMessage(message) = command else {
+                    unreachable!()
+                };
+                tracing::debug!(?gateway_approved_message_pda, "approved message PDA");
+
+                let ix = axelar_executable::construct_axelar_executable_ix(
+                    message,
+                    payload,
+                    gateway_approved_message_pda,
+                    gateway_root_pda,
+                )?;
+                let send_transaction_result =
+                    send_transaction(solana_rpc_client, keypair, ix).await;
+
+                let Err(err) = send_transaction_result else {
+                    // tx was successfully executed
+                    return Ok(())
+                };
+
+                // tx was not executed -- inspect root cause
+                let ComputeBudgetError::SimulationError(ref simulation) = err else {
+                    // some kid of irrecoverable error
+                    return Err(eyre::Error::from(err))
+                };
+                tracing::warn!(?simulation.err,"simulation err");
+
+                // NOTE: this error makes it look like the command is not approved, but in fact it's
+                // the error that is returned if a message was approved & executed.
+                // This will be altered in the future Gateway impl
+                let command_already_executed_error = simulation
+                    .err
+                    .as_ref()
+                    .and_then(|err| {
+                        if let TransactionError::InstructionError(
+                            1, // <-- 0th idx is the ComputeBudget prefix
+                            InstructionError::Custom(err_code),
+                        ) = *err
+                        {
+                            return gmp_gateway::error::GatewayError::from_u32(err_code)
+                        }
+                        None
+                    })
+                    .is_some_and(|received_err| {
+                        gmp_gateway::error::GatewayError::GatewayCommandNotApproved == received_err
+                    });
+                if command_already_executed_error {
+                    tracing::warn!("message already executed");
+                    return eyre::Result::Ok(());
+                }
+
+                // Return the simulation error
+                Err(eyre::Error::from(err))
+            }
+            .instrument(info_span!("execute task"))
+            .in_current_span()
+            .await?;
+        }
         Refund(_refund_task) => todo!(),
     };
 
@@ -211,7 +300,7 @@ struct ProcessMessages<'a> {
 }
 
 impl<'a> ProcessMessages<'a> {
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, name = "approve messages flow")]
     async fn execute(&self) -> eyre::Result<()> {
         let execute_data_pda = InitializeApproveMessagesExecuteData::builder()
             .signer(self.signer)
@@ -222,6 +311,8 @@ impl<'a> ProcessMessages<'a> {
             .keypair(self.keypair)
             .build()
             .execute()
+            .instrument(info_span!("init execute data"))
+            .in_current_span()
             .await?;
 
         // Compose messages
@@ -245,7 +336,7 @@ impl<'a> ProcessMessages<'a> {
 
                     let Err(err) = send_transaction_result else {
                         // tx was successfully executed
-                        return Ok(execute_data_pda)
+                        return Ok(approved_message_pda)
                     };
 
                     // tx was not executed -- inspect root cause
@@ -254,6 +345,7 @@ impl<'a> ProcessMessages<'a> {
                         return Err(eyre::Error::from(err))
                     };
 
+                    // this is the error for when a message PDA was already registered
                     if matches!(
                         simulation.err,
                         Some(TransactionError::InstructionError(
@@ -270,7 +362,9 @@ impl<'a> ProcessMessages<'a> {
                 .instrument(tracing::info_span!(
                     "registering command PDA",
                     ?approved_message_pda
-                ));
+                ))
+                .in_current_span();
+
                 Some(output)
             })
             .collect::<FuturesUnordered<_>>();
@@ -290,6 +384,7 @@ impl<'a> ProcessMessages<'a> {
             .keypair(self.keypair)
             .build()
             .execute()
+            .instrument(info_span!("verify signatures"))
             .await?;
 
         Ok(())

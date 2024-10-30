@@ -2,10 +2,11 @@
 //! Contsructed form the following API spec [link](https://github.com/axelarnetwork/axelar-eds-mirror/blob/main/oapi/gmp/schema.yaml)
 
 pub use big_int::BigInt;
-use bnum::types::U256;
+pub use bnum;
 use chrono::{DateTime, Utc};
 pub use id::*;
 use serde::{Deserialize, Deserializer, Serialize};
+use typed_builder::TypedBuilder;
 
 /// Represents an address as a non-empty string.
 pub type Address = String;
@@ -122,81 +123,86 @@ pub enum MessageExecutionStatus {
 }
 
 /// Represents metadata associated with an event.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EventMetadata {
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+pub struct EventMetadata<T> {
     /// tx id of the underlying event
     #[serde(rename = "txID", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub tx_id: Option<TxId>,
     /// timestamp of the underlying event
     #[serde(rename = "timestamp", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub timestamp: Option<DateTime<Utc>>,
     /// sender address
     #[serde(rename = "fromAddress", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub from_address: Option<Address>,
     /// weather the event is finalized or not
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub finalized: Option<bool>,
+    /// Extra fields that are dependant on the core event
+    #[serde(flatten)]
+    pub extra: T,
 }
 
 /// Specialized metadata for `CallEvent`.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct CallEventMetadata {
-    /// common event data
-    #[serde(flatten)]
-    pub base: EventMetadata,
     /// the message id that's responsible for the event
     #[serde(rename = "parentMessageID", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub parent_message_id: Option<MessageId>,
 }
 
 /// Specialized metadata for `MessageApprovedEvent`.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct MessageApprovedEventMetadata {
-    /// common event data
-    #[serde(flatten)]
-    pub base: EventMetadata,
     /// The command id that corresponds to the approved message
     #[serde(rename = "commandID", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub command_id: Option<CommandId>,
 }
 
 /// Specialized metadata for `MessageExecutedEvent`.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct MessageExecutedEventMetadata {
-    /// common event data
-    #[serde(flatten)]
-    pub base: EventMetadata,
     /// The command id that corresponds to the executed message
     #[serde(rename = "commandID", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub command_id: Option<CommandId>,
     /// The message
     #[serde(rename = "childMessageIDs", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub child_message_ids: Option<Vec<MessageId>>,
 }
 
 /// Specialized metadata for `CannotExecuteMessageEvent`.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct CannotExecuteMessageEventMetadata {
     /// The initiator of the message
     #[serde(rename = "fromAddress", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub from_address: Option<Address>,
     /// timestamp of the event
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub timestamp: Option<DateTime<Utc>>,
 }
 
 /// Represents a token amount, possibly with a token ID.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct Token {
     /// indicates that amount is in native token if left blank
     #[serde(rename = "tokenID", skip_serializing_if = "Option::is_none")]
+    #[builder(default)]
     pub token_id: Option<TokenId>,
     /// the amount in token’s denominator
     pub amount: BigInt,
 }
 
 /// Represents a cross-chain message.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct GatewayV2Message {
     /// the message id of a GMP call
     #[serde(rename = "messageID")]
@@ -220,18 +226,19 @@ pub struct GatewayV2Message {
 }
 
 /// Base struct for events.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EventBase {
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+pub struct EventBase<T = ()> {
     /// The event id
     #[serde(rename = "eventID")]
     pub event_id: EventId,
     /// Metadata of the event
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub meta: Option<EventMetadata>,
+    #[builder(default)]
+    pub meta: Option<EventMetadata<T>>,
 }
 
 /// Represents a Gas Credit Event.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct GasCreditEvent {
     /// Event base
     #[serde(flatten)]
@@ -247,7 +254,7 @@ pub struct GasCreditEvent {
 }
 
 /// Represents a Gas Refunded Event.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct GasRefundedEvent {
     /// Event base
     #[serde(flatten)]
@@ -266,11 +273,11 @@ pub struct GasRefundedEvent {
 }
 
 /// Represents a Call Event.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct CallEvent {
     /// Event base
     #[serde(flatten)]
-    pub base: EventBase,
+    pub base: EventBase<CallEventMetadata>,
     /// The cross chain message
     pub message: GatewayV2Message,
     /// Name of the destination chain
@@ -285,26 +292,47 @@ pub struct CallEvent {
 }
 
 /// Represents a Message Approved Event.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct MessageApprovedEvent {
     /// Event base
     #[serde(flatten)]
-    pub base: EventBase,
+    pub base: EventBase<MessageApprovedEventMetadata>,
     /// The cross chain message
     pub message: GatewayV2Message,
     /// the cost of the approval. (#of approvals in transaction / transaction cost)
     pub cost: Token,
-    /// Event metadata
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub meta: Option<MessageApprovedEventMetadata>,
+}
+
+/// Event that gets emitted upon signer rotatoin
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+pub struct SignersRotatedEvent {
+    /// Event base
+    #[serde(flatten)]
+    pub base: EventBase<SignersRotatedMetadata>,
+    /// the cost of the approval. (#of approvals in transaction / transaction cost)
+    pub cost: Token,
+}
+
+/// Represents extra metadata that can be added to the signers rotated event
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+pub struct SignersRotatedMetadata {
+    /// The hash of the new signer set
+    #[serde(rename = "signerHash")]
+    #[serde(
+        deserialize_with = "serde_utils::base64_decode",
+        serialize_with = "serde_utils::base64_encode"
+    )]
+    pub signer_hash: Vec<u8>,
+    /// The epoch of the new signer set
+    pub epoch: u64,
 }
 
 /// Represents a Message Executed Event.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct MessageExecutedEvent {
     /// Event base
     #[serde(flatten)]
-    pub base: EventBase,
+    pub base: EventBase<MessageExecutedEventMetadata>,
     /// message id
     #[serde(rename = "messageID")]
     pub message_id: MessageId,
@@ -315,17 +343,14 @@ pub struct MessageExecutedEvent {
     pub status: MessageExecutionStatus,
     /// the cost of the transaction containing the execution
     pub cost: Token,
-    /// event metadata
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub meta: Option<MessageExecutedEventMetadata>,
 }
 
 /// Represents a Cannot Execute Message Event.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct CannotExecuteMessageEvent {
-    /// tevent base
+    /// Event base
     #[serde(flatten)]
-    pub base: EventBase,
+    pub base: EventBase<CannotExecuteMessageEventMetadata>,
     /// task id
     #[serde(rename = "taskItemID")]
     pub task_item_id: TaskItemId,
@@ -333,9 +358,6 @@ pub struct CannotExecuteMessageEvent {
     pub reason: CannotExecuteMessageReason,
     /// details of the error
     pub details: String,
-    /// event metadata
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub meta: Option<CannotExecuteMessageEventMetadata>,
 }
 
 /// Represents a generic Event, which can be any of the specific event types.
@@ -354,24 +376,26 @@ pub enum Event {
     MessageExecuted(MessageExecutedEvent),
     /// cannot execute message event
     CannotExecuteMessage(CannotExecuteMessageEvent),
+    /// Signers have been rotated
+    SignersRotated(SignersRotatedEvent),
 }
 
 /// Represents the request payload for posting events.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct PublishEventsRequest {
     /// list of events to publish
     pub events: Vec<Event>,
 }
 
 /// Base struct for publish event result items.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct PublishEventResultItemBase {
     /// index of the event
     pub index: usize,
 }
 
 /// Represents an accepted publish event result.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct PublishEventAcceptedResult {
     /// event base
     #[serde(flatten)]
@@ -379,7 +403,7 @@ pub struct PublishEventAcceptedResult {
 }
 
 /// Represents an error in publishing an event.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct PublishEventErrorResult {
     /// event base
     #[serde(flatten)]
@@ -401,14 +425,14 @@ pub enum PublishEventResultItem {
 }
 
 /// Represents the response from posting events.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct PublishEventsResult {
     /// The result array
     pub results: Vec<PublishEventResultItem>,
 }
 
 /// Represents a Verify Task.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct VerifyTask {
     /// the cross chain message
     pub message: GatewayV2Message,
@@ -421,7 +445,7 @@ pub struct VerifyTask {
 }
 
 /// Represents a Gateway Transaction Task.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct GatewayTransactionTask {
     /// the execute data for the gateway
     #[serde(
@@ -433,7 +457,7 @@ pub struct GatewayTransactionTask {
 }
 
 /// Represents an Execute Task.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct ExecuteTask {
     /// the cross-chain message
     pub message: GatewayV2Message,
@@ -449,7 +473,7 @@ pub struct ExecuteTask {
 }
 
 /// Represents a Refund Task.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct RefundTask {
     /// the cross-chain message
     pub message: GatewayV2Message,
@@ -476,7 +500,7 @@ pub enum Task {
 }
 
 /// Represents an individual Task Item.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct TaskItem {
     /// UUID of current task
     pub id: TaskItemId,
@@ -488,7 +512,7 @@ pub struct TaskItem {
 }
 
 /// Represents the response from fetching tasks.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct GetTasksResult {
     /// Array of tasks matching the filters
     pub tasks: Vec<TaskItem>,
@@ -511,11 +535,11 @@ mod big_int {
 
     /// Represents a big integer as a string matching the pattern `^(0|[1-9]\d*)$`.
     #[derive(Debug, PartialEq, Eq)]
-    pub struct BigInt(pub bnum::types::U256);
+    pub struct BigInt(pub bnum::types::I512);
     impl BigInt {
         /// Creates a new [`BigInt`].
         #[must_use]
-        pub const fn new(num: U256) -> Self {
+        pub const fn new(num: bnum::types::I512) -> Self {
             Self(num)
         }
 
@@ -542,7 +566,7 @@ mod big_int {
             D: Deserializer<'de>,
         {
             let string = String::deserialize(deserializer)?;
-            let number = bnum::types::U256::parse_str_radix(string.as_str(), 10);
+            let number = bnum::types::I512::parse_str_radix(string.as_str(), 10);
             Ok(Self(number))
         }
     }
@@ -623,6 +647,7 @@ mod tests {
                         .ok(),
                     from_address: Some("0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned()),
                     finalized: Some(true),
+                    extra: (),
                 }),
             },
             message_id: MessageId::new(
@@ -676,6 +701,7 @@ mod tests {
                         .ok(),
                     from_address: Some("0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned()),
                     finalized: Some(true),
+                    extra: (),
                 }),
             },
             message_id: MessageId::new(
@@ -827,8 +853,9 @@ mod tests {
         .unwrap()
         .into_bytes();
 
-        let type_in_rust = PublishEventsRequest {
-            events: vec![Event::Call(CallEvent {
+        let type_in_rust =
+            PublishEventsRequest {
+                events: vec![Event::Call(CallEvent {
                 base: EventBase {
                     event_id: EventId::new(
                         "0x9b447614be654eeea0c5de0319b3f2c243ab45bebd914a1f7319f4bb599d8968",
@@ -844,6 +871,7 @@ mod tests {
                             .ok(),
                         from_address: Some("0xba76c6980428A0b10CFC5d8ccb61949677A61233".to_owned()),
                         finalized: Some(true),
+                        extra: CallEventMetadata { parent_message_id: None },
                     }),
                 },
                 message: GatewayV2Message {
@@ -859,7 +887,7 @@ mod tests {
                 destination_chain: "test-avalanche".to_owned(),
                 payload: payload_bytes(),
             })],
-        };
+            };
 
         test_serialization(&type_in_rust, reference_json);
     }
@@ -922,7 +950,6 @@ mod tests {
             task_item_id: TaskItemId("550e8400-e29b-41d4-a716-446655440000".parse().unwrap()),
             reason: CannotExecuteMessageReason::InsufficientGas,
             details: "Not enough gas to execute the message".to_owned(),
-            meta: None,
         });
 
         test_serialization(&type_in_rust, reference_json);
@@ -937,5 +964,61 @@ mod tests {
         };
 
         test_serialization(&type_in_rust, reference_json.to_vec());
+    }
+
+    #[test]
+    fn test_deserialize_tasks_response() {
+        // Given JSON
+        let mut json_data = r#"
+        {
+            "tasks": [
+                {
+                    "id": "01924c97-a26b-7eff-8289-c3bdf2b37446",
+                    "task": {
+                        "executeData": "YXZhbGFuY2hlLWZ1amkweDUxZWM2MmI0YWI0YzY1OTM4YTNmZTNlMjlhN2Y4OTMwYzkyODk3MWI1ZTc5MTQxODA4ZjI3OTZlYjgxYzU4NzItMDB4NDM2NmEwNDFiQTQyMzdGOWI3NTUzQjhhNzNlOEFGMWYyZWUxRjRkMXNvbGFuYS1kZXZuZXRtZW1RdUtNR0JvdW5od1A1eXc5cW9tWU5VOTdFcWN4OWM0WHdEVW82dUdWzjepvJoJHFQzw1uyXXd48x3os6pzUWvq8CLZoHNYpLgOAAAALP///0QAAAAy////KgAAAG7///8NAAAAkP///ysAAACV////AAAAAAAAAAABAAAAAAOkQJ+JUVaKfZGWXgR9L4KOCebkpdpCe1FfVVxF9+CBMwEAtcL4qBLWMHodl+/x6UzKZ+1v6InbUUK82UTyJPGkN2Vev/IRM1aZxgGVS97+qW8mfehYwHvk69Ei0masgbXJYhwBAAAAAAAAAAAAAAAAAAAAAAAAAAAAADD///8BAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAdF8wAAAAAAB0XzAAAAAAAAEAAAAg////AQAAAAAAAAA="
+                    },
+                    "timestamp": "2024-10-02T09:37:39.608929Z",
+                    "type": "GATEWAY_TX"
+                },
+                {
+                    "id": "0192d87b-faab-7dd7-9750-f6261541cf2b",
+                    "task": {
+                        "executeData": "YXZhbGFuY2hlLWZ1amkweDFiM2RkNmI2OTYyZmE3OWQ1NzFmNjAxMjhiMGY0OTIyNzQ4ODM1NDNjNGQ0MDg5YTdjMzZmYjQ3NGFmNDVkZWItMDB4RTJjZEI0MDQwMDM0ZTA1Yjc4RDUzYUMzMjIwNWEzNDdhMjEzYzkwNXNvbGFuYS1kZXZuZXRtZW1RdUtNR0JvdW5od1A1eXc5cW9tWU5VOTdFcWN4OWM0WHdEVW82dUdWbom8u2+OKANkGqUpecD+cRHd4C+YjMPyDduiSvwOm4QOAAAALP///0QAAAAy////KgAAAG7///8NAAAAkP///ysAAACV////AAAAAAAAAAABAAAAAAOkQJ+JUVaKfZGWXgR9L4KOCebkpdpCe1FfVVxF9+CBMwEApmIkQcyrccWA6IGBMyDrCbWfDlSpCkBEzVzAz3FFd68bCnvViSwHWdx71h/6JYKOii2fFP4haZrn2c3+Wkip6xwBAAAAAAAAAAAAAAAAAAAAAAAAAAAAADD///8BAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAdF8wAAAAAAB0XzAAAAAAAAEAAAAg////AQAAAAAAAAA="
+                    },
+                    "timestamp": "2024-10-29T13:34:16.754126Z",
+                    "type": "GATEWAY_TX"
+                },
+                {
+                    "id": "0192d881-9433-7831-8c67-98eaa7727676",
+                    "task": {
+                        "availableGasBalance": {
+                            "amount": "-864042"
+                        },
+                        "message": {
+                            "destinationAddress": "memQuKMGBounhwP5yw9qomYNU97Eqcx9c4XwDUo6uGV",
+                            "messageID": "0x1b3dd6b6962fa79d571f60128b0f492274883543c4d4089a7c36fb474af45deb-0",
+                            "payloadHash": "bom8u2+OKANkGqUpecD+cRHd4C+YjMPyDduiSvwOm4Q=",
+                            "sourceAddress": "0xE2cdB4040034e05b78D53aC32205a347a213c905",
+                            "sourceChain": "avalanche-fuji"
+                        },
+                        "payload": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACWhlbGxv8J+QqgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHo0Z7lybs+RcfP+DxXZV1GDSdTSXtHjzHyWWXizQKXPQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE="
+                    },
+                    "timestamp": "2024-10-29T13:40:23.732532Z",
+                    "type": "EXECUTE"
+                },
+                {
+                    "id": "0192d882-0310-780c-bda4-47770cce7248",
+                    "task": {
+                        "executeData": "YXZhbGFuY2hlLWZ1amkweGVkZTFkYWY1ZmEyZjJkZTAwNGQ0NzljMjRhMjJmNDI5YmFiOGZhOGQwMTgxOWNhNzZmN2JlN2VmYjNmNGUyZjUtMDB4RTJjZEI0MDQwMDM0ZTA1Yjc4RDUzYUMzMjIwNWEzNDdhMjEzYzkwNXNvbGFuYS1kZXZuZXRtZW1RdUtNR0JvdW5od1A1eXc5cW9tWU5VOTdFcWN4OWM0WHdEVW82dUdWbom8u2+OKANkGqUpecD+cRHd4C+YjMPyDduiSvwOm4QOAAAALP///0QAAAAy////KgAAAG7///8NAAAAkP///ysAAACV////AAAAAAAAAAABAAAAAAOkQJ+JUVaKfZGWXgR9L4KOCebkpdpCe1FfVVxF9+CBMwEAzQXXxwk7hn3x8p6/PzqdKGric/f1xyVOxChGshfK1G08/QWRtLexC6M5+aAYadUXaJkGYmYP0F0bPhYDJ0be4xwBAAAAAAAAAAAAAAAAAAAAAAAAAAAAADD///8BAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAdF8wAAAAAAB0XzAAAAAAAAEAAAAg////AQAAAAAAAAA="
+                    },
+                    "timestamp": "2024-10-29T13:40:52.1338Z",
+                    "type": "GATEWAY_TX"
+                }
+            ]
+        }
+        "#.to_owned()
+        .into_bytes();
+
+        let _deserialized: GetTasksResult = from_slice(json_data.as_mut_slice()).unwrap();
     }
 }

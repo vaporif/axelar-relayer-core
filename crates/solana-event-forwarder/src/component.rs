@@ -1,11 +1,14 @@
 use core::future::Future;
 use core::pin::Pin;
 
+use axelar_message_primitives::U256;
+use axelar_rkyv_encoding::rkyv::{self, Deserialize as _};
 use futures::{SinkExt as _, StreamExt as _};
 use gmp_gateway::events::{EventContainer, GatewayEvent};
 use relayer_amplifier_api_integration::amplifier_api::types::{
-    CallEvent, Event, EventBase, EventId, EventMetadata, GatewayV2Message, MessageId,
-    PublishEventsRequest, TxId,
+    BigInt, CallEvent, CallEventMetadata, CommandId, Event, EventBase, EventId, EventMetadata,
+    GatewayV2Message, MessageApprovedEvent, MessageApprovedEventMetadata, MessageId,
+    PublishEventsRequest, SignersRotatedEvent, SignersRotatedMetadata, Token, TxEvent, TxId,
 };
 use relayer_amplifier_api_integration::AmplifierCommand;
 use solana_sdk::pubkey::Pubkey;
@@ -49,24 +52,37 @@ impl SolanaEventForwarder {
 
         while let Some(message) = self.solana_listener_client.log_receiver.next().await {
             let gateway_program_stack = build_program_event_stack(&match_context, &message.logs);
+            let total_cost = message.cost_in_lamports;
 
-            // After processing all logs, collect events from successful invocations
-            let events_to_send = gateway_program_stack
+            // Collect all successful events into a vector
+            let events_vec = gateway_program_stack
                 .into_iter()
                 .filter_map(|x| {
                     if let ProgramInvocationState::Succeeded(events) = x {
-                        return Some(events)
+                        Some(events)
+                    } else {
+                        None
                     }
-                    None
                 })
                 .flatten()
+                .collect::<Vec<_>>();
+
+            // Calculate the number of events
+            let num_events = events_vec.len();
+
+            // Compute the price per event, handling the case where num_events is zero
+            let price_for_event = total_cost.checked_div(num_events.try_into()?).unwrap_or(0);
+
+            // Map the events to amplifier events with the calculated price
+            let events_to_send = events_vec
+                .into_iter()
                 .filter_map(|(log_index, event)| {
-                    // transform gateway events to amplifier events
                     map_gateway_event_to_amplifier_event(
                         self.config.source_chain_name.as_str(),
                         &event,
                         &message,
                         log_index,
+                        price_for_event,
                     )
                 })
                 .collect::<Vec<_>>();
@@ -177,55 +193,168 @@ fn handle_success_log(program_stack: &mut Vec<ProgramInvocationState>) {
     }
 }
 
+#[expect(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    reason = "easier to read when all the transformations in one place rather than scattered around"
+)]
 fn map_gateway_event_to_amplifier_event(
     source_chain: &str,
     event: &EventContainer,
     message: &solana_listener::SolanaTransaction,
     log_index: usize,
+    price_per_event_in_lamports: u64,
 ) -> Option<Event> {
     use gmp_gateway::events::ArchivedGatewayEvent::{
         CallContract, MessageApproved, MessageExecuted, OperatorshipTransferred, SignersRotated,
     };
-    let parse = event.parse();
-    match *parse {
+    let signature = message.signature.to_string();
+    let event_id = EventId::new(&signature, log_index);
+    let tx_id = TxId(signature.clone());
+
+    #[expect(
+        clippy::little_endian_bytes,
+        reason = "we are guaranteed correct conversion"
+    )]
+    match *event.parse() {
         CallContract(ref call_contract) => {
-            let signature = message.signature.to_string();
-            let event_id = EventId::new(&signature, log_index);
-            let source_address = Pubkey::new_from_array(call_contract.sender).to_string();
             let message_id = MessageId::new(&signature, log_index);
-            let tx_id = TxId(signature);
-            let amplifier_event = Event::Call(CallEvent {
-                base: EventBase {
-                    event_id,
-                    meta: Some(EventMetadata {
-                        tx_id: Some(tx_id),
-                        timestamp: message.timestamp,
-                        from_address: Some(source_address.clone()),
-                        finalized: Some(true),
-                    }),
-                },
-                message: GatewayV2Message {
-                    message_id,
-                    source_chain: source_chain.to_owned(),
-                    source_address,
-                    destination_address: call_contract.destination_address.to_string(),
-                    payload_hash: call_contract.payload_hash.to_vec(),
-                },
-                destination_chain: call_contract.destination_chain.to_string(),
-                payload: call_contract.payload.to_vec(),
-            });
+            let source_address = Pubkey::new_from_array(call_contract.sender).to_string();
+            let amplifier_event = Event::Call(
+                CallEvent::builder()
+                    .base(
+                        EventBase::builder()
+                            .event_id(event_id)
+                            .meta(Some(
+                                EventMetadata::builder()
+                                    .tx_id(Some(tx_id))
+                                    .timestamp(message.timestamp)
+                                    .from_address(Some(source_address.clone()))
+                                    .finalized(Some(true))
+                                    .extra(CallEventMetadata::builder().build())
+                                    .build(),
+                            ))
+                            .build(),
+                    )
+                    .message(
+                        GatewayV2Message::builder()
+                            .message_id(message_id)
+                            .source_chain(source_chain.to_owned())
+                            .source_address(source_address)
+                            .destination_address(call_contract.destination_address.to_string())
+                            .payload_hash(call_contract.payload_hash.to_vec())
+                            .build(),
+                    )
+                    .destination_chain(call_contract.destination_chain.to_string())
+                    .payload(call_contract.payload.to_vec())
+                    .build(),
+            );
             Some(amplifier_event)
         }
         SignersRotated(ref signers) => {
             tracing::info!(?signers, "Signers rotated");
-            None
+
+            let decoded_u256: U256 = signers
+                .new_epoch
+                .deserialize(&mut rkyv::Infallible)
+                .unwrap();
+            let le_bytes = decoded_u256.to_le_bytes();
+            let (le_u64, _) = le_bytes.split_first_chunk::<8>()?;
+            let epoch = u64::from_le_bytes(*le_u64);
+
+            let amplifier_event = Event::SignersRotated(
+                SignersRotatedEvent::builder()
+                    .base(
+                        EventBase::builder()
+                            .event_id(event_id)
+                            .meta(Some(
+                                EventMetadata::builder()
+                                    .tx_id(Some(tx_id))
+                                    .timestamp(message.timestamp)
+                                    .finalized(Some(true))
+                                    .extra(
+                                        SignersRotatedMetadata::builder()
+                                            .signer_hash(signers.new_signers_hash.to_vec())
+                                            .epoch(epoch)
+                                            .build(),
+                                    )
+                                    .build(),
+                            ))
+                            .build(),
+                    )
+                    .cost(
+                        Token::builder()
+                            .token_id(None)
+                            .amount(BigInt::from_u64(price_per_event_in_lamports))
+                            .build(),
+                    )
+                    .build(),
+            );
+            Some(amplifier_event)
         }
         MessageApproved(ref approved_message) => {
+            let command_id = approved_message.command_id;
+            let message_id = TxEvent(
+                String::from_utf8(approved_message.message_id.to_vec())
+                    .expect("message id is not a valid String"),
+            );
+            let amplifier_event = Event::MessageApproved(
+                MessageApprovedEvent::builder()
+                    .base(
+                        EventBase::builder()
+                            .event_id(event_id)
+                            .meta(Some(
+                                EventMetadata::builder()
+                                    .tx_id(Some(tx_id))
+                                    .timestamp(message.timestamp)
+                                    .from_address(Some(
+                                        String::from_utf8(approved_message.source_address.to_vec())
+                                            .expect("source address is not a valid string"),
+                                    ))
+                                    .finalized(Some(true))
+                                    .extra(
+                                        MessageApprovedEventMetadata::builder()
+                                            .command_id(Some(CommandId(
+                                                bs58::encode(command_id).into_string(),
+                                            )))
+                                            .build(),
+                                    )
+                                    .build(),
+                            ))
+                            .build(),
+                    )
+                    .message(
+                        GatewayV2Message::builder()
+                            .message_id(message_id)
+                            .source_chain(
+                                String::from_utf8(approved_message.source_chain.to_vec())
+                                    .expect("invalid source chain"),
+                            )
+                            .source_address(
+                                String::from_utf8(approved_message.source_address.to_vec())
+                                    .expect("invalid source address"),
+                            )
+                            .destination_address(
+                                Pubkey::new_from_array(approved_message.destination_address)
+                                    .to_string(),
+                            )
+                            .payload_hash(approved_message.payload_hash.to_vec())
+                            .build(),
+                    )
+                    .cost(
+                        Token::builder()
+                            .amount(BigInt::from_u64(price_per_event_in_lamports))
+                            .build(),
+                    )
+                    .build(),
+            );
             tracing::info!(?approved_message, "Message approved");
-            None
+            Some(amplifier_event)
         }
-        MessageExecuted(ref executed_message) => {
-            tracing::info!(?executed_message, "Message executed");
+        MessageExecuted(ref _executed_message) => {
+            tracing::warn!(
+                "current gateway event does not produce enough artifacts to relay this message"
+            );
             None
         }
         OperatorshipTransferred(ref new_operatorship) => {

@@ -11,7 +11,7 @@ use tracing::{info_span, Instrument as _};
 use super::component::{AmplifierCommand, CommandReceiver};
 use super::config::Config;
 
-pub(crate) async fn process_msgs_to_amplifier(
+pub(crate) async fn process(
     config: Config,
     mut receiver: CommandReceiver,
     client: amplifier_api::AmplifierApiClient,

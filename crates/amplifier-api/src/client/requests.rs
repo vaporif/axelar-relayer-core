@@ -69,10 +69,10 @@ impl AmplifierApiRequest for HealthCheck {
 pub struct GetChains<'a> {
     /// The name of the cain that we want to query and get the tasks for
     pub chain: &'a WithTrailingSlash,
-    #[builder(setter(strip_option), default)]
+    #[builder(default)]
     /// The earliers task id
     pub after: Option<TaskItemId>,
-    #[builder(setter(strip_option), default)]
+    #[builder(default)]
     /// The latest task id
     pub before: Option<TaskItemId>,
     /// the amount of results to return

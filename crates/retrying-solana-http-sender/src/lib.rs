@@ -33,7 +33,7 @@ pub fn new_client(config: &Config) -> Arc<RpcClient> {
         config.solana_http_rpc.to_string(),
         config.max_concurrent_rpc_requests,
     );
-    let config = RpcClientConfig::with_commitment(CommitmentConfig::confirmed());
+    let config = RpcClientConfig::with_commitment(CommitmentConfig::finalized());
     let client = RpcClient::new_sender(sender, config);
     Arc::new(client)
 }
