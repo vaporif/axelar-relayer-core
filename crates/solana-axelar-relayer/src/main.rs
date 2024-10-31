@@ -25,6 +25,9 @@ async fn main() {
     let config_file = std::fs::read_to_string(config_file).expect("cannot read config file");
     let config = toml::from_str::<Config>(&config_file).expect("invalid config file");
 
+    let file_based_storage = file_based_storage::MemmapState::new(config.storage_path)
+        .expect("could not init file based storage");
+
     let rpc_client = retrying_solana_http_sender::new_client(&config.solana_rpc);
     let event_forwarder_config = solana_event_forwarder::Config::new(
         &config.solana_listener_component,
@@ -32,12 +35,13 @@ async fn main() {
     );
     let name_on_amplifier = config.amplifier_component.chain.clone();
     let (amplifier_component, amplifier_client, amplifier_task_receiver) =
-        Amplifier::new(config.amplifier_component);
+        Amplifier::new(config.amplifier_component, file_based_storage.clone());
     let gateway_task_processor = solana_gateway_task_processor::SolanaTxPusher::new(
         config.solana_gateway_task_processor,
         name_on_amplifier.clone(),
         Arc::clone(&rpc_client),
         amplifier_task_receiver,
+        file_based_storage,
     );
     let (solana_listener_component, solana_listener_client) = solana_listener::SolanaListener::new(
         config.solana_listener_component,
@@ -80,6 +84,8 @@ pub struct Config {
     pub relayer_engine: relayer_engine::Config,
     /// Shared configuration for the Solana RPC client
     pub solana_rpc: retrying_solana_http_sender::Config,
+    /// Path to the storage configuration file
+    pub storage_path: std::path::PathBuf,
 }
 
 #[expect(
@@ -118,6 +124,8 @@ mod tests {
         let identity = identity_fixture();
         let missed_signature_catchup_strategy = "until_beginning";
         let input = indoc::formatdoc! {r#"
+            storage_path = "./store"
+
             [amplifier_component]
             identity = '''
             {identity}
@@ -172,6 +180,7 @@ mod tests {
                 max_concurrent_rpc_requests,
                 solana_http_rpc: solana_rpc,
             },
+            storage_path: "./store".parse().unwrap(),
         };
         assert_eq!(parsed, expected);
         Ok(())

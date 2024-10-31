@@ -26,6 +26,7 @@ opentelemetry-otlp.workspace = true
 opentelemetry-semantic-conventions.workspace = true
 opentelemetry_sdk.workspace = true
 opentelemetry-appender-tracing.workspace = true
+file-based-storage.workspace = true
 
 [dev-dependencies]
 temp-env.workspace = true

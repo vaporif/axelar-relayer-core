@@ -7,12 +7,13 @@ use std::sync::Arc;
 use amplifier_api::types::TaskItem;
 use axelar_rkyv_encoding::types::{HasheableMessageVec, VerifierSet};
 use effective_tx_sender::ComputeBudgetError;
-use futures::stream::{FusedStream as _, FuturesUnordered};
+use futures::stream::{FusedStream as _, FuturesOrdered, FuturesUnordered};
 use futures::StreamExt as _;
 use gmp_gateway::commands::OwnedCommand;
 use gmp_gateway::state::GatewayApprovedCommand;
 use gmp_gateway::{hasher_impl, instructions};
 use num_traits::FromPrimitive as _;
+use relayer_amplifier_state::State;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_response::RpcSimulateTransactionResult;
 use solana_sdk::instruction::{Instruction, InstructionError};
@@ -21,21 +22,21 @@ use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::{Keypair, Signature};
 use solana_sdk::signer::Signer as _;
 use solana_sdk::transaction::TransactionError;
-use tokio::task::JoinSet;
 use tracing::{info_span, instrument, Instrument as _};
 
 use crate::config;
 
 /// A component that pushes transactions over to the Solana blockchain.
 /// The transactions to push are dependant on the events that the Amplifier API will provide
-pub struct SolanaTxPusher {
+pub struct SolanaTxPusher<S: State> {
     config: config::Config,
     name_on_amplifier: String,
     rpc_client: Arc<RpcClient>,
     task_receiver: relayer_amplifier_api_integration::AmplifierTaskReceiver,
+    state: S,
 }
 
-impl relayer_engine::RelayerComponent for SolanaTxPusher {
+impl<S: State> relayer_engine::RelayerComponent for SolanaTxPusher<S> {
     fn process(self: Box<Self>) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + Send>> {
         use futures::FutureExt as _;
 
@@ -43,7 +44,7 @@ impl relayer_engine::RelayerComponent for SolanaTxPusher {
     }
 }
 
-impl SolanaTxPusher {
+impl<S: State> SolanaTxPusher<S> {
     /// Create a new [`SolanaTxPusher`] component
     #[must_use]
     pub const fn new(
@@ -51,47 +52,52 @@ impl SolanaTxPusher {
         name_on_amplifier: String,
         rpc_client: Arc<RpcClient>,
         task_receiver: relayer_amplifier_api_integration::AmplifierTaskReceiver,
+        state: S,
     ) -> Self {
         Self {
             config,
             name_on_amplifier,
             rpc_client,
             task_receiver,
+            state,
         }
     }
 
     async fn process_internal(self) -> eyre::Result<()> {
         let config_metadata = self.get_config_metadata().await.map(Arc::new)?;
+        let state = self.state.clone();
 
         let keypair = Arc::new(self.config.signing_keypair.insecure_clone());
-        let mut join_set = JoinSet::<eyre::Result<()>>::new();
+        let mut futures_ordered = FuturesOrdered::new();
         let mut rx = self.task_receiver.receiver.fuse();
         let mut task_stream = futures::stream::poll_fn(move |cx| {
             // check if we have new requests to add to the join set
             match rx.poll_next_unpin(cx) {
-                Poll::Ready(Some(command)) => {
-                    // spawn the command on the joinset, returning the error
-                    tracing::info!(?command, "received command from amplifier API");
-                    join_set.spawn({
+                Poll::Ready(Some(task)) => {
+                    // spawn the task on the joinset, returning the error
+                    tracing::info!(?task, "received task from amplifier API");
+                    futures_ordered.push_back({
                         let solana_rpc_client = Arc::clone(&self.rpc_client);
                         let keypair = Arc::clone(&keypair);
                         let config_metadata = Arc::clone(&config_metadata);
                         async move {
-                            process_task(&keypair, &solana_rpc_client, command, &config_metadata)
-                                .await
+                            let command_id = task.id.clone();
+                            let res =
+                                process_task(&keypair, &solana_rpc_client, task, &config_metadata)
+                                    .await;
+                            (command_id, res)
                         }
                     });
                 }
                 Poll::Pending => (),
                 Poll::Ready(None) => {
                     tracing::error!("receiver channel closed");
-                    join_set.abort_all();
                 }
             }
             // check if any background tasks are done
-            match join_set.poll_join_next(cx) {
+            match futures_ordered.poll_next_unpin(cx) {
                 Poll::Ready(Some(res)) => Poll::Ready(Some(res)),
-                // join set returns `Poll::Ready(None)` when it's empty
+                // futures unordered returns `Poll::Ready(None)` when it's empty
                 Poll::Ready(None) => {
                     if rx.is_terminated() {
                         return Poll::Ready(None)
@@ -102,12 +108,9 @@ impl SolanaTxPusher {
             }
         });
 
-        while let Some(task_result) = task_stream.next().await {
-            let Ok(res) = task_result else {
-                tracing::error!(?task_result, "background task panicked");
-                continue;
-            };
-            let Err(err) = res else {
+        while let Some((task_item_id, task_result)) = task_stream.next().await {
+            state.set_latest_processed_task_id(task_item_id)?;
+            let Err(err) = task_result else {
                 continue;
             };
 
@@ -649,7 +652,7 @@ fn get_new_signing_verifier_set_pda(new_verifier_set: &VerifierSet) -> eyre::Res
     Ok(new_signing_verifier_set_pda)
 }
 
-#[instrument(skip_all, ret)]
+#[instrument(skip_all)]
 async fn send_transaction(
     solana_rpc_client: &RpcClient,
     keypair: &Keypair,

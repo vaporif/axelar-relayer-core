@@ -348,7 +348,7 @@ fn map_gateway_event_to_amplifier_event(
                     )
                     .build(),
             );
-            tracing::info!(?approved_message, "Message approved");
+            tracing::info!(message_id = ?approved_message.message_id, "Message approved");
             Some(amplifier_event)
         }
         MessageExecuted(ref _executed_message) => {

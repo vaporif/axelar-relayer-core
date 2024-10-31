@@ -21,6 +21,7 @@ serde.workspace = true
 relayer-engine.workspace = true
 tokio-stream.workspace = true
 common-serde-utils.workspace = true
+relayer-amplifier-state.workspace = true
 
 [lints]
 workspace = true

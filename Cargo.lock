@@ -2085,6 +2085,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28dea519a9695b9977216879a3ebfddf92f1c08c05d984f8996aecd6ecdc811d"
 
 [[package]]
+name = "file-based-storage"
+version = "0.1.0"
+dependencies = [
+ "amplifier-api",
+ "bytemuck",
+ "memmap2 0.9.5",
+ "relayer-amplifier-state",
+ "tracing",
+]
+
+[[package]]
 name = "fixed-hash"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3189,6 +3200,15 @@ name = "memmap2"
 version = "0.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83faa42c0a078c393f6b29d5db232d8be22776a891f8f56e5284faee4a20b327"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "memmap2"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd3f7eed9d3848f8b98834af67102b720745c4ec028fcd0aa0239277e7de374f"
 dependencies = [
  "libc",
 ]
@@ -4351,6 +4371,7 @@ dependencies = [
  "futures",
  "futures-concurrency",
  "quanta",
+ "relayer-amplifier-state",
  "relayer-engine",
  "serde",
  "tokio",
@@ -4358,6 +4379,13 @@ dependencies = [
  "tracing",
  "typed-builder",
  "url",
+]
+
+[[package]]
+name = "relayer-amplifier-state"
+version = "0.1.0"
+dependencies = [
+ "amplifier-api",
 ]
 
 [[package]]
@@ -5288,6 +5316,7 @@ dependencies = [
  "amplifier-api",
  "color-eyre",
  "eyre",
+ "file-based-storage",
  "indoc",
  "opentelemetry",
  "opentelemetry-appender-tracing",
@@ -5454,13 +5483,13 @@ dependencies = [
  "mockall",
  "num-traits",
  "relayer-amplifier-api-integration",
+ "relayer-amplifier-state",
  "relayer-engine",
  "serde",
  "serde_json",
  "solana-client",
  "solana-sdk",
  "solana-transaction-status",
- "tokio",
  "tracing",
  "typed-builder",
 ]
@@ -5827,7 +5856,7 @@ dependencies = [
  "lazy_static",
  "libsecp256k1",
  "log",
- "memmap2",
+ "memmap2 0.5.10",
  "num_enum",
  "pbkdf2 0.11.0",
  "qstring",
@@ -7384,7 +7413,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

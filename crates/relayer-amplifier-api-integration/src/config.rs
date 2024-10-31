@@ -59,6 +59,6 @@ pub(crate) mod config_defaults {
         Some(5)
     }
     pub(crate) const fn get_chains_limit() -> u8 {
-        25
+        4
     }
 }

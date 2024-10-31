@@ -4,6 +4,7 @@ use core::pin::Pin;
 use amplifier_api::types::{PublishEventsRequest, TaskItem};
 use futures_concurrency::future::FutureExt as _;
 use quanta::Upkeep;
+use relayer_amplifier_state::State;
 use tracing::{info_span, Instrument as _};
 
 use crate::{config, from_amplifier, healthcheck, to_amplifier};
@@ -25,10 +26,11 @@ pub(crate) type AmplifierTaskSender = futures::channel::mpsc::UnboundedSender<Ta
 /// - listening for new tasks coming form Amplifeir API (Listener subprocess)
 /// - sending events to the Amplifier API (Subscriber subprocess)
 #[derive(Debug)]
-pub struct Amplifier {
+pub struct Amplifier<S: State> {
     config: config::Config,
     receiver: CommandReceiver,
     sender: AmplifierTaskSender,
+    state: S,
 }
 
 /// Utility client used for communicating with the `Amplifier` instance
@@ -45,7 +47,10 @@ pub struct AmplifierTaskReceiver {
     pub receiver: futures::channel::mpsc::UnboundedReceiver<TaskItem>,
 }
 
-impl relayer_engine::RelayerComponent for Amplifier {
+impl<S> relayer_engine::RelayerComponent for Amplifier<S>
+where
+    S: State,
+{
     fn process(self: Box<Self>) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + Send>> {
         use futures::FutureExt as _;
 
@@ -53,17 +58,24 @@ impl relayer_engine::RelayerComponent for Amplifier {
     }
 }
 
-impl Amplifier {
+impl<S> Amplifier<S>
+where
+    S: State,
+{
     /// Instantiate a new Amplifier using the pre-configured configuration.
     ///
     /// The returned variable also returns a helper client that encompasses ways to communicate with
     /// the underlying Amplifier instance.
     #[must_use]
-    pub fn new(config: config::Config) -> (Self, AmplifierCommandClient, AmplifierTaskReceiver) {
+    pub fn new(
+        config: config::Config,
+        state: S,
+    ) -> (Self, AmplifierCommandClient, AmplifierTaskReceiver) {
         let (command_tx, command_rx) = futures::channel::mpsc::unbounded();
         let (task_tx, task_rx) = futures::channel::mpsc::unbounded();
         let this = Self {
             config,
+            state,
             sender: task_tx,
             receiver: command_rx,
         };
@@ -87,10 +99,14 @@ impl Amplifier {
             to_amplifier::process(self.config.clone(), self.receiver, client.clone())
                 .instrument(info_span!("to amplifier"))
                 .in_current_span();
-        let from_amplifier_msgs =
-            from_amplifier::process(self.config.clone(), client.clone(), self.sender.clone())
-                .instrument(info_span!("from amplifier"))
-                .in_current_span();
+        let from_amplifier_msgs = from_amplifier::process(
+            self.config.clone(),
+            client.clone(),
+            self.sender.clone(),
+            self.state,
+        )
+        .instrument(info_span!("from amplifier"))
+        .in_current_span();
 
         // await tasks until one of them exits (fatal)
         healthcheck

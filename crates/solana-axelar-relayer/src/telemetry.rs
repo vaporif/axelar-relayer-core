@@ -105,6 +105,7 @@ fn setup_subscriber(
         .add_directive("solana_event_forwarder=info".parse()?)
         .add_directive("solana_gateway_task_processor=info".parse()?)
         .add_directive("effective_tx_sender=info".parse()?)
+        .add_directive("file_based_storage=info".parse()?)
         .add_directive("hyper=error".parse()?)
         .add_directive("tonic=error".parse()?)
         .add_directive("reqwest=error".parse()?)

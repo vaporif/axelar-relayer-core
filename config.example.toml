@@ -1,3 +1,4 @@
+storage_path = "./storage"
 [amplifier_component]
 # pem format cert
 identity = '''

@@ -64,6 +64,8 @@ unused_must_use = { level = "deny", priority = -1 }
 # Our crates
 relayer-engine = { path = "crates/relayer-engine" }
 relayer-amplifier-api-integration = { path = "crates/relayer-amplifier-api-integration" }
+relayer-amplifier-state = { path = "crates/relayer-amplifier-state" }
+file-based-storage = { path = "crates/file-based-storage" }
 amplifier-api = { path = "crates/amplifier-api" }
 solana-listener = { path = "crates/solana-listener" }
 common-serde-utils = { path = "crates/common-serde-utils" }
@@ -102,6 +104,8 @@ backoff = { version = "0.4", features = ["tokio"] }
 indoc = "2"
 itertools = "0.12"
 num-traits = "0.2"
+memmap2 = "0.9"
+bytemuck = "1.19"
 
 # Serde
 serde = { version = "1", features = ["derive"] }

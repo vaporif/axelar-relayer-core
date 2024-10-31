@@ -2,11 +2,11 @@
 //! Contsructed form the following API spec [link](https://github.com/axelarnetwork/axelar-eds-mirror/blob/main/oapi/gmp/schema.yaml)
 
 pub use big_int::BigInt;
-pub use bnum;
 use chrono::{DateTime, Utc};
 pub use id::*;
 use serde::{Deserialize, Deserializer, Serialize};
 use typed_builder::TypedBuilder;
+pub use {bnum, uuid};
 
 /// Represents an address as a non-empty string.
 pub type Address = String;
@@ -500,7 +500,7 @@ pub enum Task {
 }
 
 /// Represents an individual Task Item.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct TaskItem {
     /// UUID of current task
     pub id: TaskItemId,
@@ -509,6 +509,24 @@ pub struct TaskItem {
     /// the inner task
     #[serde(flatten)]
     pub task: Task,
+}
+
+#[expect(clippy::min_ident_chars, reason = "comes from trait definition")]
+impl core::fmt::Debug for TaskItem {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let task_type = match self.task {
+            Task::Verify(_) => "Verify",
+            Task::GatewayTx(_) => "GatewayTx",
+            Task::Execute(_) => "Execute",
+            Task::Refund(_) => "Refund",
+        };
+
+        f.debug_struct("TaskItem")
+            .field("id", &self.id)
+            .field("timestamp", &self.timestamp)
+            .field("task", &task_type)
+            .finish()
+    }
 }
 
 /// Represents the response from fetching tasks.
