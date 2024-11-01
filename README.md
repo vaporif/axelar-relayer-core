@@ -1,1 +1,1 @@
-# Solana Axelar Relayer
+# Axelar Relayer core libraries

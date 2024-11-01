@@ -1,4 +1,4 @@
-# Contributing to Solana Axelar Relayer
+# Contributing to Axelar Relayer Core
 
 First off, thanks for taking the time to contribute! 🎉👍
 

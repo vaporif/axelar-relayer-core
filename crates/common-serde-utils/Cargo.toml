@@ -9,11 +9,6 @@ edition.workspace = true
 
 [dependencies]
 serde.workspace = true
-solana-sdk = { workspace = true, optional = true }
-tracing.workspace = true
-
-[features]
-solana-sdk = ["dep:solana-sdk"]
 
 [lints]
 workspace = true
