@@ -39,6 +39,18 @@ mod id {
         pub fn new(tx_hash: &str, log_index: usize) -> Self {
             Self(format!("{tx_hash}-{log_index}"))
         }
+
+        /// Construct a new event id for a [`CannotExecuteMessageEvent`]
+        #[must_use]
+        pub fn cannot_execute_task_event_id(task_item_id: &TaskItemId) -> Self {
+            Self(format!("cannot-execute-task-v2-{}", task_item_id.0))
+        }
+
+        /// Construct a new event id for a [`MessageExecutedEvent`] with [`MessageExecutionStatus::Reverted`]
+        #[must_use]
+        pub fn tx_reverted_event_id(tx_hash: &str) -> Self {
+            Self(format!("tx-reverted-{tx_hash}"))
+        }
     }
 
     /// `NewType` for tracking message ids
