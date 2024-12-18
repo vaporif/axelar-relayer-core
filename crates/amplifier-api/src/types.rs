@@ -46,7 +46,8 @@ mod id {
             Self(format!("cannot-execute-task-v2-{}", task_item_id.0))
         }
 
-        /// Construct a new event id for a [`MessageExecutedEvent`] with [`MessageExecutionStatus::Reverted`]
+        /// Construct a new event id for a [`MessageExecutedEvent`] with
+        /// [`MessageExecutionStatus::Reverted`]
         #[must_use]
         pub fn tx_reverted_event_id(tx_hash: &str) -> Self {
             Self(format!("tx-reverted-{tx_hash}"))
