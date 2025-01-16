@@ -463,6 +463,19 @@ pub struct VerifyTask {
     pub payload: Vec<u8>,
 }
 
+/// Represents a Construct Proof Task.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+pub struct ConstructProofTask {
+    /// the cross chain message
+    pub message: GatewayV2Message,
+    /// the raw payload of the task
+    #[serde(
+        deserialize_with = "serde_utils::base64_decode",
+        serialize_with = "serde_utils::base64_encode"
+    )]
+    pub payload: Vec<u8>,
+}
+
 /// Represents a Gateway Transaction Task.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct GatewayTransactionTask {
@@ -508,6 +521,8 @@ pub struct RefundTask {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "task", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Task {
+    /// Construct Proof
+    ConstructProof(ConstructProofTask),
     /// Verify task
     Verify(VerifyTask),
     /// Gateway TX task
@@ -538,6 +553,7 @@ impl core::fmt::Debug for TaskItem {
             Task::GatewayTx(_) => "GatewayTx",
             Task::Execute(_) => "Execute",
             Task::Refund(_) => "Refund",
+            Task::ConstructProof(_) => "ConsructProof",
         };
 
         f.debug_struct("TaskItem")
