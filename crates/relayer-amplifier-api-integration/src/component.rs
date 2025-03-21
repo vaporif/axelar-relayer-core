@@ -17,13 +17,28 @@ pub enum AmplifierCommand {
     PublishEvents(PublishEventsRequest),
 }
 
+impl core::fmt::Display for AmplifierCommand {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            AmplifierCommand::PublishEvents(request) => {
+                writeln!(f, "AmplifierCommand::PublishEvents:")?;
+                writeln!(f, "  request:")?;
+                for line in request.to_string().lines() {
+                    writeln!(f, "    {}", line)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+o
 pub(crate) type CommandReceiver = futures::channel::mpsc::UnboundedReceiver<AmplifierCommand>;
 pub(crate) type AmplifierTaskSender = futures::channel::mpsc::UnboundedSender<TaskItem>;
 
 /// The core Amplifier API abstraction.
 ///
 /// Internally, it spawns processes for:
-/// - monitoring the liveliness of the Amplifier API (via helathcheck)
+/// - monitoring the liveliness of the Amplifier API (via healthcheck)
 /// - listening for new tasks coming form Amplifeir API (Listener subprocess)
 /// - sending events to the Amplifier API (Subscriber subprocess)
 #[derive(Debug)]
