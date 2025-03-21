@@ -1,6 +1,8 @@
 //! Types for Axelar Amplifier API
 //! Contsructed form the following API spec [link](https://github.com/axelarnetwork/axelar-eds-mirror/blob/main/oapi/gmp/schema.yaml)
 
+use core::fmt::{Display, Formatter};
+
 pub use big_int::BigInt;
 use chrono::{DateTime, Utc};
 pub use id::*;
@@ -125,6 +127,15 @@ pub enum CannotExecuteMessageReason {
     Error,
 }
 
+impl Display for CannotExecuteMessageReason {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            CannotExecuteMessageReason::InsufficientGas => write!(f, "insufficient gas"),
+            CannotExecuteMessageReason::Error => write!(f, "other error"),
+        }
+    }
+}
+
 /// Enumeration of message execution statuses.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -133,6 +144,15 @@ pub enum MessageExecutionStatus {
     Successful,
     /// Message reverted
     Reverted,
+}
+
+impl Display for MessageExecutionStatus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            MessageExecutionStatus::Successful => write!(f, "successful"),
+            MessageExecutionStatus::Reverted => write!(f, "reverted"),
+        }
+    }
 }
 
 /// Represents metadata associated with an event.
@@ -157,6 +177,25 @@ pub struct EventMetadata<T> {
     /// Extra fields that are dependant on the core event
     #[serde(flatten)]
     pub extra: T,
+}
+
+impl<T> Display for EventMetadata<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "EventMetadata:")?;
+        if let Some(tx_id) = &self.tx_id {
+            writeln!(f, "  txID: {}", tx_id.0)?;
+        }
+        if let Some(timestamp) = &self.timestamp {
+            writeln!(f, "  timestamp: {}", timestamp)?;
+        }
+        if let Some(from_address) = &self.from_address {
+            writeln!(f, "  fromAddress: {}", from_address)?;
+        }
+        if let Some(finalized) = &self.finalized {
+            writeln!(f, "  finalized: {}", finalized)?;
+        }
+        Ok(())
+    }
 }
 
 /// Specialized metadata for `CallEvent`.
@@ -217,6 +256,15 @@ pub struct Token {
     pub amount: BigInt,
 }
 
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match &self.token_id {
+            Some(token_id) => write!(f, "{:?} {}", self.amount, token_id.0),
+            None => write!(f, "{:?} NativeToken", self.amount),
+        }
+    }
+}
+
 /// Represents a cross-chain message.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct GatewayV2Message {
@@ -241,6 +289,17 @@ pub struct GatewayV2Message {
     pub payload_hash: Vec<u8>,
 }
 
+impl Display for GatewayV2Message {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "GatewayV2Message:")?;
+        writeln!(f, "  messageID: {}", self.message_id.0)?;
+        writeln!(f, "  sourceChain: {}", self.source_chain)?;
+        writeln!(f, "  sourceAddress: {}", self.source_address)?;
+        writeln!(f, "  destinationAddress: {}", self.destination_address)?;
+        Ok(())
+    }
+}
+
 /// Base struct for events.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct EventBase<T = ()> {
@@ -251,6 +310,19 @@ pub struct EventBase<T = ()> {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
     pub meta: Option<EventMetadata<T>>,
+}
+
+impl<T> Display for EventBase<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "EventBase:")?;
+        writeln!(f, "  eventID: {}", self.event_id.0)?;
+        if let Some(meta) = &self.meta {
+            for line in meta.to_string().lines() {
+                writeln!(f, "    {}", line)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Represents a Gas Credit Event.
@@ -267,6 +339,20 @@ pub struct GasCreditEvent {
     pub refund_address: Address,
     /// payment for the Contract Call
     pub payment: Token,
+}
+
+impl Display for GasCreditEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "GasCreditEvent:")?;
+        writeln!(f, "  base:")?;
+        for line in self.base.to_string().lines() {
+            writeln!(f, "    {}", line)?;
+        }
+        writeln!(f, "  messageID: {}", self.message_id.0)?;
+        writeln!(f, "  refundAddress: {}", self.refund_address)?;
+        writeln!(f, "  payment: {}", self.payment)?;
+        Ok(())
+    }
 }
 
 /// Represents a Gas Refunded Event.
@@ -288,6 +374,21 @@ pub struct GasRefundedEvent {
     pub cost: Token,
 }
 
+impl Display for GasRefundedEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "GasRefundedEvent:")?;
+        writeln!(f, "  base:")?;
+        for line in self.base.to_string().lines() {
+            writeln!(f, "    {}", line)?;
+        }
+        writeln!(f, "  messageID: {}", self.message_id.0)?;
+        writeln!(f, "  recipientAddress: {}", self.recipient_address)?;
+        writeln!(f, "  refundedAmount: {}", self.refunded_amount)?;
+        writeln!(f, "  cost: {}", self.cost)?;
+        Ok(())
+    }
+}
+
 /// Represents a Call Event.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct CallEvent {
@@ -307,6 +408,21 @@ pub struct CallEvent {
     pub payload: Vec<u8>,
 }
 
+impl Display for CallEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "CallEvent:")?;
+        writeln!(f, "  base:")?;
+        for line in self.base.to_string().lines() {
+            writeln!(f, "    {}", line)?;
+        }
+        writeln!(f, "  message:")?;
+        for line in self.message.to_string().lines() {
+            writeln!(f, "    {}", line)?;
+        }
+        writeln!(f, "  destinationChain: {}", self.destination_chain)?;
+        Ok(())
+    }
+}
 /// Represents a Message Approved Event.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct MessageApprovedEvent {
@@ -319,6 +435,18 @@ pub struct MessageApprovedEvent {
     pub cost: Token,
 }
 
+impl Display for MessageApprovedEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "MessageApprovedEvent:")?;
+        writeln!(f, "  base: {}", self.base)?;
+        writeln!(f, "  message:")?;
+        for line in self.message.to_string().lines() {
+            writeln!(f, "    {}", line)?;
+        }
+        writeln!(f, "  cost: {}", self.cost)?;
+        Ok(())
+    }
+}
 /// Event that gets emitted upon signer rotatoin
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct SignersRotatedEvent {
@@ -329,6 +457,14 @@ pub struct SignersRotatedEvent {
     pub cost: Token,
 }
 
+impl Display for SignersRotatedEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "SignersRotatedEvent:")?;
+        writeln!(f, "  base: {}", self.base)?;
+        writeln!(f, "  cost: {}", self.cost)?;
+        Ok(())
+    }
+}
 /// Represents extra metadata that can be added to the signers rotated event
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct SignersRotatedMetadata {
@@ -361,6 +497,17 @@ pub struct MessageExecutedEvent {
     pub cost: Token,
 }
 
+impl Display for MessageExecutedEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "MessageExecutedEvent:")?;
+        writeln!(f, "  base: {}", self.base)?;
+        writeln!(f, "  messageID: {}", self.message_id.0)?;
+        writeln!(f, "  sourceChain: {}", self.source_chain)?;
+        writeln!(f, "  status: {}", self.status)?;
+        writeln!(f, "  cost: {}", self.cost)?;
+        Ok(())
+    }
+}
 /// Represents the v2 of Cannot Execute Message Event.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct CannotExecuteMessageEventV2 {
@@ -377,6 +524,18 @@ pub struct CannotExecuteMessageEventV2 {
     pub reason: CannotExecuteMessageReason,
     /// details of the error
     pub details: String,
+}
+
+impl Display for CannotExecuteMessageEventV2 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "CannotExecuteMessageEventV2:")?;
+        writeln!(f, "  base: {}", self.base)?;
+        writeln!(f, "  messageID: {}", self.message_id.0)?;
+        writeln!(f, "  sourceChain: {}", self.source_chain)?;
+        writeln!(f, "  reason: {}", self.reason)?;
+        writeln!(f, "  details: {}", self.details)?;
+        Ok(())
+    }
 }
 /// Represents a generic Event, which can be any of the specific event types.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -399,11 +558,68 @@ pub enum Event {
     SignersRotated(SignersRotatedEvent),
 }
 
+impl Display for Event {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Event::GasCredit(event) => {
+                for line in event.to_string().lines() {
+                    writeln!(f, "{}", line)?;
+                }
+            }
+            Event::GasRefunded(event) => {
+                for line in event.to_string().lines() {
+                    writeln!(f, "{}", line)?;
+                }
+            }
+            Event::Call(event) => {
+                for line in event.to_string().lines() {
+                    writeln!(f, "{}", line)?;
+                }
+            }
+            Event::MessageApproved(event) => {
+                for line in event.to_string().lines() {
+                    writeln!(f, "{}", line)?;
+                }
+            }
+            Event::MessageExecuted(event) => {
+                for line in event.to_string().lines() {
+                    writeln!(f, "{}", line)?;
+                }
+            }
+            Event::CannotExecuteMessageV2(event) => {
+                for line in event.to_string().lines() {
+                    writeln!(f, "{}", line)?;
+                }
+            }
+            Event::SignersRotated(event) => {
+                for line in event.to_string().lines() {
+                    writeln!(f, "{}", line)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Represents the request payload for posting events.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
 pub struct PublishEventsRequest {
     /// list of events to publish
     pub events: Vec<Event>,
+}
+
+impl Display for PublishEventsRequest {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "PublishEventsRequest:")?;
+        writeln!(f, "  events:")?;
+        for (index, event) in self.events.iter().enumerate() {
+            writeln!(f, "    [{}]:", index)?;
+            for line in event.to_string().lines() {
+                writeln!(f, "      {}", line)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Base struct for publish event result items.
