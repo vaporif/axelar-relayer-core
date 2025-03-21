@@ -31,7 +31,7 @@ impl core::fmt::Display for AmplifierCommand {
         Ok(())
     }
 }
-o
+
 pub(crate) type CommandReceiver = futures::channel::mpsc::UnboundedReceiver<AmplifierCommand>;
 pub(crate) type AmplifierTaskSender = futures::channel::mpsc::UnboundedSender<TaskItem>;
 
