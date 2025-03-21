@@ -314,13 +314,22 @@ pub struct EventBase<T = ()> {
 
 impl<T> Display for EventBase<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "eventID: {}", self.event_id.0)?;
-        if let Some(meta) = &self.meta {
-            for line in meta.to_string().lines() {
-                writeln!(f, "  {}", line)?;
+        let output = if let Some(meta) = &self.meta {
+            let meta_string = meta.to_string();
+            if meta_string.is_empty() {
+                format!("eventId - {}", self.event_id.0)
+            } else {
+                meta_string
+                    .lines()
+                    .map(|line| format!("  {}", line))
+                    .collect::<Vec<_>>()
+                    .join("\n")
             }
-        }
-        Ok(())
+        } else {
+            format!("eventId - {}", self.event_id.0)
+        };
+
+        write!(f, "{}", output)
     }
 }
 
