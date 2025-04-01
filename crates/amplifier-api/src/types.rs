@@ -566,6 +566,21 @@ pub enum Event {
     SignersRotated(SignersRotatedEvent),
 }
 
+impl Event {
+    /// Returns event id
+    pub fn event_id(&self) -> &str {
+        match self {
+            Event::GasCredit(event) => &event.base.event_id.0,
+            Event::GasRefunded(event) => &event.base.event_id.0,
+            Event::Call(event) => &event.base.event_id.0,
+            Event::MessageApproved(event) => &event.base.event_id.0,
+            Event::MessageExecuted(event) => &event.base.event_id.0,
+            Event::CannotExecuteMessageV2(event) => &event.base.event_id.0,
+            Event::SignersRotated(event) => &event.base.event_id.0,
+        }
+    }
+}
+
 impl Display for Event {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         match self {
