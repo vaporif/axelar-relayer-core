@@ -4,6 +4,7 @@
 use core::fmt::{Display, Formatter};
 
 pub use big_int::BigInt;
+use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::{DateTime, Utc};
 pub use id::*;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -16,24 +17,32 @@ pub type Address = String;
 /// Newtypes for different types of IDs so we don't mix them up in the future
 mod id {
 
+    use borsh::{BorshDeserialize, BorshSerialize};
+
     use super::*;
 
     /// `NewType` for tracking transaction ids
     ///
     /// for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(
+        Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
+    )]
     pub struct TxId(pub String);
 
     /// `NewType` for tracking token ids
     ///
     /// for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(
+        Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
+    )]
     pub struct TokenId(pub String);
 
     /// Indicates a type in format of `TxHash-LogIndex`
     ///
     /// TxHash-LogIndex. for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(
+        Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
+    )]
     pub struct TxEvent(pub String);
     impl TxEvent {
         /// construct a new event identifier from the tx hash and the log index
@@ -65,19 +74,25 @@ mod id {
     /// `NewType` for tracking task ids
     ///
     /// for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(
+        Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
+    )]
     pub struct TaskItemId(pub uuid::Uuid);
 
     /// `NewType` for tracking command ids.
     ///
     /// for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(
+        Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
+    )]
     pub struct CommandId(pub String);
 
     /// `NewType` for tracking request ids.
     ///
     /// for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    #[derive(
+        Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
+    )]
     pub struct RequestId(pub String);
     #[expect(
         clippy::min_ident_chars,
@@ -118,7 +133,7 @@ mod serde_utils {
 }
 
 /// Enumeration of reasons why a message cannot be executed.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum CannotExecuteMessageReason {
     /// Not enough gas to execute the message
@@ -137,7 +152,7 @@ impl Display for CannotExecuteMessageReason {
 }
 
 /// Enumeration of message execution statuses.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum MessageExecutionStatus {
     /// Message executed successfully
@@ -156,7 +171,17 @@ impl Display for MessageExecutionStatus {
 }
 
 /// Represents metadata associated with an event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct EventMetadata<T> {
     /// tx id of the underlying event
     #[serde(rename = "txID", skip_serializing_if = "Option::is_none")]
@@ -165,6 +190,10 @@ pub struct EventMetadata<T> {
     /// timestamp of the underlying event
     #[serde(rename = "timestamp", skip_serializing_if = "Option::is_none")]
     #[builder(default)]
+    #[borsh(
+        serialize_with = "crate::util::serialize_option_utc",
+        deserialize_with = "crate::util::deserialize_option_utc"
+    )]
     pub timestamp: Option<DateTime<Utc>>,
     /// sender address
     #[serde(rename = "fromAddress", skip_serializing_if = "Option::is_none")]
@@ -199,7 +228,17 @@ impl<T> Display for EventMetadata<T> {
 }
 
 /// Specialized metadata for `CallEvent`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct CallEventMetadata {
     /// the message id that's responsible for the event
     #[serde(rename = "parentMessageID", skip_serializing_if = "Option::is_none")]
@@ -208,7 +247,17 @@ pub struct CallEventMetadata {
 }
 
 /// Specialized metadata for `MessageApprovedEvent`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct MessageApprovedEventMetadata {
     /// The command id that corresponds to the approved message
     #[serde(rename = "commandID", skip_serializing_if = "Option::is_none")]
@@ -217,7 +266,17 @@ pub struct MessageApprovedEventMetadata {
 }
 
 /// Specialized metadata for `MessageExecutedEvent`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct MessageExecutedEventMetadata {
     /// The command id that corresponds to the executed message
     #[serde(rename = "commandID", skip_serializing_if = "Option::is_none")]
@@ -230,7 +289,17 @@ pub struct MessageExecutedEventMetadata {
 }
 
 /// Specialized metadata for `CannotExecuteMessageEventV2`.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct CannotExecuteMessageEventV2Metadata {
     /// The initiator of the message
     #[serde(rename = "fromAddress", skip_serializing_if = "Option::is_none")]
@@ -239,6 +308,10 @@ pub struct CannotExecuteMessageEventV2Metadata {
     /// timestamp of the event
     #[serde(skip_serializing_if = "Option::is_none")]
     #[builder(default)]
+    #[borsh(
+        serialize_with = "crate::util::serialize_option_utc",
+        deserialize_with = "crate::util::deserialize_option_utc"
+    )]
     pub timestamp: Option<DateTime<Utc>>,
     /// task id
     #[serde(rename = "taskItemID")]
@@ -246,13 +319,27 @@ pub struct CannotExecuteMessageEventV2Metadata {
 }
 
 /// Represents a token amount, possibly with a token ID.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct Token {
     /// indicates that amount is in native token if left blank
     #[serde(rename = "tokenID", skip_serializing_if = "Option::is_none")]
     #[builder(default)]
     pub token_id: Option<TokenId>,
     /// the amount in token’s denominator
+    #[borsh(
+        serialize_with = "crate::util::serialize_bigint",
+        deserialize_with = "crate::util::deserialize_bigint"
+    )]
     pub amount: BigInt,
 }
 
@@ -266,7 +353,17 @@ impl Display for Token {
 }
 
 /// Represents a cross-chain message.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct GatewayV2Message {
     /// the message id of a GMP call
     #[serde(rename = "messageID")]
@@ -301,7 +398,17 @@ impl Display for GatewayV2Message {
 }
 
 /// Base struct for events.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct EventBase<T = ()> {
     /// The event id
     #[serde(rename = "eventID")]
@@ -334,7 +441,17 @@ impl<T> Display for EventBase<T> {
 }
 
 /// Represents a Gas Credit Event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct GasCreditEvent {
     /// Event base
     #[serde(flatten)]
@@ -364,7 +481,17 @@ impl Display for GasCreditEvent {
 }
 
 /// Represents a Gas Refunded Event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct GasRefundedEvent {
     /// Event base
     #[serde(flatten)]
@@ -398,7 +525,17 @@ impl Display for GasRefundedEvent {
 }
 
 /// Represents a Call Event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct CallEvent {
     /// Event base
     #[serde(flatten)]
@@ -432,7 +569,17 @@ impl Display for CallEvent {
     }
 }
 /// Represents a Message Approved Event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct MessageApprovedEvent {
     /// Event base
     #[serde(flatten)]
@@ -456,7 +603,17 @@ impl Display for MessageApprovedEvent {
     }
 }
 /// Event that gets emitted upon signer rotatoin
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct SignersRotatedEvent {
     /// Event base
     #[serde(flatten)]
@@ -474,7 +631,17 @@ impl Display for SignersRotatedEvent {
     }
 }
 /// Represents extra metadata that can be added to the signers rotated event
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct SignersRotatedMetadata {
     /// The hash of the new signer set
     #[serde(rename = "signerHash")]
@@ -488,7 +655,17 @@ pub struct SignersRotatedMetadata {
 }
 
 /// Represents a Message Executed Event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct MessageExecutedEvent {
     /// Event base
     #[serde(flatten)]
@@ -517,7 +694,17 @@ impl Display for MessageExecutedEvent {
     }
 }
 /// Represents the v2 of Cannot Execute Message Event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct CannotExecuteMessageEventV2 {
     /// Event base
     #[serde(flatten)]
@@ -546,7 +733,7 @@ impl Display for CannotExecuteMessageEventV2 {
     }
 }
 /// Represents a generic Event, which can be any of the specific event types.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
 #[serde(tag = "type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Event {
     /// gas credit event
@@ -625,7 +812,17 @@ impl Display for Event {
 }
 
 /// Represents the request payload for posting events.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct PublishEventsRequest {
     /// list of events to publish
     pub events: Vec<Event>,
@@ -646,14 +843,34 @@ impl Display for PublishEventsRequest {
 }
 
 /// Base struct for publish event result items.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct PublishEventResultItemBase {
     /// index of the event
     pub index: usize,
 }
 
 /// Represents an accepted publish event result.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct PublishEventAcceptedResult {
     /// event base
     #[serde(flatten)]
@@ -661,7 +878,17 @@ pub struct PublishEventAcceptedResult {
 }
 
 /// Represents an error in publishing an event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct PublishEventErrorResult {
     /// event base
     #[serde(flatten)]
@@ -673,7 +900,7 @@ pub struct PublishEventErrorResult {
 }
 
 /// Represents the result of processing an event.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
 #[serde(tag = "status", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PublishEventResultItem {
     /// the event was accepted
@@ -683,14 +910,34 @@ pub enum PublishEventResultItem {
 }
 
 /// Represents the response from posting events.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct PublishEventsResult {
     /// The result array
     pub results: Vec<PublishEventResultItem>,
 }
 
 /// Represents a Verify Task.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct VerifyTask {
     /// the cross chain message
     pub message: GatewayV2Message,
@@ -703,7 +950,17 @@ pub struct VerifyTask {
 }
 
 /// Represents a Construct Proof Task.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct ConstructProofTask {
     /// the cross chain message
     pub message: GatewayV2Message,
@@ -716,7 +973,17 @@ pub struct ConstructProofTask {
 }
 
 /// Represents a Gateway Transaction Task.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct GatewayTransactionTask {
     /// the execute data for the gateway
     #[serde(
@@ -728,7 +995,17 @@ pub struct GatewayTransactionTask {
 }
 
 /// Represents an Execute Task.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct ExecuteTask {
     /// the cross-chain message
     pub message: GatewayV2Message,
@@ -744,7 +1021,17 @@ pub struct ExecuteTask {
 }
 
 /// Represents a Refund Task.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct RefundTask {
     /// the cross-chain message
     pub message: GatewayV2Message,
@@ -757,7 +1044,7 @@ pub struct RefundTask {
 }
 
 /// Represents a generic Task, which can be any of the specific task types.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize)]
 #[serde(tag = "type", content = "task", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Task {
     /// Construct Proof
@@ -773,11 +1060,17 @@ pub enum Task {
 }
 
 /// Represents an individual Task Item.
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone, PartialEq, Eq, Serialize, Deserialize, TypedBuilder, BorshSerialize, BorshDeserialize,
+)]
 pub struct TaskItem {
     /// UUID of current task
     pub id: TaskItemId,
     /// timestamp of task’s creation
+    #[borsh(
+        serialize_with = "crate::util::serialize_utc",
+        deserialize_with = "crate::util::deserialize_utc"
+    )]
     pub timestamp: DateTime<Utc>,
     /// the inner task
     #[serde(flatten)]
@@ -804,14 +1097,26 @@ impl core::fmt::Debug for TaskItem {
 }
 
 /// Represents the response from fetching tasks.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TypedBuilder)]
+#[derive(
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    TypedBuilder,
+    BorshSerialize,
+    BorshDeserialize,
+)]
 pub struct GetTasksResult {
     /// Array of tasks matching the filters
     pub tasks: Vec<TaskItem>,
 }
 
 /// Represents an error response.
-#[derive(Debug, thiserror::Error, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, thiserror::Error, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
+)]
 #[error("Amplifier API Error: {error}")]
 pub struct ErrorResponse {
     /// error message
@@ -823,7 +1128,7 @@ pub struct ErrorResponse {
 }
 
 mod big_int {
-    use super::*;
+    use serde::{Deserialize, Deserializer, Serialize};
 
     /// Represents a big integer as a string matching the pattern `^(0|[1-9]\d*)$`.
     #[derive(Clone, Debug, PartialEq, Eq)]

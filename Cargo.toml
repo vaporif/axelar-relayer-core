@@ -83,7 +83,7 @@ base64 = "0.22"
 bs58 = "0.5"
 redact = { version = "0.1", features = ["serde"] }
 thiserror = "1"
-uuid = { version = "1.2", features = ["v4", "serde"] }
+uuid = { version = "1.2", features = ["v4", "serde", "borsh"] }
 typed-builder = "0.18"
 derive_builder = "0.20"
 bnum = "0.12"
@@ -101,6 +101,7 @@ serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 serde_json = "1"
 simd-json = "0.13"
+borsh = { version = "1.5", features = ["derive"] }
 
 # Tests
 rstest = { version = "0.21" }
