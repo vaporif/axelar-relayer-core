@@ -1,3 +1,4 @@
+//! Utilities for deserializing some common structures
 use std::io::ErrorKind;
 
 use borsh::io::{Read, Result, Write};
@@ -6,10 +7,18 @@ use chrono::{DateTime, Utc};
 
 use crate::types::BigInt;
 
+/// Serialize [`DateTime<Utc>`] as `timestamp_micros`
+///
+/// # Errors
+/// Infallible
 pub fn serialize_utc<W: Write>(value: &DateTime<Utc>, writer: &mut W) -> Result<()> {
     value.timestamp_micros().serialize(writer)
 }
 
+/// Deserialize [`DateTime<Utc>`] as `timestamp_micros`
+///
+/// # Errors
+/// wrong input
 pub fn deserialize_utc<R: Read>(reader: &mut R) -> Result<DateTime<Utc>> {
     let timestamp: i64 = BorshDeserialize::deserialize_reader(reader)?;
     let datetime = DateTime::from_timestamp_micros(timestamp);
@@ -22,7 +31,12 @@ pub fn deserialize_utc<R: Read>(reader: &mut R) -> Result<DateTime<Utc>> {
     }
 }
 
-pub fn serialize_option_utc<W: Write>(value: &Option<DateTime<Utc>>, writer: &mut W) -> Result<()> {
+/// Serialize [`Option<DateTime<Utc>>`] as `timestamp_micros`
+/// use first byte as an Option
+///
+/// # Errors
+/// Infallible
+pub fn serialize_option_utc<W: Write>(value: Option<DateTime<Utc>>, writer: &mut W) -> Result<()> {
     match value {
         Some(dt) => {
             1_u8.serialize(writer)?;
@@ -32,6 +46,11 @@ pub fn serialize_option_utc<W: Write>(value: &Option<DateTime<Utc>>, writer: &mu
     }
 }
 
+/// Serialize [`Option<DateTime<Utc>>`] as `timestamp_micros`
+/// use first byte as an Option
+///
+/// # Errors
+/// wrong input: i.e. first byte not 0 or 1
 pub fn deserialize_option_utc<R: Read>(reader: &mut R) -> Result<Option<DateTime<Utc>>> {
     let flag: u8 = BorshDeserialize::deserialize_reader(reader)?;
 
@@ -48,9 +67,18 @@ pub fn deserialize_option_utc<R: Read>(reader: &mut R) -> Result<Option<DateTime
     }
 }
 
+/// Serialize [`&BinInt`]
+///
+/// # Errors
+/// Infallible
 pub fn serialize_bigint<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
     value.0.to_string().serialize(writer)
 }
+
+/// Deserialize [`&BinInt`]
+///
+/// # Errors
+/// wrong input
 pub fn deserialize_bigint<R: Read>(reader: &mut R) -> Result<BigInt> {
     let value: String = BorshDeserialize::deserialize_reader(reader)?;
     let number = bnum::types::I512::parse_str_radix(&value, 10);

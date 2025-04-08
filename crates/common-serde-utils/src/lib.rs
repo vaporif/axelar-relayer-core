@@ -4,7 +4,7 @@ use core::time::Duration;
 
 use serde::{Deserialize as _, Deserializer};
 
-/// Decode [`Duratoin`] assuming that the underlying number is representation of duration in
+/// Decode [`Duration`] assuming that the underlying number is representation of duration in
 /// milliseconds
 ///
 /// # Errors
