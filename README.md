@@ -38,7 +38,7 @@ The relayer uses threading and supervision model:
    - Uses an AtomicBool as a shared termination flag
    - When Ctrl+C is received, the AtomicBool is set to true
    - All components, including the supervisor, watch this AtomicBool
-   - Upon termination, components have graceful period to finish current work 
+   - Upon termination, components have graceful period to finish current work
 
 4. **Worker Components**:
    - Each component (Amplifier Subscriber, Blockchain Ingester, Blockchain Subscriber, Amplifier Ingester) runs on its own thread
