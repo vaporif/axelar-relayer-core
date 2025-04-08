@@ -51,3 +51,4 @@ The relayer uses threading and supervision model:
    - Currently implemented using NATS messaging system
    - Abstraction allows for easy replacement with different queue technologies
    - Components interact with queues only through trait interfaces, maintaining loose coupling
+   - Supports horizontal scaling by allowing multiple instances to consume from the same queue
