@@ -141,6 +141,7 @@ pub fn run(
     eyre::Ok(())
 }
 
+// TODO: add heartbeat to relayer
 fn spawn_worker<'scope>(
     worker_name: WorkerName,
     mut worker: Box<dyn Worker>,
