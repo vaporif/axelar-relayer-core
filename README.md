@@ -99,3 +99,25 @@ The relayer uses threading and supervision model:
    - Abstraction allows for easy replacement with different queue technologies
    - Components interact with queues only through trait interfaces, maintaining loose coupling
    - Supports horizontal scaling by allowing multiple instances to consume from the same queue
+
+## WorkerFn Array
+Since `WorkerFn` is pointer to async function pushing data to hashmap is queite noisy.
+
+Use as reference
+```rust
+let mut components: HashMap<String, WorkerBuildFn> = HashMap::new();
+
+if cli.amplifier_ingester {
+  tracing::debug!("amplifier ingester enabled");
+  components.insert(
+      "[amplifier-ingester]".to_string(),
+      Box::new(|| {
+          Box::pin(async {
+              let component = new_amplifier_ingester().await?;
+              Ok(Box::new(component) as Box<dyn Worker>)
+          })
+      }),
+  );
+}
+```
+
