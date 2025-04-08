@@ -39,6 +39,7 @@ The relayer uses threading and supervision model:
    - Each thread has an isolated Tokio runtime
    - Components check the termination flag regularly and shut down when needed
    - Isolation ensures a failure in one component doesn't affect others
+   - It's up to the implementation to run all components at once or as separate binaries but isolation is mandatory
 
 4. **Queue Abstraction**:
    - All access to queues is abstracted via Rust traits
