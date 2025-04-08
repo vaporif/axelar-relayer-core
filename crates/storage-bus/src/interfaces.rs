@@ -36,18 +36,11 @@ pub mod consumer {
         /// Signals that the message will not be processed now
         /// and processing can move onto the next message, NAK'd
         /// message will be retried.
-        Nak(Option<Duration>),
+        Nak,
         /// When sent before the AckWait period indicates that
         /// work is ongoing and the period should be extended by
         /// another equal to AckWait.
         Progress,
-        /// Acknowledges the message was handled and requests
-        /// delivery of the next message to the reply subject.
-        /// Only applies to Pull-mode.
-        Next,
-        /// Instructs the server to stop redelivery of a message
-        /// without acknowledging it as successfully processed.
-        Term,
     }
 }
 

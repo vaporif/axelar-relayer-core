@@ -7,8 +7,8 @@ use borsh::BorshDeserialize;
 use futures::StreamExt;
 use uuid::Uuid;
 
-use super::error::Error;
 use super::NatsStream;
+use super::error::Error;
 use crate::interfaces;
 
 impl NatsStream {
@@ -55,10 +55,8 @@ impl From<interfaces::consumer::AckKind> for jetstream::AckKind {
     fn from(val: interfaces::consumer::AckKind) -> Self {
         match val {
             interfaces::consumer::AckKind::Ack => jetstream::AckKind::Ack,
-            interfaces::consumer::AckKind::Nak(duration) => jetstream::AckKind::Nak(duration),
+            interfaces::consumer::AckKind::Nak => jetstream::AckKind::Nak(None),
             interfaces::consumer::AckKind::Progress => jetstream::AckKind::Progress,
-            interfaces::consumer::AckKind::Next => jetstream::AckKind::Next,
-            interfaces::consumer::AckKind::Term => jetstream::AckKind::Term,
         }
     }
 }

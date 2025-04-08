@@ -1,7 +1,7 @@
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use eyre::Context;
@@ -91,7 +91,7 @@ where
             }
             Err(err) => {
                 tracing::error!(%event, %err, "error during task processing");
-                if let Err(err) = queue_msg.ack(AckKind::Nak(None)).await {
+                if let Err(err) = queue_msg.ack(AckKind::Nak).await {
                     tracing::error!(%event, %err, "could not nak message")
                 }
             }
