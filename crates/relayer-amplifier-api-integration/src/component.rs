@@ -23,7 +23,7 @@ pub(crate) type AmplifierTaskSender = futures::channel::mpsc::UnboundedSender<Ta
 /// The core Amplifier API abstraction.
 ///
 /// Internally, it spawns processes for:
-/// - monitoring the liveliness of the Amplifier API (via helathcheck)
+/// - monitoring the liveliness of the Amplifier API (via healthcheck)
 /// - listening for new tasks coming form Amplifeir API (Listener subprocess)
 /// - sending events to the Amplifier API (Subscriber subprocess)
 #[derive(Debug)]
@@ -32,6 +32,21 @@ pub struct Amplifier<S: State> {
     receiver: CommandReceiver,
     sender: AmplifierTaskSender,
     state: S,
+}
+
+impl core::fmt::Display for AmplifierCommand {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::PublishEvents(request) => {
+                writeln!(f, "AmplifierCommand::PublishEvents:")?;
+                writeln!(f, "  request:")?;
+                for line in request.to_string().lines() {
+                    writeln!(f, "    {line}")?;
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Utility client used for communicating with the `Amplifier` instance
