@@ -85,9 +85,9 @@ where
             Ok(_) => {
                 if let Err(err) = queue_msg.ack(AckKind::Ack).await {
                     tracing::error!(%event, %err, "could not ack message")
+                } else {
+                    tracing::info!(event_id = %event.event_id(), "processed");
                 }
-
-                tracing::info!(event_id = %event.event_id(), "processed");
             }
             Err(err) => {
                 tracing::error!(%event, %err, "error during task processing");
