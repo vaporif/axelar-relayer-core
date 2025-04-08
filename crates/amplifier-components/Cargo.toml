@@ -15,9 +15,19 @@ amplifier-subscriber.workspace = true
 storage-bus = { workspace = true, optional = true }
 url.workspace = true
 relayer-amplifier-api-integration.workspace  = true
+ctrlc.workspace = true
 
 [lints]
 workspace = true
 
 [features]
 nats = ["storage-bus/nats"]
+
+[[example]]
+name = "components_array"
+path = "examples/components_array.rs"
+
+[dev-dependencies]
+reqwest.workspace = true
+tokio.workspace = true
+supervisor.workspace = true

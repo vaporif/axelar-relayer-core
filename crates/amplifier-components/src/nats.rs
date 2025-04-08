@@ -9,38 +9,38 @@ use url::Url;
 
 pub async fn new_amplifier_subscriber(
     config_fn: impl Fn() -> eyre::Result<Config>,
-    urls_fn: impl Fn() -> Vec<Url>,
-    chain_name: String,
+    urls_fn: impl Fn() -> eyre::Result<Vec<Url>>,
 ) -> eyre::Result<amplifier_subscriber::Subscriber<NatsPublisher<amplifier_api::types::TaskItem>>> {
     let config = config_fn().wrap_err("config file issues")?;
+    let nats_urls = urls_fn().wrap_err("nats urls issues")?;
     let amplifier_client = crate::amplifier_client(&config)?;
 
-    let task_queue_publisher = nats::connectors::tasks::connect_publisher(urls_fn())
+    let task_queue_publisher = nats::connectors::tasks::connect_publisher(nats_urls)
         .await
         .wrap_err("task queue publisher connect err")?;
 
     Ok(amplifier_subscriber::Subscriber::new(
         amplifier_client,
         task_queue_publisher,
-        chain_name,
+        config.chain,
     ))
 }
 
 pub async fn new_amplifier_ingester(
     config_fn: impl Fn() -> eyre::Result<Config>,
-    urls_fn: impl Fn() -> Vec<Url>,
-    chain_name: String,
+    urls_fn: impl Fn() -> eyre::Result<Vec<Url>>,
 ) -> eyre::Result<amplifier_ingester::Ingester<NatsConsumer<amplifier_api::types::Event>>> {
     let config = config_fn().wrap_err("config file issues")?;
+    let nats_urls = urls_fn().wrap_err("nats urls issues")?;
     let amplifier_client = crate::amplifier_client(&config)?;
 
-    let event_queue_consumer = nats::connectors::events::connect_consumer(urls_fn())
+    let event_queue_consumer = nats::connectors::events::connect_consumer(nats_urls)
         .await
         .wrap_err("event consumer connect err")?;
 
     Ok(amplifier_ingester::Ingester::new(
         amplifier_client,
         event_queue_consumer,
-        chain_name,
+        config.chain,
     ))
 }

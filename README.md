@@ -103,21 +103,4 @@ The relayer uses threading and supervision model:
 ## WorkerFn Array
 Since `WorkerFn` is pointer to async function pushing data to hashmap is queite noisy.
 
-Use as reference
-```rust
-let mut components: HashMap<String, WorkerBuildFn> = HashMap::new();
-
-if cli.amplifier_ingester {
-  tracing::debug!("amplifier ingester enabled");
-  components.insert(
-      "[amplifier-ingester]".to_string(),
-      Box::new(|| {
-          Box::pin(async {
-              let component = new_amplifier_ingester().await?;
-              Ok(Box::new(component) as Box<dyn Worker>)
-          })
-      }),
-  );
-}
-```
-
+check [Example](crates/amplifier-components/examples/components_array.rs)

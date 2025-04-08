@@ -104,6 +104,7 @@ num-traits = "0.2"
 memmap2 = "0.9"
 bytemuck = "1.19"
 rand = "0.9"
+ctrlc = "3"
 
 # Serde
 serde = { version = "1", features = ["derive"] }
