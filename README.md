@@ -48,7 +48,7 @@ The relayer uses threading and supervision model:
 
 5. **Queue Abstraction**:
    - All access to queues is abstracted via Rust traits
-   - Currently implemented using NATS messaging system
+   - Currently implemented using [NATS](https://nats.io/) open-source messaging system
    - Abstraction allows for easy replacement with different queue technologies
    - Components interact with queues only through trait interfaces, maintaining loose coupling
    - Supports horizontal scaling by allowing multiple instances to consume from the same queue
