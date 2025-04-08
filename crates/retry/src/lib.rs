@@ -1,3 +1,4 @@
+//! Crate with retry logic
 pub(crate) mod backoff_pair_iterator;
 pub mod builder;
 pub(crate) mod retry_fn;

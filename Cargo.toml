@@ -70,6 +70,9 @@ common-serde-utils = { path = "crates/common-serde-utils" }
 supervisor = { path = "crates/supervisor" }
 storage-bus = { path = "crates/storage-bus" }
 retry = { path = "crates/retry" }
+amplifier-components = { path = "crates/amplifier-components" }
+amplifier-subscriber = { path = "crates/amplifier-subscriber" }
+amplifier-ingester = { path = "crates/amplifier-ingester" }
 
 # CLI
 clap = { version = "4", features = ["derive"] }

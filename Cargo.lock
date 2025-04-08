@@ -61,6 +61,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "amplifier-components"
+version = "0.1.1"
+dependencies = [
+ "amplifier-ingester",
+ "amplifier-subscriber",
+ "eyre",
+ "relayer-amplifier-api-integration",
+ "storage-bus",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "amplifier-ingester"
 version = "0.1.1"
 dependencies = [

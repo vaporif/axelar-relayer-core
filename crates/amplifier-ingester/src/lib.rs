@@ -1,3 +1,4 @@
+//! Crate with amplifier ingester component
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;

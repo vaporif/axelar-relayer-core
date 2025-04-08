@@ -1,9 +1,10 @@
+//! Crate with amplifier subscriber component
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::AtomicBool;
 
 use amplifier_api::requests::WithTrailingSlash;
-use amplifier_api::{requests, AmplifierApiClient};
+use amplifier_api::{AmplifierApiClient, requests};
 use eyre::Context;
 use storage_bus::interfaces::publisher::{PeekMessage, Publisher};
 use supervisor::Worker;
@@ -20,12 +21,12 @@ where
         Publisher<amplifier_api::types::TaskItem> + PeekMessage<amplifier_api::types::TaskItem>,
 {
     pub fn new(
-        starknet_chain_name: String,
         amplifier_client: AmplifierApiClient,
         task_queue_publisher: TaskQueuePublisher,
+        chain: String,
     ) -> Self {
         Self {
-            chain: starknet_chain_name,
+            chain,
             amplifier_client,
             task_queue_publisher,
         }

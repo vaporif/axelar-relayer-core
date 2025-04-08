@@ -36,7 +36,7 @@ pub fn deserialize_utc<R: Read>(reader: &mut R) -> Result<DateTime<Utc>> {
 ///
 /// # Errors
 /// Infallible
-pub fn serialize_option_utc<W: Write>(value: Option<DateTime<Utc>>, writer: &mut W) -> Result<()> {
+pub fn serialize_option_utc<W: Write>(value: &Option<DateTime<Utc>>, writer: &mut W) -> Result<()> {
     match value {
         Some(dt) => {
             1_u8.serialize(writer)?;
