@@ -1,0 +1,35 @@
+[package]
+name = "storage-bus"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+async-nats = { workspace = true, optional = true }
+url.workspace = true
+tokio.workspace = true
+thiserror.workspace = true
+amplifier-api.workspace = true
+futures.workspace = true
+tracing.workspace = true
+borsh = { workspace = true, optional = true }
+
+uuid.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+nats = [
+  "dep:async-nats",
+  "dep:borsh",
+  "consumer-interfaces",
+  "publisher-interfaces",
+  "storage-interfaces",
+]
+consumer-interfaces = []
+publisher-interfaces = []
+storage-interfaces = []

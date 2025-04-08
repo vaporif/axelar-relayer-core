@@ -65,6 +65,9 @@ relayer-amplifier-api-integration = { path = "crates/relayer-amplifier-api-integ
 relayer-amplifier-state = { path = "crates/relayer-amplifier-state" }
 amplifier-api = { path = "crates/amplifier-api" }
 common-serde-utils = { path = "crates/common-serde-utils" }
+supervisor = { path = "crates/supervisor" }
+storage-bus = { path = "crates/storage-bus" }
+retry = { path = "crates/retry" }
 
 # CLI
 clap = { version = "4", features = ["derive"] }
@@ -82,7 +85,7 @@ chrono = { version = "0.4", default-features = false, features = [
 base64 = "0.22"
 bs58 = "0.5"
 redact = { version = "0.1", features = ["serde"] }
-thiserror = "1"
+thiserror = "2"
 uuid = { version = "1.2", features = ["v4", "serde", "borsh"] }
 typed-builder = "0.18"
 derive_builder = "0.20"
@@ -91,16 +94,17 @@ hex = "0.4"
 quanta = "0.12"
 backoff = { version = "0.4", features = ["tokio"] }
 indoc = "2"
-itertools = "0.12"
+itertools = "0.14"
 num-traits = "0.2"
 memmap2 = "0.9"
 bytemuck = "1.19"
+rand = "0.9"
 
 # Serde
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 serde_json = "1"
-simd-json = "0.13"
+simd-json = "0.15"
 
 borsh = { version = "1.5", features = ["derive"] }
 
@@ -124,7 +128,7 @@ reqwest = { version = "0.12", default-features = false, features = [
     "http2",
 ] }
 
-# Async
+# async
 tokio = { version = "1", features = [
     "rt",
     "signal",
@@ -133,10 +137,14 @@ tokio = { version = "1", features = [
 ] }
 tokio-stream = { version = "0.1" }
 tokio-util = "0.7"
+tokio-retry = "0.3"
 futures-concurrency = "7.4"
 futures-util = "0.3"
 futures = "0.3"
 async-trait = "0"
+
+# queues
+async-nats = "0.40"
 
 # tracing
 tracing = "0.1"

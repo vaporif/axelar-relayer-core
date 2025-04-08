@@ -1,0 +1,19 @@
+[package]
+name = "amplifier-subscriber"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+amplifier-api.workspace = true
+supervisor.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+eyre.workspace = true
+storage-bus = { workspace = true, features = ["publisher-interfaces"] }
+
+[lints]
+workspace = true
