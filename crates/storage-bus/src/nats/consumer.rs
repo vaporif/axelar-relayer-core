@@ -7,8 +7,8 @@ use borsh::BorshDeserialize;
 use futures::StreamExt;
 use uuid::Uuid;
 
-use super::NatsStream;
 use super::error::Error;
+use super::NatsStream;
 use crate::interfaces;
 
 impl NatsStream {

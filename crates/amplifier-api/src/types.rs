@@ -755,7 +755,8 @@ pub enum Event {
 
 impl Event {
     /// Returns event id
-    #[must_use] pub fn event_id(&self) -> &str {
+    #[must_use]
+    pub fn event_id(&self) -> &str {
         match self {
             Self::GasCredit(event) => &event.base.event_id.0,
             Self::GasRefunded(event) => &event.base.event_id.0,
