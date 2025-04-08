@@ -21,32 +21,26 @@ The relayer establishes bidirectional communication between an Amplifier API and
 
 The relayer uses threading and supervision model:
 
-1. **Command Line Interface (CLI)**:
-   - Provides component selection options
-   - Can run all components simultaneously (full relayer operation)
-   - Can selectively run individual components (e.g., only Amplifier Subscriber)
-   - Command-line arguments determine which components to initialize
-
-2. **Supervisor**:
+1. **Supervisor**:
    - Runs on its own dedicated thread with a Tokio runtime
    - Spawns and monitors worker threads only for the components selected via CLI
    - Detects crashes and automatically restarts failed components
    - Provides a graceful shutdown period when termination is requested
 
-3. **Termination Handling**:
+2. **Termination Handling**:
    - A dedicated thread listens for Ctrl+C signals
    - Uses an AtomicBool as a shared termination flag
    - When Ctrl+C is received, the AtomicBool is set to true
    - All components, including the supervisor, watch this AtomicBool
    - Upon termination, components have graceful period to finish current work
 
-4. **Worker Components**:
+3. **Worker Components**:
    - Each component (Amplifier Subscriber, Blockchain Ingester, Blockchain Subscriber, Amplifier Ingester) runs on its own thread
    - Each thread has an isolated Tokio runtime
    - Components check the termination flag regularly and shut down when needed
    - Isolation ensures a failure in one component doesn't affect others
 
-5. **Queue Abstraction**:
+4. **Queue Abstraction**:
    - All access to queues is abstracted via Rust traits
    - Currently implemented using [NATS](https://nats.io/) open-source messaging system
    - Abstraction allows for easy replacement with different queue technologies
