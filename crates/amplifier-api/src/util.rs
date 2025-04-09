@@ -12,7 +12,11 @@ use crate::types::BigInt;
 /// # Errors
 /// Infallible
 pub fn serialize_utc<W: Write>(value: &DateTime<Utc>, writer: &mut W) -> Result<()> {
-    value.timestamp_micros().serialize(writer)
+    let secs = value.timestamp();
+    let nsecs = value.timestamp_subsec_nanos();
+
+    // Serialize as a tuple of (seconds, nanoseconds)
+    (secs, nsecs).serialize(writer)
 }
 
 /// Deserialize [`DateTime<Utc>`] as `timestamp_micros`
@@ -20,8 +24,8 @@ pub fn serialize_utc<W: Write>(value: &DateTime<Utc>, writer: &mut W) -> Result<
 /// # Errors
 /// wrong input
 pub fn deserialize_utc<R: Read>(reader: &mut R) -> Result<DateTime<Utc>> {
-    let timestamp: i64 = BorshDeserialize::deserialize_reader(reader)?;
-    let datetime = DateTime::from_timestamp_micros(timestamp);
+    let (secs, nsecs): (i64, u32) = BorshDeserialize::deserialize_reader(reader)?;
+    let datetime = DateTime::from_timestamp(secs, nsecs);
     match datetime {
         Some(datetime) => Ok(datetime),
         None => Err(borsh::io::Error::new(

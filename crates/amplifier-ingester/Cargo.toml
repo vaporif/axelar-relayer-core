@@ -10,12 +10,10 @@ license.workspace = true
 [dependencies]
 relayer-amplifier-api-integration.workspace = true
 supervisor.workspace = true
-tokio.workspace = true
 tracing.workspace = true
 eyre.workspace = true
 storage-bus = { workspace = true, features = ["consumer-interfaces"] }
 futures.workspace = true
-tokio-stream.workspace = true
 
 [lints]
 workspace = true

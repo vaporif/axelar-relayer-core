@@ -10,7 +10,6 @@ license.workspace = true
 [dependencies]
 amplifier-api.workspace = true
 supervisor.workspace = true
-tokio.workspace = true
 tracing.workspace = true
 eyre.workspace = true
 storage-bus = { workspace = true, features = ["publisher-interfaces"] }
