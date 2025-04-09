@@ -94,13 +94,13 @@ The relayer uses threading and supervision model:
    - It's up to the implementation to run all components at once or as separate binaries but isolation is mandatory
 
 4. **Queue Abstraction**:
-   - All access to queues is abstracted via Rust traits
+   - Queue is push based
    - Currently implemented using [NATS](https://nats.io/) open-source messaging system
    - Abstraction allows for easy replacement with different queue technologies
    - Components interact with queues only through trait interfaces, maintaining loose coupling
    - Supports horizontal scaling by allowing multiple instances to consume from the same queue
 
 ## WorkerFn Array
-Since `WorkerFn` is pointer to async function pushing data to hashmap is queite noisy.
+Since `WorkerFn` is pointer to async function pushing data to hashmap is noisy.
 
 check [Example](crates/amplifier-components/examples/components_array.rs)
