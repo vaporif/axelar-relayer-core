@@ -101,6 +101,6 @@ The relayer uses threading and supervision model:
    - Supports horizontal scaling by allowing multiple instances to consume from the same queue
 
 ## WorkerFn Array
-Since `WorkerFn` is pointer to async function pushing data to hashmap is noisy.
+Since `WorkerFn` is a pointer to async function pushing data to hashmap is noisy.
 
 check [Example](crates/amplifier-components/examples/components_array.rs)
