@@ -85,7 +85,7 @@ pub(crate) fn internal(
                     .in_current_span(),
             );
         }
-    };
+    }
 
     Ok(())
 }

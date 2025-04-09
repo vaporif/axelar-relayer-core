@@ -1,11 +1,11 @@
 //! Crate with amplifier subscriber component
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::atomic::AtomicBool;
+use core::future::Future;
+use core::pin::Pin;
+use core::sync::atomic::AtomicBool;
 
 use amplifier_api::requests::WithTrailingSlash;
 use amplifier_api::{AmplifierApiClient, requests};
-use eyre::Context;
+use eyre::Context as _;
 use storage_bus::interfaces::publisher::{PeekMessage, Publisher};
 use supervisor::Worker;
 
@@ -20,7 +20,7 @@ where
     TaskQueuePublisher:
         Publisher<amplifier_api::types::TaskItem> + PeekMessage<amplifier_api::types::TaskItem>,
 {
-    pub fn new(
+    pub const fn new(
         amplifier_client: AmplifierApiClient,
         task_queue_publisher: TaskQueuePublisher,
         chain: String,
@@ -49,7 +49,7 @@ where
 
         let request = requests::GetChains::builder()
             .chain(&chain_with_trailing_slash)
-            .limit(100u8)
+            .limit(100_u8)
             .after(last_task_id)
             .build();
 
@@ -81,7 +81,7 @@ where
         tracing::debug!(?response, "amplifier response");
 
         if !response.tasks.is_empty() {
-            tracing::info!(count = response.tasks.len(), "got amplifier tasks")
+            tracing::info!(count = response.tasks.len(), "got amplifier tasks");
         }
 
         for task in response.tasks {

@@ -1,9 +1,9 @@
 #[cfg(feature = "consumer-interfaces")]
 pub mod consumer {
-    use std::error::Error;
-    use std::fmt::Debug;
-    use std::future::Future;
-    use std::time::Duration;
+    use core::error::Error;
+    use core::fmt::Debug;
+    use core::future::Future;
+    
 
     pub trait QueueMessage<T>: Debug
     where
@@ -37,17 +37,17 @@ pub mod consumer {
         /// and processing can move onto the next message, NAK'd
         /// message will be retried.
         Nak,
-        /// When sent before the AckWait period indicates that
+        /// When sent before the `AckWait` period indicates that
         /// work is ongoing and the period should be extended by
-        /// another equal to AckWait.
+        /// another equal to `AckWait`.
         Progress,
     }
 }
 
 #[cfg(feature = "publisher-interfaces")]
 pub mod publisher {
-    use std::error::Error;
-    use std::future::{Future, IntoFuture};
+    use core::error::Error;
+    use core::future::{Future, IntoFuture};
 
     pub trait PeekMessage<T> {
         fn peek_last(

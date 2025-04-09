@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use std::str::FromStr;
-use std::time::Duration;
+use core::str::FromStr as _;
+use core::time::Duration;
 
 use relayer_amplifier_api_integration::Config;
 use relayer_amplifier_api_integration::amplifier_api::identity::Identity;
-use supervisor::{Worker, WorkerBuildFn};
+use supervisor::WorkerBuildFn;
 use url::Url;
 
 fn get_config() -> eyre::Result<Config> {
@@ -13,7 +13,7 @@ fn get_config() -> eyre::Result<Config> {
         .identity(Identity::new(
             reqwest::Identity::from_pem(PEM.as_bytes()).expect("works"),
         ))
-        .chain("blochain_name_on_axelar".to_string())
+        .chain("blochain_name_on_axelar".to_owned())
         .build();
     Ok(cfg)
 }
@@ -28,7 +28,7 @@ async fn main() {
     amplifier_components::register_backtrace();
     let shutdown = amplifier_components::register_ctrlc_handler();
 
-    let mut components: HashMap<String, WorkerBuildFn> = HashMap::new();
+    let components: HashMap<String, WorkerBuildFn> = HashMap::new();
 
     #[cfg(feature = "nats")]
     {

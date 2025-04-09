@@ -1,13 +1,13 @@
 //! Crate with supervisor and worker trait
 use std::collections::HashMap;
-use std::future::Future;
+use core::future::Future;
 use std::panic;
-use std::panic::AssertUnwindSafe;
-use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use core::panic::AssertUnwindSafe;
+use core::pin::Pin;
+use core::sync::atomic::{AtomicBool, Ordering};
+use core::time::Duration;
 
-use eyre::Context;
+use eyre::Context as _;
 
 const SHUTDOWN_SIGNAL_CHECK_INTERVAL_MS: u64 = 500;
 const WORKER_GRACEFUL_SHUTDOWN_MS: u64 = 2000;
@@ -44,7 +44,7 @@ pub fn run(
                 .wrap_err("failed to create tokio runtime for supervisor")?;
 
             runtime.block_on(async move {
-                for (worker_name, builder) in worker_builders.iter() {
+                for (worker_name, builder) in &worker_builders {
                     let worker = match builder().await {
                         Ok(worker) => worker,
                         Err(err) => {
@@ -152,7 +152,7 @@ fn spawn_worker<'scope>(
     tickrate: Duration,
 ) -> std::thread::ScopedJoinHandle<'scope, ()> {
     tracing::debug!(worker_name, "starting worker");
-    let worker_name = worker_name.clone();
+    let worker_name = worker_name;
 
     scope.spawn(move || {
         let runtime = match tokio::runtime::Builder::new_current_thread()
@@ -170,7 +170,7 @@ fn spawn_worker<'scope>(
         let result = panic::catch_unwind(AssertUnwindSafe(|| {
             runtime.block_on(async {
                 let mut interval = tokio::time::interval(tickrate);
-                while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                while !shutdown.load(core::sync::atomic::Ordering::Relaxed) {
                     interval.tick().await;
                     worker.do_work(shutdown).await?;
                 }
@@ -180,7 +180,7 @@ fn spawn_worker<'scope>(
         }));
 
         match result {
-            Ok(Ok(_)) => {
+            Ok(Ok(())) => {
                 tracing::info!(worker_name, "worker exited, shutting down");
             }
             Ok(Err(err)) => {
@@ -190,9 +190,9 @@ fn spawn_worker<'scope>(
                 let panic_msg = if let Some(s) = panic_err.downcast_ref::<String>() {
                     s.clone()
                 } else if let Some(s) = panic_err.downcast_ref::<&str>() {
-                    s.to_string()
+                    (*s).to_owned()
                 } else {
-                    format!("Unknown panic: {:?}", panic_err)
+                    format!("Unknown panic: {panic_err:?}")
                 };
                 tracing::error!(worker_name, %panic_msg, "worker panicked");
             }
@@ -203,6 +203,6 @@ fn spawn_worker<'scope>(
             tracing::debug!(worker_name, "Reported worker crash for restart");
         }
 
-        tracing::debug!("worker exit post crash report")
+        tracing::debug!("worker exit post crash report");
     })
 }

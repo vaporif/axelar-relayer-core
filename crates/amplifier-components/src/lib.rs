@@ -1,8 +1,8 @@
 //! Crate with amplifier component connectors.
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::{AtomicBool, Ordering};
 
-use eyre::Context;
+use eyre::Context as _;
 use relayer_amplifier_api_integration::Config;
 use relayer_amplifier_api_integration::amplifier_api::AmplifierApiClient;
 
@@ -20,7 +20,7 @@ pub fn register_backtrace() {
 }
 
 /// Run from main thread once
-pub fn register_ctrlc_handler() -> Arc<AtomicBool> {
+#[must_use] pub fn register_ctrlc_handler() -> Arc<AtomicBool> {
     let ctrl_c_shutdown = Arc::new(AtomicBool::new(false));
     let shutdown = ctrl_c_shutdown.clone();
     ctrlc::set_handler(move || {
@@ -36,7 +36,7 @@ pub fn register_ctrlc_handler() -> Arc<AtomicBool> {
     shutdown
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 fn amplifier_client(config: &Config) -> eyre::Result<AmplifierApiClient> {
     AmplifierApiClient::new(config.url.clone(), &config.identity)
         .wrap_err("amplifier api client failed to create")
