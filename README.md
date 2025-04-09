@@ -60,13 +60,13 @@ graph TD
 The relayer establishes bidirectional communication between an Amplifier API and a blockchain. It consists of these main flows:
 
 ### Amplifier to Blockchain Flow
-- **Amplifier Subscriber**: Subscribes to the Amplifier REST API and receives amplifier tasks
-- **Amplifier Tasks Queue**: Stores tasks before processing
+- **Amplifier Subscriber**: Subscribes to the Amplifier REST API and receives amplifier tasks then sends them to queue
+- **Amplifier Tasks Queue**: Stores amplifier tasks
 - **Blockchain Ingester**: Consumes tasks from the queue, transforms them to a compatible format, and includes them in the blockchain
 
 ### Blockchain to Amplifier Flow
-- **Blockchain Subscriber**: Subscribes to blockchain events 
-- **Amplifier Events Queue**: Stores transformed events
+- **Blockchain Subscriber**: Subscribes to blockchain events, transforms them into amplifier events and sends to queue 
+- **Amplifier Events Queue**: Stores amplifier events
 - **Amplifier Ingester**: Consumes events from the queue and sends them to the Amplifier API
 
 ## Internal Relayer Architecture
