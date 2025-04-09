@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 
 use crate::types::BigInt;
 
-/// Serialize [`DateTime<Utc>`] as `timestamp_micros`
+/// Serialize [`DateTime<Utc>`]
 ///
 /// # Errors
 /// Infallible
@@ -19,7 +19,7 @@ pub fn serialize_utc<W: Write>(value: &DateTime<Utc>, writer: &mut W) -> Result<
     (secs, nsecs).serialize(writer)
 }
 
-/// Deserialize [`DateTime<Utc>`] as `timestamp_micros`
+/// Deserialize [`DateTime<Utc>`]
 ///
 /// # Errors
 /// wrong input
