@@ -1,8 +1,9 @@
 //! Crate with amplifier ingester component
 use core::future::Future;
 use core::pin::Pin;
-use std::sync::Arc;
 use core::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 use eyre::Context as _;
 use futures::StreamExt as _;
@@ -99,7 +100,7 @@ where
     }
 
     #[tracing::instrument(skip_all, name = "[amplifier-ingester]")]
-    pub async fn ingest(&self) -> eyre::Result<()> {
+    pub async fn ingest<'s>(&self, shutdown: &'s AtomicBool) -> eyre::Result<()> {
         tracing::debug!("refresh");
 
         self.event_queue_consumer
@@ -107,6 +108,10 @@ where
             .await
             .wrap_err("could not retrieve messages from queue")?
             .for_each_concurrent(10, move |queue_msg| async move {
+                if shutdown.load(Ordering::Relaxed) {
+                    tracing::debug!("shutting down...");
+                    return;
+                }
                 let queue_msg = match queue_msg {
                     Ok(queue_msg) => queue_msg,
                     Err(err) => {
@@ -128,8 +133,8 @@ where
 {
     fn do_work<'s>(
         &'s mut self,
-        _shutdown: &'s AtomicBool,
+        shutdown: &'s AtomicBool,
     ) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + 's>> {
-        Box::pin(async { self.ingest().await })
+        Box::pin(async { self.ingest(shutdown).await })
     }
 }

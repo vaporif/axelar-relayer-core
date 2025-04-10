@@ -2,6 +2,7 @@
 use core::future::Future;
 use core::pin::Pin;
 use core::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use amplifier_api::requests::WithTrailingSlash;
 use amplifier_api::{AmplifierApiClient, requests};
@@ -34,7 +35,7 @@ where
 
     // TODO: Add leader election or something else
     #[tracing::instrument(skip_all, name = "[amplifier-subscriber]")]
-    pub async fn subscribe(&mut self) -> eyre::Result<()> {
+    pub async fn subscribe<'s>(&mut self, shutdown: &'s AtomicBool) -> eyre::Result<()> {
         tracing::debug!("refresh");
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
@@ -85,6 +86,10 @@ where
         }
 
         for task in response.tasks {
+            if shutdown.load(Ordering::Relaxed) {
+                tracing::debug!("shutting down...");
+                return Ok(());
+            }
             tracing::debug!(?task, "sending to queue");
             self.task_queue_publisher
                 .publish(task.id.0, task)
@@ -104,8 +109,8 @@ where
 {
     fn do_work<'s>(
         &'s mut self,
-        _shutdown: &'s AtomicBool,
+        shutdown: &'s AtomicBool,
     ) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + 's>> {
-        Box::pin(async { self.subscribe().await })
+        Box::pin(async { self.subscribe(shutdown).await })
     }
 }
