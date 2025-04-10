@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use core::str::FromStr as _;
 use core::time::Duration;
+use std::collections::HashMap;
 
 use relayer_amplifier_api_integration::Config;
 use relayer_amplifier_api_integration::amplifier_api::identity::Identity;
@@ -61,6 +61,7 @@ async fn main() {
     supervisor::run(components, &shutdown, Duration::from_secs(5)).expect("starts");
 }
 
+// NOTE: Random private key just to prove system starts
 const PEM: &str = "-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA5EZibAiV9ZLx5yYg5nsZhukPt+9zvK4rJbSeu4mQN538KMl1
 MiKxFrxsLVW5idGuWrhOkYw5EBdbHDzmOnRsVLepv7axqc/+P40swGYFzZZwkoaZ
