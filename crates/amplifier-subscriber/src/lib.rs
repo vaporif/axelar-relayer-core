@@ -2,7 +2,7 @@
 use core::future::Future;
 use core::pin::Pin;
 use core::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
+use core::sync::atomic::Ordering;
 
 use amplifier_api::requests::WithTrailingSlash;
 use amplifier_api::{AmplifierApiClient, requests};

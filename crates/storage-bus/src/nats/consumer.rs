@@ -1,10 +1,10 @@
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::time::Duration;
+use core::fmt::Debug;
+use core::marker::PhantomData;
+use core::time::Duration;
 
 use async_nats::jetstream;
 use borsh::BorshDeserialize;
-use futures::StreamExt;
+use futures::StreamExt as _;
 use uuid::Uuid;
 
 use super::NatsStream;
@@ -54,9 +54,9 @@ impl NatsStream {
 impl From<interfaces::consumer::AckKind> for jetstream::AckKind {
     fn from(val: interfaces::consumer::AckKind) -> Self {
         match val {
-            interfaces::consumer::AckKind::Ack => jetstream::AckKind::Ack,
-            interfaces::consumer::AckKind::Nak => jetstream::AckKind::Nak(None),
-            interfaces::consumer::AckKind::Progress => jetstream::AckKind::Progress,
+            interfaces::consumer::AckKind::Ack => Self::Ack,
+            interfaces::consumer::AckKind::Nak => Self::Nak(None),
+            interfaces::consumer::AckKind::Progress => Self::Progress,
         }
     }
 }
@@ -76,7 +76,7 @@ impl<T: BorshDeserialize + Debug> NatsMessage<T> {
 }
 
 impl<T: Debug> interfaces::consumer::QueueMessage<T> for NatsMessage<T> {
-    #[allow(refining_impl_trait)]
+    #[expect(refining_impl_trait)]
     #[tracing::instrument(skip_all)]
     async fn ack(&self, ack_kind: interfaces::consumer::AckKind) -> Result<(), Error> {
         tracing::debug!(?ack_kind, "sending ack");
@@ -102,7 +102,7 @@ impl<T> interfaces::consumer::Consumer<T> for NatsConsumer<T>
 where
     T: BorshDeserialize + Debug,
 {
-    #[allow(refining_impl_trait)]
+    #[expect(refining_impl_trait)]
     #[tracing::instrument(skip_all)]
     async fn messages(
         &self,

@@ -1,6 +1,6 @@
 // TODO: Nats dead letter queue publish
 // is expected to be done on application level
-use std::time::Duration;
+use core::time::Duration;
 
 use async_nats::{self, jetstream};
 use error::Error;

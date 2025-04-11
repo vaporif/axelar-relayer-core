@@ -1,8 +1,7 @@
-use eyre::Context;
+use eyre::Context as _;
 use relayer_amplifier_api_integration::Config;
-use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
+use relayer_amplifier_api_integration::amplifier_api::{self};
 use storage_bus::nats::consumer::NatsConsumer;
-use storage_bus::nats::kv_store::NatsKvStore;
 use storage_bus::nats::publisher::NatsPublisher;
 use storage_bus::nats::{self};
 use url::Url;

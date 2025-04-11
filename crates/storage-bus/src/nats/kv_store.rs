@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 use async_nats::jetstream::{self, kv};
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -41,7 +41,7 @@ impl<T> interfaces::kv_store::KvStore<T> for NatsKvStore<T>
 where
     T: BorshSerialize + BorshDeserialize,
 {
-    #[allow(refining_impl_trait)]
+    #[expect(refining_impl_trait)]
     async fn update(
         &self,
         data: interfaces::kv_store::WithRevision<T>,
@@ -61,7 +61,7 @@ where
         })
     }
 
-    #[allow(refining_impl_trait)]
+    #[expect(refining_impl_trait)]
     async fn put(&self, value: T) -> Result<interfaces::kv_store::WithRevision<T>, Error> {
         let value_bytes = borsh::to_vec(&value).map_err(Error::Serialize)?;
         let revision = self
@@ -73,7 +73,7 @@ where
         Ok(interfaces::kv_store::WithRevision { value, revision })
     }
 
-    #[allow(refining_impl_trait)]
+    #[expect(refining_impl_trait)]
     async fn get(&self) -> Result<Option<interfaces::kv_store::WithRevision<T>>, Error> {
         let entry = self.store.entry(&self.bucket).await.map_err(Error::Entry)?;
 

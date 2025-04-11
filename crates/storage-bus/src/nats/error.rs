@@ -1,9 +1,9 @@
-use async_nats::jetstream::consumer::push::MessagesError;
+use async_nats::ConnectError;
 use async_nats::jetstream::consumer::StreamError;
+use async_nats::jetstream::consumer::push::MessagesError;
 use async_nats::jetstream::context::{CreateKeyValueError, CreateStreamError, PublishError};
 use async_nats::jetstream::kv::{EntryError, PutError, UpdateError};
 use async_nats::jetstream::stream::{ConsumerError, DirectGetError, InfoError};
-use async_nats::ConnectError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

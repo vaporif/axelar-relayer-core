@@ -1,6 +1,6 @@
 //! Crate with amplifier component connectors.
-use std::sync::Arc;
 use core::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use eyre::Context as _;
 use relayer_amplifier_api_integration::Config;
@@ -20,7 +20,8 @@ pub fn register_backtrace() {
 }
 
 /// Run from main thread once
-#[must_use] pub fn register_ctrlc_handler() -> Arc<AtomicBool> {
+#[must_use]
+pub fn register_ctrlc_handler() -> Arc<AtomicBool> {
     let ctrl_c_shutdown = Arc::new(AtomicBool::new(false));
     let shutdown = ctrl_c_shutdown.clone();
     ctrlc::set_handler(move || {

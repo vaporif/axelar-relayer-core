@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use xshell::{cmd, Shell};
+use xshell::{Shell, cmd};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

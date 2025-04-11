@@ -3,7 +3,6 @@ pub mod consumer {
     use core::error::Error;
     use core::fmt::Debug;
     use core::future::Future;
-    
 
     pub trait QueueMessage<T>: Debug
     where
@@ -67,8 +66,8 @@ pub mod publisher {
 
 #[cfg(feature = "storage-interfaces")]
 pub mod kv_store {
-    use std::error::Error;
-    use std::fmt::Debug;
+    use core::error::Error;
+    use core::fmt::Debug;
 
     #[derive(Debug)]
     pub struct WithRevision<T> {

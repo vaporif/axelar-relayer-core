@@ -1,11 +1,11 @@
 //! Crate with supervisor and worker trait
-use std::collections::HashMap;
 use core::future::Future;
-use std::panic;
 use core::panic::AssertUnwindSafe;
 use core::pin::Pin;
 use core::sync::atomic::{AtomicBool, Ordering};
 use core::time::Duration;
+use std::collections::HashMap;
+use std::panic;
 
 use eyre::Context as _;
 

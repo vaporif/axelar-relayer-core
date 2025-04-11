@@ -1,10 +1,10 @@
 use core::task::Poll;
 
+use amplifier_api::AmplifierRequest;
 use amplifier_api::requests::{self, WithTrailingSlash};
 use amplifier_api::types::{ErrorResponse, GetTasksResult};
-use amplifier_api::AmplifierRequest;
-use futures::stream::StreamExt as _;
 use futures::SinkExt as _;
+use futures::stream::StreamExt as _;
 use relayer_amplifier_state::State;
 use tokio::task::JoinSet;
 use tokio_stream::wrappers::IntervalStream;

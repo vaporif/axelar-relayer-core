@@ -3,7 +3,7 @@ use core::future::Future;
 use core::pin::Pin;
 use core::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
+use core::sync::atomic::Ordering;
 
 use eyre::Context as _;
 use futures::StreamExt as _;

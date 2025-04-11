@@ -1,10 +1,10 @@
 pub mod events {
     use url::Url;
 
+    use crate::nats::NatsBuilder;
     use crate::nats::consumer::NatsConsumer;
     use crate::nats::error::Error;
     use crate::nats::publisher::NatsPublisher;
-    use crate::nats::NatsBuilder;
 
     const AMPLIFIER_EVENTS_STREAM: &str = "AMPLIFIER_EVENTS";
     const AMPLIFIER_EVENTS_PUBLISH_SUBJECT: &str = "amplifier.event.new";
@@ -44,10 +44,10 @@ pub mod events {
 pub mod tasks {
     use url::Url;
 
+    use crate::nats::NatsBuilder;
     use crate::nats::consumer::NatsConsumer;
     use crate::nats::error::Error;
     use crate::nats::publisher::NatsPublisher;
-    use crate::nats::NatsBuilder;
 
     const AMPLIFIER_TASKS_STREAM: &str = "AMPLIFIER_TASKS";
     const AMPLIFIER_TASKS_PUBLISH_SUBJECT: &str = "amplifier.tasks.new";

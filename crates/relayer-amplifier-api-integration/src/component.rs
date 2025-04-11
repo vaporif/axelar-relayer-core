@@ -6,7 +6,7 @@ use futures_concurrency::future::FutureExt as _;
 use quanta::Upkeep;
 use relayer_amplifier_state::State;
 use serde::{Deserialize, Serialize};
-use tracing::{info_span, Instrument as _};
+use tracing::{Instrument as _, info_span};
 
 use crate::{config, from_amplifier, healthcheck, to_amplifier};
 
