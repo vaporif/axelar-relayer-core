@@ -15,7 +15,7 @@ pub mod events {
 
     const EVENTS_TOPIC: &str = "amplifier-events";
     const EVENTS_COLLECTION_ID: &str = "amplifier-events";
-    const EVENTS_DOCUMENT_ID: &str = "amplifier-events";
+    const EVENTS_DOCUMENT_ID: &str = "last-processed";
 
     pub async fn connect_consumer(
         message_buffer_size: usize,
@@ -87,8 +87,8 @@ pub mod tasks {
     use crate::gcp::publisher::GcpPublisher;
 
     const TASKS_TOPIC: &str = "amplifier-tasks";
-    const TASKS_COLLECTION_ID: &str = "amplifier-events";
-    const TASKS_DOCUMENT_ID: &str = "amplifier-events";
+    const TASKS_COLLECTION_ID: &str = "amplifier-tasks";
+    const TASKS_DOCUMENT_ID: &str = "last-processed";
 
     pub async fn connect_consumer(
         message_buffer_size: usize,
