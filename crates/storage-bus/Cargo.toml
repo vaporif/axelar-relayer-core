@@ -9,7 +9,17 @@ license.workspace = true
 
 [dependencies]
 async-nats = { workspace = true, optional = true }
+google-cloud-pubsub = { workspace = true, optional = true }
+firestore = { workspace = true, optional = true }
+google-cloud-googleapis = { workspace = true, optional = true, features = [
+  "pubsub",
+] }
+tonic = { workspace = true, optional = true }
+flume = { workspace = true, optional = true, features = ["async"] }
+serde = { workspace = true, optional = true }
 url.workspace = true
+tokio.workspace = true
+tokio-util = { workspace = true, optional = true }
 thiserror.workspace = true
 amplifier-api.workspace = true
 futures.workspace = true
@@ -25,6 +35,19 @@ workspace = true
 nats = [
   "dep:async-nats",
   "dep:borsh",
+  "consumer-interfaces",
+  "publisher-interfaces",
+  "storage-interfaces",
+]
+gcp = [
+  "dep:google-cloud-pubsub",
+  "dep:google-cloud-googleapis",
+  "dep:firestore",
+  "dep:serde",
+  "dep:tonic",
+  "dep:borsh",
+  "dep:tokio-util",
+  "dep:flume",
   "consumer-interfaces",
   "publisher-interfaces",
   "storage-interfaces",

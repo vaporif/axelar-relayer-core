@@ -105,7 +105,12 @@ memmap2 = "0.9"
 bytemuck = "1.19"
 rand = "0.9"
 ctrlc = "3"
+tonic = "0.13"
+flume = "0.11"
+google-cloud-pubsub = { package = "gcloud-pubsub", version = "1.2" }
+google-cloud-googleapis = { package = "gcloud-googleapis", version = "1.1.0" }
 
+firestore = "0.45"
 # Serde
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
