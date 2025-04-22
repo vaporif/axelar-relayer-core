@@ -33,7 +33,6 @@ pub(crate) async fn get_or_create_topic(
     Ok(topic)
 }
 
-// TODO: create topic
 pub(crate) async fn get_or_create_subscription(
     client: &Client,
     topic: &str,
