@@ -6,8 +6,8 @@ pub mod events {
     use crate::nats::error::Error;
     use crate::nats::publisher::NatsPublisher;
 
-    const AMPLIFIER_EVENTS_STREAM: &str = "AMPLIFIER_EVENTS";
-    const AMPLIFIER_EVENTS_PUBLISH_SUBJECT: &str = "amplifier.event.new";
+    const EVENTS_STREAM: &str = "AMPLIFIER_EVENTS";
+    const EVENTS_PUBLISH_SUBJECT: &str = "amplifier.event.new";
 
     pub async fn connect_consumer(
         urls: Vec<Url>,
@@ -15,8 +15,8 @@ pub mod events {
         let consumer = NatsBuilder::connect_to_nats(urls)
             .await?
             .stream(
-                AMPLIFIER_EVENTS_STREAM,
-                AMPLIFIER_EVENTS_PUBLISH_SUBJECT,
+                EVENTS_STREAM,
+                EVENTS_PUBLISH_SUBJECT,
                 "amplifier events to send to amplifier api",
             )
             .await?
@@ -31,12 +31,12 @@ pub mod events {
         let publisher = NatsBuilder::connect_to_nats(urls)
             .await?
             .stream(
-                AMPLIFIER_EVENTS_STREAM,
-                AMPLIFIER_EVENTS_PUBLISH_SUBJECT,
+                EVENTS_STREAM,
+                EVENTS_PUBLISH_SUBJECT,
                 "amplifier events to send to amplifier api",
             )
             .await?
-            .publisher(AMPLIFIER_EVENTS_PUBLISH_SUBJECT)?;
+            .publisher(EVENTS_PUBLISH_SUBJECT)?;
         Ok(publisher)
     }
 }
@@ -49,8 +49,8 @@ pub mod tasks {
     use crate::nats::error::Error;
     use crate::nats::publisher::NatsPublisher;
 
-    const AMPLIFIER_TASKS_STREAM: &str = "AMPLIFIER_TASKS";
-    const AMPLIFIER_TASKS_PUBLISH_SUBJECT: &str = "amplifier.tasks.new";
+    const TASKS_STREAM: &str = "AMPLIFIER_TASKS";
+    const TASKS_PUBLISH_SUBJECT: &str = "amplifier.tasks.new";
 
     pub async fn connect_consumer(
         urls: Vec<Url>,
@@ -58,8 +58,8 @@ pub mod tasks {
         let consumer = NatsBuilder::connect_to_nats(urls)
             .await?
             .stream(
-                AMPLIFIER_TASKS_STREAM,
-                AMPLIFIER_TASKS_PUBLISH_SUBJECT,
+                TASKS_STREAM,
+                TASKS_PUBLISH_SUBJECT,
                 "amplifier tasks for ingester in starknet",
             )
             .await?
@@ -74,12 +74,12 @@ pub mod tasks {
         let publisher = NatsBuilder::connect_to_nats(urls)
             .await?
             .stream(
-                AMPLIFIER_TASKS_STREAM,
-                AMPLIFIER_TASKS_PUBLISH_SUBJECT,
+                TASKS_STREAM,
+                TASKS_PUBLISH_SUBJECT,
                 "amplifier tasks for ingester in starknet",
             )
             .await?
-            .publisher(AMPLIFIER_TASKS_PUBLISH_SUBJECT)?;
+            .publisher(TASKS_PUBLISH_SUBJECT)?;
         Ok(publisher)
     }
 }
