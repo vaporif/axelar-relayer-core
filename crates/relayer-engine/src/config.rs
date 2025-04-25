@@ -3,7 +3,9 @@
 use core::future::Future;
 use core::net::SocketAddr;
 use core::pin::Pin;
+use std::str::FromStr;
 
+use clap::Parser;
 use serde::Deserialize;
 
 /// Generic async component that the Relyer Engine can spawn and execute.
@@ -24,14 +26,21 @@ pub trait RelayerComponent {
 
 /// Top-level configuration for the relayer engine.
 /// Agnostic to the underlying components.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Parser)]
 pub struct Config {
     /// Health check server configuration.
+    #[arg(env = "RELAYER_ENGINE_HEALTH_CHECK", value_parser = parse_health_check)]
     pub health_check: HealthCheckConfig,
 }
 
+fn parse_health_check(input: &str) -> Result<HealthCheckConfig, String> {
+    Ok(HealthCheckConfig {
+        bind_addr: SocketAddr::from_str(input).expect("failed to get health check"),
+    })
+}
+
 /// Health check server configuration.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Clone)]
 pub struct HealthCheckConfig {
     /// Address to bind the health check server.
     pub bind_addr: SocketAddr,
