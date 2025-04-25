@@ -57,6 +57,7 @@ dependencies = [
  "base64",
  "bnum",
  "chrono",
+ "clap",
  "pretty_assertions",
  "redact",
  "reqwest",
@@ -1459,6 +1460,7 @@ name = "relayer-amplifier-api-integration"
 version = "0.1.1"
 dependencies = [
  "amplifier-api",
+ "clap",
  "common-serde-utils",
  "eyre",
  "futures",

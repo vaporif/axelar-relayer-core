@@ -69,7 +69,7 @@ amplifier-api = { path = "crates/amplifier-api" }
 common-serde-utils = { path = "crates/common-serde-utils" }
 
 # CLI
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 xshell = "0.2"
 
 # Utils

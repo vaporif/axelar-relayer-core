@@ -20,6 +20,7 @@ uuid.workspace = true
 chrono.workspace = true
 bnum.workspace = true
 typed-builder.workspace = true
+clap.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true
