@@ -1,4 +1,5 @@
 use amplifier_api::identity::Identity;
+use base64::{prelude::BASE64_STANDARD, Engine};
 use clap::Parser;
 use eyre::Result;
 use serde::Deserialize;
@@ -71,7 +72,8 @@ pub struct Config {
 }
 
 fn parse_identity(input: &str) -> Result<Identity> {
-    Ok(Identity::new_from_pem_bytes(input.as_bytes())?)
+    let identity_bytes = BASE64_STANDARD.decode(input)?;
+    Ok(Identity::new_from_pem_bytes(&identity_bytes)?)
 }
 
 fn parse_chains_poll_interval(input: &str) -> Result<core::time::Duration> {
