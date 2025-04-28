@@ -1,5 +1,6 @@
 use amplifier_api::identity::Identity;
 use clap::Parser;
+use eyre::Result;
 use serde::Deserialize;
 use typed_builder::TypedBuilder;
 
@@ -65,23 +66,21 @@ pub struct Config {
     pub invalid_healthchecks_before_shutdown: usize,
 }
 
-fn parse_identity(input: &str) -> Result<Identity, String> {
-    Ok(Identity::new_from_pem_bytes(input.as_bytes()).expect("failed to parse identity"))
+fn parse_identity(input: &str) -> Result<Identity> {
+    Ok(Identity::new_from_pem_bytes(input.as_bytes())?)
 }
 
-fn parse_chains_poll_interval(input: &str) -> Result<core::time::Duration, String> {
+fn parse_chains_poll_interval(input: &str) -> Result<core::time::Duration> {
     Ok(core::time::Duration::from_secs(
         input
-            .parse::<u64>()
-            .expect("failed to parse chains poll interval"),
+            .parse::<u64>()?,
     ))
 }
 
-fn parse_healthcheck_interval(input: &str) -> Result<core::time::Duration, String> {
+fn parse_healthcheck_interval(input: &str) -> Result<core::time::Duration> {
     Ok(core::time::Duration::from_secs(
         input
-            .parse::<u64>()
-            .expect("failed to parse healthcheck interval"),
+            .parse::<u64>()?
     ))
 }
 

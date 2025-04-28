@@ -6,6 +6,7 @@ use core::pin::Pin;
 use std::str::FromStr;
 
 use clap::Parser;
+use eyre::Result;
 use serde::Deserialize;
 
 /// Generic async component that the Relyer Engine can spawn and execute.
@@ -21,7 +22,7 @@ pub trait RelayerComponent {
     ///   engine / other processes
     /// - `Err(eyre::Report)` -- the component is shutting down with a fatal error and it requires
     ///   the shutdown of the whole engine
-    fn process(self: Box<Self>) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + Send>>;
+    fn process(self: Box<Self>) -> Pin<Box<dyn Future<Output = Result<()>> + Send>>;
 }
 
 /// Top-level configuration for the relayer engine.
@@ -33,9 +34,9 @@ pub struct Config {
     pub health_check: HealthCheckConfig,
 }
 
-fn parse_health_check(input: &str) -> Result<HealthCheckConfig, String> {
+fn parse_health_check(input: &str) -> Result<HealthCheckConfig> {
     Ok(HealthCheckConfig {
-        bind_addr: SocketAddr::from_str(input).expect("failed to get health check"),
+        bind_addr: SocketAddr::from_str(input)?
     })
 }
 
