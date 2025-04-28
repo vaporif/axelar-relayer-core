@@ -1,5 +1,6 @@
 use amplifier_api::identity::Identity;
-use base64::{prelude::BASE64_STANDARD, Engine};
+use base64::prelude::BASE64_STANDARD;
+use base64::Engine;
 use clap::Parser;
 use eyre::Result;
 use serde::Deserialize;
@@ -9,13 +10,17 @@ use typed_builder::TypedBuilder;
 #[derive(Debug, Deserialize, Clone, PartialEq, TypedBuilder, Parser)]
 pub struct Config {
     /// Identity certificate for the Amplifier API authentication to work
-    #[arg(value_name = "AMPLIFIER_API_IDENTITY", env, value_parser = parse_identity)]
+    #[arg(
+        value_name = "AMPLIFIER_API_IDENTITY",
+        env = "AMPLIFIER_API_IDENTITY",
+        value_parser = parse_identity
+    )]
     pub identity: Identity,
     /// The Amplifier API url to connect to
-    #[arg(value_name = "AMPLIFIER_API_URL", env)]
+    #[arg(value_name = "AMPLIFIER_API_URL", env = "AMPLIFIER_API_URL")]
     pub url: url::Url,
     /// The name of the chain that we need to send / listen for
-    #[arg(value_name = "AMPLIFIER_API_CHAIN", env)]
+    #[arg(value_name = "AMPLIFIER_API_CHAIN", env = "AMPLIFIER_API_CHAIN")]
     pub chain: String,
 
     /// The interval between polling Amplifier API for new tasks
@@ -27,8 +32,8 @@ pub struct Config {
     )]
     #[arg(
         value_name = "AMPLIFIER_API_CHAINS_POLL_INTERVAL",
-        env,
-        value_parser = parse_chains_poll_interval, 
+        env = "AMPLIFIER_API_CHAINS_POLL_INTERVAL", 
+        value_parser = parse_chains_poll_interval,
         default_value = config_defaults::chains_poll_interval_default_value().to_string()
     )]
     pub get_chains_poll_interval: core::time::Duration,
@@ -39,7 +44,7 @@ pub struct Config {
     #[serde(default = "config_defaults::get_chains_limit")]
     #[arg(
         value_name = "AMPLIFIER_API_CHAINS_LIMIT",
-        env,
+        env = "AMPLIFIER_API_CHAINS_LIMIT", 
         default_value = config_defaults::get_chains_limit().to_string()
     )]
     pub get_chains_limit: u8,
@@ -53,9 +58,9 @@ pub struct Config {
     )]
     #[arg(
         value_name = "AMPLIFIER_API_HEALTHCHECK_INTERVAL",
-        env,
-        value_parser = parse_healthcheck_interval, 
-        default_value = config_defaults::healthcheck_interval_default_value().to_string()
+        env = "AMPLIFIER_API_HEALTHCHECK_INTERVAL", 
+        value_parser = parse_healthcheck_interval,
+        default_value = "bla"
     )]
     pub healthcheck_interval: core::time::Duration,
 
@@ -65,7 +70,7 @@ pub struct Config {
     #[serde(default = "config_defaults::invalid_healthchecks_before_shutdown")]
     #[arg(
         value_name = "AMPLIFIER_API_INVALID_HEALTHCHECKS_BEFORE_SHUTDOWN",
-        env,
+        env = "AMPLIFIER_API_INVALID_HEALTHCHECKS_BEFORE_SHUTDOWN", 
         default_value = config_defaults::invalid_healthchecks_before_shutdown().to_string()
     )]
     pub invalid_healthchecks_before_shutdown: usize,
@@ -77,17 +82,11 @@ fn parse_identity(input: &str) -> Result<Identity> {
 }
 
 fn parse_chains_poll_interval(input: &str) -> Result<core::time::Duration> {
-    Ok(core::time::Duration::from_secs(
-        input
-            .parse::<u64>()?,
-    ))
+    Ok(core::time::Duration::from_secs(input.parse::<u64>()?))
 }
 
 fn parse_healthcheck_interval(input: &str) -> Result<core::time::Duration> {
-    Ok(core::time::Duration::from_secs(
-        input
-            .parse::<u64>()?
-    ))
+    Ok(core::time::Duration::from_secs(input.parse::<u64>()?))
 }
 
 pub(crate) mod config_defaults {
