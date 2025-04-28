@@ -8,13 +8,13 @@ use typed_builder::TypedBuilder;
 #[derive(Debug, Deserialize, Clone, PartialEq, TypedBuilder, Parser)]
 pub struct Config {
     /// Identity certificate for the Amplifier API authentication to work
-    #[arg(env = "AMPLIFIER_API_IDENTITY", value_parser = parse_identity)]
+    #[arg(value_name = "AMPLIFIER_API_IDENTITY", env, value_parser = parse_identity)]
     pub identity: Identity,
     /// The Amplifier API url to connect to
-    #[arg(env = "AMPLIFIER_API_URL")]
+    #[arg(value_name = "AMPLIFIER_API_URL", env)]
     pub url: url::Url,
     /// The name of the chain that we need to send / listen for
-    #[arg(env = "AMPLIFIER_API_CHAIN")]
+    #[arg(value_name = "AMPLIFIER_API_CHAIN", env)]
     pub chain: String,
 
     /// The interval between polling Amplifier API for new tasks
@@ -25,7 +25,8 @@ pub struct Config {
         deserialize_with = "common_serde_utils::duration_ms_decode"
     )]
     #[arg(
-        env = "AMPLIFIER_API_CHAINS_POLL_INTERVAL", 
+        value_name = "AMPLIFIER_API_CHAINS_POLL_INTERVAL",
+        env,
         value_parser = parse_chains_poll_interval, 
         default_value = config_defaults::chains_poll_interval_default_value().to_string()
     )]
@@ -36,7 +37,8 @@ pub struct Config {
     #[builder(default = config_defaults::get_chains_limit())]
     #[serde(default = "config_defaults::get_chains_limit")]
     #[arg(
-        env = "AMPLIFIER_API_CHAINS_LIMIT", 
+        value_name = "AMPLIFIER_API_CHAINS_LIMIT",
+        env,
         default_value = config_defaults::get_chains_limit().to_string()
     )]
     pub get_chains_limit: u8,
@@ -49,7 +51,8 @@ pub struct Config {
         deserialize_with = "common_serde_utils::duration_ms_decode"
     )]
     #[arg(
-        env = "AMPLIFIER_API_HEALTHCHECK_INTERVAL", 
+        value_name = "AMPLIFIER_API_HEALTHCHECK_INTERVAL",
+        env,
         value_parser = parse_healthcheck_interval, 
         default_value = config_defaults::healthcheck_interval_default_value().to_string()
     )]
@@ -60,7 +63,8 @@ pub struct Config {
     #[builder(default = config_defaults::invalid_healthchecks_before_shutdown())]
     #[serde(default = "config_defaults::invalid_healthchecks_before_shutdown")]
     #[arg(
-        env = "AMPLIFIER_API_INVALID_HEALTHCHECKS_BEFORE_SHUTDOWN", 
+        value_name = "AMPLIFIER_API_INVALID_HEALTHCHECKS_BEFORE_SHUTDOWN",
+        env,
         default_value = config_defaults::invalid_healthchecks_before_shutdown().to_string()
     )]
     pub invalid_healthchecks_before_shutdown: usize,

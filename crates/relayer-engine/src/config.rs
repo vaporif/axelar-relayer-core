@@ -30,7 +30,7 @@ pub trait RelayerComponent {
 #[derive(Debug, Deserialize, PartialEq, Eq, Parser)]
 pub struct Config {
     /// Health check server configuration.
-    #[arg(env = "RELAYER_ENGINE_HEALTH_CHECK", value_parser = parse_health_check)]
+    #[arg(value_name = "RELAYER_ENGINE_HEALTH_CHECK", env, value_parser = parse_health_check)]
     pub health_check: HealthCheckConfig,
 }
 
