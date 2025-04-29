@@ -1,6 +1,5 @@
 use core::num::NonZeroU64;
 use core::time::Duration;
-use std::u64;
 
 use rand::Rng as _;
 
@@ -101,7 +100,7 @@ fn jitter(duration_ms: u64) -> u64 {
 }
 
 fn u128_to_u64_saturating(value: u128) -> u64 {
-    if value > u64::MAX as u128 {
+    if value > u128::from(u64::MAX) {
         u64::MAX
     } else {
         u64::try_from(value).unwrap_or(u64::MAX)

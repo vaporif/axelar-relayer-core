@@ -14,6 +14,7 @@ pub fn register_backtrace() {
 
 /// Run from main thread once
 #[must_use]
+#[allow(clippy::print_stdout, reason = "runs before tracing")]
 pub fn register_ctrlc_handler() -> CancellationToken {
     let cancel_token = CancellationToken::new();
     let ctrlc_token = cancel_token.clone();

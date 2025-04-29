@@ -36,10 +36,11 @@ impl Builder {
         Fn: AsyncFn() -> Result<T, Err>,
         Err: Display + Abortable,
     {
-        let backoff =
-            ExponentialBackoff::from_millis(self.backoff.initial_delay.as_millis() as u64)
-                .factor(self.backoff.backoff_factor.into())
-                .max_delay(self.backoff.max_delay);
+        let backoff = ExponentialBackoff::from_millis(
+            u64::try_from(self.backoff.initial_delay.as_millis()).unwrap_or(u64::MAX),
+        )
+        .factor(self.backoff.backoff_factor.into())
+        .max_delay(self.backoff.max_delay);
 
         RetryFn::new(backoff, function)
     }
