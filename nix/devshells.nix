@@ -19,6 +19,7 @@
             nixd
             natscli
             nats-server
+            google-cloud-sdk
             cargo-make
             pkg-config
             opentofu
