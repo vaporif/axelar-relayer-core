@@ -4,6 +4,7 @@ use google_cloud_pubsub::topic::Topic;
 
 use super::error::Error;
 
+/// get & check if topic exists
 pub(crate) async fn get_topic(client: &Client, topic_name: &str) -> Result<Topic, Error> {
     let topic = client.topic(topic_name);
 
@@ -16,6 +17,7 @@ pub(crate) async fn get_topic(client: &Client, topic_name: &str) -> Result<Topic
     Ok(topic)
 }
 
+/// get & check if subscription exists
 pub(crate) async fn get_subscription(
     client: &Client,
     subscription_name: &str,

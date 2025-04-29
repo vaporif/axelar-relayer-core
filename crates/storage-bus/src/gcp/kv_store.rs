@@ -9,6 +9,7 @@ use super::error::Error;
 use crate::interfaces::kv_store::WithRevision;
 use crate::interfaces::{self};
 
+/// Redis
 pub struct GcpRedis<T> {
     key: String,
     connection: MultiplexedConnection,
@@ -19,6 +20,7 @@ impl<T> GcpRedis<T>
 where
     T: Serialize + for<'de> Deserialize<'de> + Send + Sync,
 {
+    /// connect to redis to work with specific key
     pub async fn connect(key: String, connection: String) -> Result<Self, Error> {
         let client = Client::open(connection).map_err(Error::Connection)?;
 
@@ -34,6 +36,7 @@ where
         })
     }
 
+    /// upsert value
     pub async fn upsert(&self, value: &T) -> Result<(), Error> {
         let json_string = serde_json::to_string(value).map_err(Error::RedisSerialize)?;
 

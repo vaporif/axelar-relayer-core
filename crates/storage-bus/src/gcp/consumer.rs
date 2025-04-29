@@ -11,6 +11,7 @@ use super::util::get_subscription;
 use crate::interfaces;
 
 impl super::PubSubBuilder {
+    /// connect consumer
     pub async fn consumer<T: Debug + Send + Sync + BorshDeserialize + 'static>(
         self,
         subscription: &str,
@@ -40,6 +41,7 @@ impl super::PubSubBuilder {
     }
 }
 
+/// Decoded queue message
 #[derive(Debug)]
 pub struct GcpMessage<T: Send + Sync> {
     msg: ReceivedMessage,
@@ -84,6 +86,7 @@ impl<T: Debug + Send + Sync> interfaces::consumer::QueueMessage<T> for GcpMessag
     }
 }
 
+/// Queue consumer
 pub struct GcpConsumer<T: Send + Sync> {
     receiver: flume::Receiver<Result<GcpMessage<T>, Error>>,
     cancel_token: CancellationToken,

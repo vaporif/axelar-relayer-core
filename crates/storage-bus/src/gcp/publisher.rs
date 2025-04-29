@@ -39,6 +39,7 @@ impl super::PubSubBuilder {
     }
 }
 
+/// Queue publisher
 pub struct GcpPublisher<T> {
     publisher: Publisher,
     _phantom: PhantomData<T>,
@@ -71,6 +72,7 @@ where
     }
 }
 
+/// Queue publisher with ability to get last message (without consuming)
 pub struct PeekableGcpPublisher<T> {
     publisher: GcpPublisher<T>,
     last_message_kv_store: GcpRedis<T>,

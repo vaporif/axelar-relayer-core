@@ -2,6 +2,8 @@
 
 use google_cloud_pubsub::client::{self, google_cloud_auth};
 use redis::RedisError;
+
+/// Errors
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("auth error {0}")]
