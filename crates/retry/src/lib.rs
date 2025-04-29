@@ -5,7 +5,6 @@ pub mod builder;
 pub(crate) mod retry_fn;
 pub(crate) mod retry_pair_fn;
 
-use core::fmt::Display;
 use core::num::NonZeroU64;
 use core::time::Duration;
 
@@ -13,7 +12,7 @@ pub use builder::BackoffRetryBuilder;
 
 /// Retry error
 #[derive(Debug, thiserror::Error)]
-pub enum RetryError<Err: Display + Abortable> {
+pub enum RetryError<Err: Abortable> {
     /// Execution aborted due to non-recoverable error
     #[error("aborted {0}")]
     Aborted(Err),
@@ -32,6 +31,7 @@ pub(crate) struct BackoffParrams {
 
 /// Is error abortable i.e. non-recoverable?
 pub trait Abortable {
+    /// Is error abortable i.e. non-recoverable?
     fn abortable(&self) -> bool;
 }
 
