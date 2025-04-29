@@ -95,13 +95,15 @@ impl Iterator for BackoffPairIterator {
     clippy::cast_precision_loss,
     reason = "Precision loss is acceptable for jitter"
 )]
+#[allow(clippy::as_conversions, reason = "Conversion is checked for safety")]
+#[allow(clippy::cast_sign_loss, reason = "We check the sign before casting")]
 fn jitter(duration_ms: u64) -> u64 {
     let jitter_factor: f64 = rand::rng().random_range(0.5_f64..1.5_f64);
     let jittered: f64 = duration_ms as f64 * jitter_factor;
-    if jittered.is_finite() && jittered.is_sign_positive() {
+    if jittered.is_finite() && jittered.is_sign_positive() && jittered < f64::MAX / 2.0 {
         jittered as u64
     } else {
-        u64::MAX
+        duration_ms
     }
 }
 

@@ -53,7 +53,7 @@ pub mod publisher {
         ) -> impl Future<Output = Result<Option<T>, impl Error + Send + Sync + 'static>>;
     }
 
-    // TODO: change to publish_batch
+    #[allow(clippy::impl_trait_in_params, reason = "improves readability")]
     pub trait Publisher<T: Send + Sync> {
         type AckFuture: IntoFuture;
         fn publish(
