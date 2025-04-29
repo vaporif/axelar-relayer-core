@@ -1,19 +1,15 @@
 //! Crate with amplifier subscriber component
-use core::future::Future;
-use core::pin::Pin;
-use core::sync::atomic::AtomicBool;
-use core::sync::atomic::Ordering;
+use std::pin::Pin;
 
 use amplifier_api::requests::WithTrailingSlash;
 use amplifier_api::{AmplifierApiClient, requests};
-use eyre::Context as _;
+use eyre::Context;
 use storage_bus::interfaces::publisher::{PeekMessage, Publisher};
-use supervisor::Worker;
 
 pub struct Subscriber<TaskQueuePublisher> {
-    chain: String,
     amplifier_client: AmplifierApiClient,
     task_queue_publisher: TaskQueuePublisher,
+    chain: String,
 }
 
 impl<TaskQueuePublisher> Subscriber<TaskQueuePublisher>
@@ -21,21 +17,21 @@ where
     TaskQueuePublisher:
         Publisher<amplifier_api::types::TaskItem> + PeekMessage<amplifier_api::types::TaskItem>,
 {
-    pub const fn new(
+    pub fn new(
         amplifier_client: AmplifierApiClient,
         task_queue_publisher: TaskQueuePublisher,
         chain: String,
     ) -> Self {
         Self {
-            chain,
             amplifier_client,
             task_queue_publisher,
+            chain,
         }
     }
 
     // TODO: Add leader election or something else
     #[tracing::instrument(skip_all, name = "[amplifier-subscriber]")]
-    pub async fn subscribe<'s>(&mut self, shutdown: &'s AtomicBool) -> eyre::Result<()> {
+    pub async fn subscribe(&mut self) -> eyre::Result<()> {
         tracing::debug!("refresh");
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
@@ -50,7 +46,7 @@ where
 
         let request = requests::GetChains::builder()
             .chain(&chain_with_trailing_slash)
-            .limit(100_u8)
+            .limit(100u8)
             .after(last_task_id)
             .build();
 
@@ -82,17 +78,13 @@ where
         tracing::debug!(?response, "amplifier response");
 
         if !response.tasks.is_empty() {
-            tracing::info!(count = response.tasks.len(), "got amplifier tasks");
+            tracing::info!(count = response.tasks.len(), "got amplifier tasks")
         }
 
         for task in response.tasks {
-            if shutdown.load(Ordering::Relaxed) {
-                tracing::debug!("shutting down...");
-                return Ok(());
-            }
             tracing::debug!(?task, "sending to queue");
             self.task_queue_publisher
-                .publish(task.id.0, task)
+                .publish(task.id.0, &task)
                 .await
                 .wrap_err("could not publish task to queue")?;
         }
@@ -100,17 +92,14 @@ where
     }
 }
 
-impl<TaskQueuePublisher> Worker for Subscriber<TaskQueuePublisher>
+impl<TaskQueuePublisher> supervisor::Worker for Subscriber<TaskQueuePublisher>
 where
     TaskQueuePublisher: Publisher<amplifier_api::types::TaskItem>
         + PeekMessage<amplifier_api::types::TaskItem>
         + Send
         + Sync,
 {
-    fn do_work<'s>(
-        &'s mut self,
-        shutdown: &'s AtomicBool,
-    ) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + 's>> {
-        Box::pin(async { self.subscribe(shutdown).await })
+    fn do_work<'s>(&'s mut self) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + 's>> {
+        Box::pin(async { self.subscribe().await })
     }
 }
