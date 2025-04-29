@@ -82,6 +82,7 @@ pub mod kv_store {
     use std::error::Error;
     use std::fmt::Debug;
 
+    /// Value with revision
     #[derive(Debug)]
     pub struct WithRevision<T> {
         pub value: T,
@@ -89,16 +90,19 @@ pub mod kv_store {
     }
 
     pub trait KvStore<T> {
+        /// Update value in kvstore
         fn update(
             &self,
             data: &WithRevision<T>,
         ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>>;
 
+        /// Create value in kvstore
         fn put(
             &self,
             value: &T,
         ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>>;
 
+        /// Get value from kvstore
         fn get(
             &self,
         ) -> impl Future<Output = Result<Option<WithRevision<T>>, impl Error + Send + Sync + 'static>>;

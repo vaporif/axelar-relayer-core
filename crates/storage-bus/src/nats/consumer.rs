@@ -12,6 +12,7 @@ use super::error::Error;
 use crate::interfaces;
 
 impl NatsStream {
+    /// create consumer
     pub async fn consumer<T: Debug>(
         self,
         description: impl Into<String>,
@@ -61,7 +62,7 @@ impl From<interfaces::consumer::AckKind> for jetstream::AckKind {
     }
 }
 
-// TODO: Dead letter queue
+/// decoded queue message
 #[derive(Debug)]
 pub struct NatsMessage<T> {
     decoded: T,
@@ -95,6 +96,7 @@ impl<T: Debug> interfaces::consumer::QueueMessage<T> for NatsMessage<T> {
     }
 }
 
+/// Queue consumer
 pub struct NatsConsumer<T> {
     consumer_inner: jetstream::consumer::Consumer<jetstream::consumer::push::Config>,
     _phantom: PhantomData<T>,

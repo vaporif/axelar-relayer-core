@@ -10,6 +10,7 @@ use crate::interfaces;
 const NATS_MSG_ID: &str = "Nats-Msg-Id";
 
 impl super::NatsStream {
+    /// connect pulisher
     pub fn publisher<T: Send + Sync>(
         self,
         subject: impl Into<String>,
@@ -23,6 +24,7 @@ impl super::NatsStream {
     }
 }
 
+/// Queue publisher
 pub struct NatsPublisher<T> {
     context: jetstream::Context,
     stream: jetstream::stream::Stream,

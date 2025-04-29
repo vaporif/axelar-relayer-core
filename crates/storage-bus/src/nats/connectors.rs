@@ -9,6 +9,7 @@ pub mod events {
     const EVENTS_STREAM: &str = "AMPLIFIER_EVENTS";
     const EVENTS_PUBLISH_SUBJECT: &str = "amplifier.event.new";
 
+    // conect consumer
     pub async fn connect_consumer(
         urls: &[Url],
     ) -> Result<NatsConsumer<amplifier_api::types::Event>, Error> {
@@ -25,6 +26,7 @@ pub mod events {
         Ok(consumer)
     }
 
+    // conect publisher
     pub async fn connect_publisher(
         urls: &[Url],
     ) -> Result<NatsPublisher<amplifier_api::types::Event>, Error> {
@@ -52,6 +54,7 @@ pub mod tasks {
     const TASKS_STREAM: &str = "AMPLIFIER_TASKS";
     const TASKS_PUBLISH_SUBJECT: &str = "amplifier.tasks.new";
 
+    // conect consumer
     pub async fn connect_consumer(
         urls: &[Url],
     ) -> Result<NatsConsumer<amplifier_api::types::TaskItem>, Error> {
@@ -68,6 +71,7 @@ pub mod tasks {
         Ok(consumer)
     }
 
+    // conect publisher
     pub async fn connect_publisher(
         urls: &[Url],
     ) -> Result<NatsPublisher<amplifier_api::types::TaskItem>, Error> {

@@ -5,6 +5,7 @@ use async_nats::jetstream::context::{CreateKeyValueError, CreateStreamError, Pub
 use async_nats::jetstream::kv::{EntryError, PutError, UpdateError};
 use async_nats::jetstream::stream::{ConsumerError, DirectGetError, InfoError};
 
+/// Errors
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("connect to nats error: {0}")]

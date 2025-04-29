@@ -5,6 +5,7 @@ use async_nats::{self, jetstream};
 use error::Error;
 use url::Url;
 
+/// Nats clients builder
 pub struct NatsBuilder {
     inbox: String,
     context: jetstream::context::Context,

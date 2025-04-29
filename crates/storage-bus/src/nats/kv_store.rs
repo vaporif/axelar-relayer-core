@@ -8,12 +8,14 @@ use url::Url;
 use super::error::Error;
 use crate::interfaces;
 
+/// KeyValue store
 pub struct NatsKvStore<T> {
     bucket: String,
     store: kv::Store,
     _phantom: PhantomData<T>,
 }
 
+/// connect to kvstore
 pub async fn connect<T>(
     urls: &[Url],
     bucket: String,
@@ -42,6 +44,7 @@ impl<T> interfaces::kv_store::KvStore<T> for NatsKvStore<T>
 where
     T: BorshSerialize + BorshDeserialize + Debug,
 {
+    /// Update value in kvstore
     #[allow(refining_impl_trait)]
     #[tracing::instrument(skip(self))]
     async fn update(&self, data: &interfaces::kv_store::WithRevision<T>) -> Result<u64, Error> {
