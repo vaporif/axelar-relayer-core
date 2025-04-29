@@ -94,7 +94,7 @@ impl Iterator for BackoffPairIterator {
 }
 
 fn jitter(duration_ms: u64) -> u64 {
-    let jitter_factor = rand::rng().random_range(0.5..1.5);
+    let jitter_factor = rand::rng().random_range(0.5_f64..1.5_f64);
     let jittered = duration_ms as f64 * jitter_factor;
     if jittered.is_finite() {
         jittered as u64
