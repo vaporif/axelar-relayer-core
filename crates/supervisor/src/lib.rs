@@ -192,12 +192,12 @@ fn spawn_worker<'scope>(
                 tracing::error!(worker_name, ?err, "worker error");
             }
             Err(panic_err) => {
-                let panic_msg = if let Some(s) = panic_err.downcast_ref::<String>() {
-                    s.clone()
-                } else if let Some(s) = panic_err.downcast_ref::<&str>() {
-                    s.to_string()
+                let panic_msg = if let Some(err) = panic_err.downcast_ref::<String>() {
+                    err.clone()
+                } else if let Some(err) = panic_err.downcast_ref::<&str>() {
+                    (*err).to_owned()
                 } else {
-                    format!("Unknown panic: {:?}", panic_err)
+                    format!("Unknown panic: {panic_err:?}")
                 };
                 tracing::error!(worker_name, %panic_msg, "worker panicked");
             }
