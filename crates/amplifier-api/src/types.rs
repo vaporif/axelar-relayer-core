@@ -755,6 +755,7 @@ pub enum Event {
 
 impl Event {
     /// Returns event id
+    #[allow(clippy::missing_const_for_fn, reason = "not applicable")]
     #[must_use]
     pub fn event_id(&self) -> &str {
         match self {

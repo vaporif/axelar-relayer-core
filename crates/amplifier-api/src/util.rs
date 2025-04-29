@@ -40,6 +40,7 @@ pub fn deserialize_utc<R: Read>(reader: &mut R) -> Result<DateTime<Utc>> {
 ///
 /// # Errors
 /// Infallible
+#[allow(clippy::ref_option, reason = "serde requires otherwise")]
 pub fn serialize_option_utc<W: Write>(value: &Option<DateTime<Utc>>, writer: &mut W) -> Result<()> {
     match *value {
         Some(dt) => {

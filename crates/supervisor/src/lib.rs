@@ -47,7 +47,7 @@ pub fn run(
                         Ok(worker) => worker,
                         Err(err) => {
                             tracing::error!(%worker_name, ?err, "error during building worker");
-                            let _ = worker_crashed_tx.send(worker_name.clone());
+                            _ = worker_crashed_tx.send(worker_name.clone());
                             continue;
                         },
                     };
@@ -95,14 +95,14 @@ pub fn run(
                                     continue;
                                 }
                                 tracing::info!(worker_name, "Restarting worker");
-                                let builder = &worker_builders[&worker_name];
+                                let builder = worker_builders.get(&worker_name).expect("builder should be present");
 
                                 // TODO: rate limiter?
                                 let worker = match builder().await {
                                     Ok(worker) => worker,
                                     Err(err) => {
                                         tracing::error!(%worker_name, ?err, "error during building worker");
-                                        let _ = worker_crashed_tx.send(worker_name.clone());
+                                        _ = worker_crashed_tx.send(worker_name.clone());
                                         continue;
                                     },
                                 };
@@ -116,7 +116,7 @@ pub fn run(
                                 );
 
                                 if let Some(Some(old_handle)) = active_workers.remove(&worker_name) {
-                                    let _ = old_handle.join();
+                                    _ = old_handle.join();
                                     tracing::debug!(worker_name, "Replaced existing worker handle");
                                 }
                                 active_workers.insert(worker_name.clone(), Some(worker_handle));
@@ -129,7 +129,7 @@ pub fn run(
             eyre::Ok(())
         });
 
-        let _ = supervisor_handle
+        _ = supervisor_handle
             .join()
             .map_err(|err| eyre::eyre!(format!("Supervisor thread panicked: {err:?}")))?;
 
@@ -205,7 +205,7 @@ fn spawn_worker<'scope>(
 
         if cancel_token.is_cancelled() {
             thread::sleep(Duration::from_secs(1));
-            let _ = worker_crashed_tx.send(worker_name.clone());
+            _ = worker_crashed_tx.send(worker_name.clone());
             tracing::debug!(worker_name, "Reported worker crash for restart");
         }
 
