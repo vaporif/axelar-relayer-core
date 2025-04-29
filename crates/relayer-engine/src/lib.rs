@@ -47,7 +47,6 @@ impl RelayerEngine {
             match task_result {
                 Ok(Ok(())) => {
                     tracing::warn!("A task exited successfully");
-                    continue;
                 }
                 Ok(Err(err)) => {
                     tracing::error!(?err, "A task returned an error, shutting down the system");
