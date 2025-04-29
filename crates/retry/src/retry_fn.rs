@@ -19,7 +19,7 @@ where
     Fn: AsyncFn() -> Result<T, Err>,
     Err: Display + Abortable,
 {
-    pub(crate) fn new(backoff: ExponentialBackoff, function: Fn) -> Self {
+    pub(crate) const fn new(backoff: ExponentialBackoff, function: Fn) -> Self {
         Self {
             backoff,
             function,

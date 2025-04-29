@@ -78,6 +78,7 @@ The relayer uses threading and supervision model:
    - Spawns and monitors worker threads only for the components selected via CLI
    - Detects crashes and automatically restarts failed components
    - Provides a graceful shutdown period when termination is requested
+   - Is fully optional
 
 2. **Termination Handling**:
    - A dedicated thread listens for Ctrl+C signals
@@ -91,16 +92,12 @@ The relayer uses threading and supervision model:
    - Each thread has an isolated Tokio runtime
    - Components check the termination flag regularly and shut down when needed
    - Isolation ensures a failure in one component doesn't affect others
-   - It's up to the implementation to run all components at once or as separate binaries but isolation is mandatory
+   - It's up to the implementation to run all components at once or as separate binaries
 
 4. **Queue Abstraction**:
    - Queue is push based
-   - Currently implemented using [NATS](https://nats.io/) open-source messaging system
+   - Currently implemented using [NATS](https://nats.io/) and [GCP](https://cloud.google.com/pubsub?hl=en)
    - Abstraction allows for easy replacement with different queue technologies
    - Components interact with queues only through trait interfaces, maintaining loose coupling
    - Supports horizontal scaling by allowing multiple instances to consume from the same queue
 
-## WorkerFn Array
-Since `WorkerFn` is a pointer to async function pushing data to hashmap is noisy.
-
-check [Example](crates/amplifier-components/examples/components_array.rs)

@@ -1,40 +1,45 @@
 //! Crate with retry logic
 pub(crate) mod backoff_pair_iterator;
+/// Builder for retries
 pub mod builder;
 pub(crate) mod retry_fn;
 pub(crate) mod retry_pair_fn;
 
 use core::fmt::Display;
 use core::num::NonZeroU64;
-use std::time::Duration;
+use core::time::Duration;
 
 pub use builder::BackoffRetryBuilder;
 
+/// Retry error
 #[derive(Debug, thiserror::Error)]
 pub enum RetryError<Err: Display + Abortable> {
+    /// Execution aborted due to non-recoverable error
     #[error("aborted {0}")]
     Aborted(Err),
+    /// Max retry attemps reached
     // TODO: add last err
     #[error("max retry attempts reached")]
     MaxAttempts,
 }
 
 #[derive(Debug, Clone)]
-pub struct BackoffParrams {
+pub(crate) struct BackoffParrams {
     initial_delay: Duration,
     backoff_factor: NonZeroU64,
     max_delay: Duration,
 }
 
+/// Is error abortable i.e. non-recoverable?
 pub trait Abortable {
     fn abortable(&self) -> bool;
 }
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroU64;
+    use core::num::NonZeroU64;
+    use core::time::Duration;
     use std::sync::{Arc, Mutex};
-    use std::time::Duration;
 
     use super::*;
 
