@@ -11,13 +11,19 @@ pub struct NatsBuilder {
     context: jetstream::context::Context,
 }
 
+/// connectors to queue
 pub mod connectors;
+/// consumer
 pub mod consumer;
+/// error
 pub mod error;
+/// keyvalue store
 pub mod kv_store;
+/// publisher
 pub mod publisher;
 
 impl NatsBuilder {
+    /// connect to nats
     pub async fn connect_to_nats(urls: &[Url]) -> Result<Self, Error> {
         let connect_options = async_nats::ConnectOptions::default().retry_on_initial_connect();
         let client = async_nats::connect_with_options(urls, connect_options).await?;
@@ -28,6 +34,7 @@ impl NatsBuilder {
         Ok(Self { inbox, context })
     }
 
+    /// select stream
     pub async fn stream(
         self,
         name: impl Into<String>,
@@ -59,6 +66,7 @@ impl NatsBuilder {
     }
 }
 
+/// Nats stream
 pub struct NatsStream {
     inbox: String,
     context: jetstream::context::Context,
