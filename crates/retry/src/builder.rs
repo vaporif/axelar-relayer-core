@@ -45,7 +45,7 @@ impl Builder {
     }
 
     #[must_use]
-    pub const fn with_retry_pair<Fn1, Fn2, T, Err>(
+    pub fn with_retry_pair<Fn1, Fn2, T, Err>(
         &self,
         first_function: Fn1,
         second_function: Fn2,

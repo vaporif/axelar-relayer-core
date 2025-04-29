@@ -1,5 +1,6 @@
 use core::num::NonZeroU64;
 use core::time::Duration;
+use std::u64;
 
 use rand::Rng as _;
 
@@ -31,11 +32,7 @@ pub(crate) struct Iteration {
 }
 
 impl BackoffPairIterator {
-    pub(crate) const fn new(
-        initial_delay: Duration,
-        factor: NonZeroU64,
-        max_delay: Duration,
-    ) -> Self {
+    pub(crate) fn new(initial_delay: Duration, factor: NonZeroU64, max_delay: Duration) -> Self {
         let initial_delay_ms = u128_to_u64_saturating(initial_delay.as_millis());
 
         let max_delay_ms = u128_to_u64_saturating(max_delay.as_millis());
@@ -103,10 +100,10 @@ fn jitter(duration_ms: u64) -> u64 {
     }
 }
 
-const fn u128_to_u64_saturating(value: u128) -> u64 {
+fn u128_to_u64_saturating(value: u128) -> u64 {
     if value > u64::MAX as u128 {
         u64::MAX
     } else {
-        value as u64
+        u64::try_from(value).unwrap_or(u64::MAX)
     }
 }
