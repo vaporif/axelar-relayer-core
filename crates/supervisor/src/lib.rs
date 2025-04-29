@@ -42,7 +42,7 @@ pub fn run(
                 .wrap_err("failed to create tokio runtime for supervisor")?;
 
             runtime.block_on(async move {
-                for (worker_name, builder) in worker_builders.iter() {
+                for (worker_name, builder) in &worker_builders {
                     let worker = match builder().await {
                         Ok(worker) => worker,
                         Err(err) => {
@@ -53,7 +53,7 @@ pub fn run(
                     };
 
                     let worker_handle = spawn_worker(
-                        &worker_name,
+                        worker_name,
                         worker,
                         worker_crashed_tx.clone(),
                         cancel_token,
@@ -209,6 +209,6 @@ fn spawn_worker<'scope>(
             tracing::debug!(worker_name, "Reported worker crash for restart");
         }
 
-        tracing::debug!("worker exit post crash report")
+        tracing::debug!("worker exit post crash report");
     })
 }

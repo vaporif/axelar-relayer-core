@@ -31,16 +31,16 @@ pub(crate) struct Iteration {
 }
 
 impl BackoffPairIterator {
-    pub(crate) fn new(
+    pub(crate) const fn new(
         initial_delay: Duration,
         factor: NonZeroU64,
         max_delay: Duration,
-    ) -> BackoffPairIterator {
+    ) -> Self {
         let initial_delay_ms = u128_to_u64_saturating(initial_delay.as_millis());
 
         let max_delay_ms = u128_to_u64_saturating(max_delay.as_millis());
 
-        BackoffPairIterator {
+        Self {
             current_first_path_delay_ms: initial_delay_ms,
             current_second_path_delay_ms: 0,
             factor,

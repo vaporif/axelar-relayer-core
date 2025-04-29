@@ -1,9 +1,9 @@
 //! Crate with amplifier ingester component
-use std::pin::Pin;
+use core::pin::Pin;
 use std::sync::Arc;
 
-use eyre::Context;
-use futures::StreamExt;
+use eyre::Context as _;
+use futures::StreamExt as _;
 use relayer_amplifier_api_integration::amplifier_api::requests::{self, WithTrailingSlash};
 use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEventsRequest};
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
@@ -82,9 +82,9 @@ where
         .await;
 
         match result {
-            Ok(_) => {
+            Ok(()) => {
                 if let Err(err) = queue_msg.ack(AckKind::Ack).await {
-                    tracing::error!(%event, %err, "could not ack message")
+                    tracing::error!(%event, %err, "could not ack message");
                 }
 
                 tracing::info!(event_id = %event.event_id(), "processed");
@@ -92,7 +92,7 @@ where
             Err(err) => {
                 tracing::error!(%event, %err, "error during task processing");
                 if let Err(err) = queue_msg.ack(AckKind::Nak).await {
-                    tracing::error!(%event, %err, "could not nak message")
+                    tracing::error!(%event, %err, "could not nak message");
                 }
             }
         }

@@ -105,7 +105,7 @@ where
 #[cfg(test)]
 mod tests {
     use std::sync::{Arc, Mutex};
-    use std::time::Duration;
+    use core::time::Duration;
 
     use super::*;
 
@@ -114,8 +114,8 @@ mod tests {
         abort: bool,
         msg: &'static str,
     }
-    impl std::fmt::Display for TestError {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    impl core::fmt::Display for TestError {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             write!(f, "TestError abort={} msg={}", self.abort, self.msg)
         }
     }
@@ -128,7 +128,7 @@ mod tests {
     fn test_backoff() -> BackoffPairIterator {
         BackoffPairIterator::new(
             Duration::from_millis(1),
-            std::num::NonZeroU64::new(2).unwrap(),
+            core::num::NonZeroU64::new(2).unwrap(),
             Duration::from_millis(10),
         )
     }

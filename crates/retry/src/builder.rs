@@ -15,14 +15,14 @@ pub struct BackoffRetryBuilder {
 }
 
 impl BackoffRetryBuilder {
-    pub fn new(initial_delay: Duration, backoff_factor: NonZeroU64, max_delay: Duration) -> Self {
+    #[must_use] pub const fn new(initial_delay: Duration, backoff_factor: NonZeroU64, max_delay: Duration) -> Self {
         let backoff = BackoffParrams {
             initial_delay,
             backoff_factor,
             max_delay,
         };
 
-        BackoffRetryBuilder { backoff }
+        Self { backoff }
     }
 
     #[must_use]
@@ -40,7 +40,7 @@ impl BackoffRetryBuilder {
     }
 
     #[must_use]
-    pub fn with_retry_pair<Fn1, Fn2, T, Err>(
+    pub const fn with_retry_pair<Fn1, Fn2, T, Err>(
         &self,
         first_function: Fn1,
         second_function: Fn2,
