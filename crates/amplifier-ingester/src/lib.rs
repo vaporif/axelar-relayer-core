@@ -9,6 +9,7 @@ use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEven
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use storage_bus::interfaces::consumer::{AckKind, Consumer, QueueMessage};
 
+/// Consumes events queue and sends it to include to amplifier api
 pub struct Ingester<EventQueueConsumer> {
     ampf_client: AmplifierApiClient,
     event_queue_consumer: Arc<EventQueueConsumer>,
@@ -20,6 +21,7 @@ impl<EventQueueConsumer> Ingester<EventQueueConsumer>
 where
     EventQueueConsumer: Consumer<amplifier_api::types::Event>,
 {
+    /// create injester
     pub fn new(
         amplifier_client: AmplifierApiClient,
         event_queue_consumer: EventQueueConsumer,
@@ -35,6 +37,7 @@ where
         }
     }
 
+    /// process queue message
     pub async fn process_queue_msg<Msg: QueueMessage<Event>>(&self, queue_msg: Msg) {
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
@@ -98,6 +101,7 @@ where
         }
     }
 
+    /// consume queue messages and ingest to amplifier api
     #[tracing::instrument(skip_all, name = "[amplifier-ingester]")]
     pub async fn ingest(&self) -> eyre::Result<()> {
         tracing::debug!("refresh");

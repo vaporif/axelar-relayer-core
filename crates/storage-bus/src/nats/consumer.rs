@@ -60,6 +60,8 @@ impl From<interfaces::consumer::AckKind> for jetstream::AckKind {
         }
     }
 }
+
+// TODO: Dead letter queue
 #[derive(Debug)]
 pub struct NatsMessage<T> {
     decoded: T,

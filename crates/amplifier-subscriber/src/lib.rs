@@ -6,6 +6,7 @@ use amplifier_api::{AmplifierApiClient, requests};
 use eyre::Context as _;
 use storage_bus::interfaces::publisher::{PeekMessage, Publisher};
 
+/// subscribes to tasks from amplifier and sends them to queue
 pub struct Subscriber<TaskQueuePublisher> {
     amplifier_client: AmplifierApiClient,
     task_queue_publisher: TaskQueuePublisher,
@@ -17,6 +18,7 @@ where
     TaskQueuePublisher:
         Publisher<amplifier_api::types::TaskItem> + PeekMessage<amplifier_api::types::TaskItem>,
 {
+    /// create subscriber
     pub const fn new(
         amplifier_client: AmplifierApiClient,
         task_queue_publisher: TaskQueuePublisher,
@@ -29,7 +31,7 @@ where
         }
     }
 
-    // TODO: Add leader election or something else
+    /// subscribe and process
     #[tracing::instrument(skip_all, name = "[amplifier-subscriber]")]
     pub async fn subscribe(&mut self) -> eyre::Result<()> {
         tracing::debug!("refresh");

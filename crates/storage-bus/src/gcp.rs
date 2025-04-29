@@ -1,3 +1,4 @@
+/// google cloud platform implementation
 use error::Error;
 use google_cloud_pubsub::client::{Client, ClientConfig};
 

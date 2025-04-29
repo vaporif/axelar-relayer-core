@@ -1,5 +1,4 @@
-// TODO: Nats dead letter queue publish
-// is expected to be done on application level
+/// nats implementation
 use std::time::Duration;
 
 use async_nats::{self, jetstream};

@@ -1,20 +1,26 @@
+/// Consumer interfaces
 #[cfg(feature = "consumer-interfaces")]
 pub mod consumer {
     use core::error::Error;
     use core::fmt::Debug;
 
+    /// queue message trait
     pub trait QueueMessage<T>: Debug
     where
         T: Debug,
     {
+        /// Decoded message
         fn decoded(&self) -> &T;
+        /// Ack response
         fn ack(
             &self,
             ack_kind: AckKind,
         ) -> impl Future<Output = Result<(), impl Error + Send + Sync + 'static>>;
     }
 
+    /// consumer
     pub trait Consumer<T: Debug> {
+        /// messages stream
         fn messages(
             &self,
         ) -> impl Future<
@@ -27,6 +33,7 @@ pub mod consumer {
         >;
     }
 
+    /// Ack responses
     #[derive(Debug)]
     pub enum AckKind {
         /// Acknowledges a message was completely handled.
@@ -42,20 +49,26 @@ pub mod consumer {
     }
 }
 
+/// Publish interfaces
 #[cfg(feature = "publisher-interfaces")]
 pub mod publisher {
     use core::error::Error;
 
     // TODO: peek should return not the full message but just message id
+    /// peekable
     pub trait PeekMessage<T> {
+        /// Get last message from queue without consuming
         fn peek_last(
             &mut self,
         ) -> impl Future<Output = Result<Option<T>, impl Error + Send + Sync + 'static>>;
     }
 
+    /// publisher
     #[allow(clippy::impl_trait_in_params, reason = "improves readability")]
     pub trait Publisher<T: Send + Sync> {
+        /// ack future type
         type AckFuture: IntoFuture;
+        /// Publish message to queue
         fn publish(
             &self,
             deduplication_id: impl Into<String>,
