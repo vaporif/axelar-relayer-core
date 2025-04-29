@@ -5,7 +5,7 @@ use tokio_util::sync::CancellationToken;
 pub fn register_backtrace() {
     #[cfg(debug_assertions)]
     {
-        // Note: unsafe only in multithreaded
+        // SAFETY: called from single thread i.e. is safe
         unsafe {
             std::env::set_var("RUST_BACKTRACE", "full");
         }
@@ -15,9 +15,11 @@ pub fn register_backtrace() {
 /// Run from main thread once
 #[must_use]
 #[allow(clippy::print_stdout, reason = "runs before tracing")]
+#[expect(clippy::missing_panics_doc, reason = "infallible")]
 pub fn register_ctrlc_handler() -> CancellationToken {
     let cancel_token = CancellationToken::new();
     let ctrlc_token = cancel_token.clone();
+
     ctrlc::set_handler(move || {
         if ctrlc_token.is_cancelled() {
             std::process::exit(1);
