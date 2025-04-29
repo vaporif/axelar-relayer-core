@@ -10,12 +10,17 @@ use super::retry_pair_fn::RetryPairFn;
 use super::{Abortable, BackoffParrams};
 
 #[derive(Debug, Clone)]
-pub struct BackoffRetryBuilder {
+pub struct Builder {
     backoff: BackoffParrams,
 }
 
-impl BackoffRetryBuilder {
-    #[must_use] pub const fn new(initial_delay: Duration, backoff_factor: NonZeroU64, max_delay: Duration) -> Self {
+impl Builder {
+    #[must_use]
+    pub const fn new(
+        initial_delay: Duration,
+        backoff_factor: NonZeroU64,
+        max_delay: Duration,
+    ) -> Self {
         let backoff = BackoffParrams {
             initial_delay,
             backoff_factor,

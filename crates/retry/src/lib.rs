@@ -8,7 +8,7 @@ pub(crate) mod retry_pair_fn;
 use core::num::NonZeroU64;
 use core::time::Duration;
 
-pub use builder::BackoffRetryBuilder;
+pub use builder::Builder;
 
 /// Retry error
 #[derive(Debug, thiserror::Error)]
@@ -58,7 +58,7 @@ mod tests {
 
     #[tokio::test]
     async fn builder_with_retry_success() {
-        let builder = BackoffRetryBuilder::new(
+        let builder = Builder::new(
             Duration::from_millis(1),
             NonZeroU64::new(2).unwrap(),
             Duration::from_millis(10),
@@ -85,7 +85,7 @@ mod tests {
 
     #[tokio::test]
     async fn builder_with_retry_pair_success() {
-        let builder = BackoffRetryBuilder::new(
+        let builder = Builder::new(
             Duration::from_millis(1),
             NonZeroU64::new(2).unwrap(),
             Duration::from_millis(10),
@@ -99,7 +99,7 @@ mod tests {
 
     #[tokio::test]
     async fn builder_with_retry_aborts_on_abortable() {
-        let builder = BackoffRetryBuilder::new(
+        let builder = Builder::new(
             Duration::from_millis(1),
             NonZeroU64::new(2).unwrap(),
             Duration::from_millis(10),
