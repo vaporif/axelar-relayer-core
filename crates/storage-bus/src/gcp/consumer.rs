@@ -23,6 +23,8 @@ impl super::PubSubBuilder {
 
         let (sender, receiver) = flume::bounded(message_buffer_size);
 
+        let cancel_token = cancel_token.child_token();
+
         let read_messages_handle = start_read_messages_task(
             subscription,
             sender,
@@ -32,7 +34,7 @@ impl super::PubSubBuilder {
 
         let consumer = GcpConsumer::<T> {
             receiver,
-            cancel_token: cancel_token.child_token(),
+            cancel_token,
             read_messages_handle,
             _phantom: PhantomData,
         };
