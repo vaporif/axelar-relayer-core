@@ -53,6 +53,7 @@ option_if_let_else = "allow"
 self_named_module_files = "allow"
 shadow_unrelated = "allow"
 arbitrary_source_item_ordering.level = "allow"
+min_ident_chars = "allow"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = -1 }
