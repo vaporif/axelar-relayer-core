@@ -60,7 +60,7 @@ pub struct Config {
         value_name = "AMPLIFIER_API_HEALTHCHECK_INTERVAL",
         env = "AMPLIFIER_API_HEALTHCHECK_INTERVAL", 
         value_parser = parse_healthcheck_interval,
-        default_value = "bla"
+        default_value = config_defaults::healthcheck_interval_default_value().to_string()
     )]
     pub healthcheck_interval: core::time::Duration,
 
