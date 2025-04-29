@@ -54,6 +54,7 @@ self_named_module_files = "allow"
 shadow_unrelated = "allow"
 arbitrary_source_item_ordering.level = "allow"
 min_ident_chars = "allow"
+pattern_type_mismatch = "allow"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = -1 }
