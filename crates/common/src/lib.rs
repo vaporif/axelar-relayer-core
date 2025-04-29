@@ -2,6 +2,7 @@
 
 use tokio_util::sync::CancellationToken;
 
+/// Ensure backtrace is enabled
 pub fn register_backtrace() {
     #[cfg(debug_assertions)]
     {
