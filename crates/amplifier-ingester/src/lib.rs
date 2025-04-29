@@ -1,21 +1,18 @@
 //! Crate with amplifier ingester component
-use core::future::Future;
-use core::pin::Pin;
-use core::sync::atomic::AtomicBool;
+use std::pin::Pin;
 use std::sync::Arc;
-use core::sync::atomic::Ordering;
 
-use eyre::Context as _;
-use futures::StreamExt as _;
+use eyre::Context;
+use futures::StreamExt;
 use relayer_amplifier_api_integration::amplifier_api::requests::{self, WithTrailingSlash};
 use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEventsRequest};
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use storage_bus::interfaces::consumer::{AckKind, Consumer, QueueMessage};
-use supervisor::Worker;
 
 pub struct Ingester<EventQueueConsumer> {
     ampf_client: AmplifierApiClient,
     event_queue_consumer: Arc<EventQueueConsumer>,
+    concurrent_queue_items: usize,
     chain: String,
 }
 
@@ -27,11 +24,13 @@ where
         amplifier_client: AmplifierApiClient,
         event_queue_consumer: EventQueueConsumer,
         chain: String,
+        concurrent_queue_items: usize,
     ) -> Self {
         let event_queue_consumer = Arc::new(event_queue_consumer);
         Self {
             ampf_client: amplifier_client,
             event_queue_consumer,
+            concurrent_queue_items,
             chain,
         }
     }
@@ -41,7 +40,7 @@ where
 
         let event = queue_msg.decoded().clone();
         tracing::info!(%event, "processing");
-
+        // TODO: Refactor
         let payload = PublishEventsRequest {
             events: vec![event.clone()],
         };
@@ -83,35 +82,31 @@ where
         .await;
 
         match result {
-            Ok(()) => {
+            Ok(_) => {
                 if let Err(err) = queue_msg.ack(AckKind::Ack).await {
-                    tracing::error!(%event, %err, "could not ack message");
-                } else {
-                    tracing::info!(event_id = %event.event_id(), "processed");
+                    tracing::error!(%event, %err, "could not ack message")
                 }
+
+                tracing::info!(event_id = %event.event_id(), "processed");
             }
             Err(err) => {
                 tracing::error!(%event, %err, "error during task processing");
                 if let Err(err) = queue_msg.ack(AckKind::Nak).await {
-                    tracing::error!(%event, %err, "could not nak message");
+                    tracing::error!(%event, %err, "could not nak message")
                 }
             }
         }
     }
 
     #[tracing::instrument(skip_all, name = "[amplifier-ingester]")]
-    pub async fn ingest<'s>(&self, shutdown: &'s AtomicBool) -> eyre::Result<()> {
+    pub async fn ingest(&self) -> eyre::Result<()> {
         tracing::debug!("refresh");
 
         self.event_queue_consumer
             .messages()
             .await
             .wrap_err("could not retrieve messages from queue")?
-            .for_each_concurrent(10, move |queue_msg| async move {
-                if shutdown.load(Ordering::Relaxed) {
-                    tracing::debug!("shutting down...");
-                    return;
-                }
+            .for_each_concurrent(self.concurrent_queue_items, move |queue_msg| async move {
                 let queue_msg = match queue_msg {
                     Ok(queue_msg) => queue_msg,
                     Err(err) => {
@@ -127,14 +122,11 @@ where
     }
 }
 
-impl<EventQueueConsumer> Worker for Ingester<EventQueueConsumer>
+impl<EventQueueConsumer> supervisor::Worker for Ingester<EventQueueConsumer>
 where
     EventQueueConsumer: Consumer<amplifier_api::types::Event> + Send + Sync,
 {
-    fn do_work<'s>(
-        &'s mut self,
-        shutdown: &'s AtomicBool,
-    ) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + 's>> {
-        Box::pin(async { self.ingest(shutdown).await })
+    fn do_work<'s>(&'s mut self) -> Pin<Box<dyn Future<Output = eyre::Result<()>> + 's>> {
+        Box::pin(async { self.ingest().await })
     }
 }
