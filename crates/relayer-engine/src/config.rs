@@ -3,7 +3,7 @@
 use core::future::Future;
 use core::net::SocketAddr;
 use core::pin::Pin;
-use std::str::FromStr;
+use core::str::FromStr as _;
 
 use clap::Parser;
 use eyre::Result;

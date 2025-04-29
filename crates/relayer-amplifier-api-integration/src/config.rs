@@ -1,6 +1,6 @@
 use amplifier_api::identity::Identity;
 use base64::prelude::BASE64_STANDARD;
-use base64::Engine;
+use base64::Engine as _;
 use clap::Parser;
 use eyre::Result;
 use serde::Deserialize;
@@ -108,7 +108,6 @@ pub(crate) mod config_defaults {
         10
     }
 
-    #[expect(clippy::unnecessary_wraps, reason = "fine for config defaults")]
     pub(crate) const fn invalid_healthchecks_before_shutdown() -> usize {
         5
     }
