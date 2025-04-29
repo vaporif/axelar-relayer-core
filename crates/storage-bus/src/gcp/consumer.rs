@@ -32,7 +32,7 @@ impl super::PubSubBuilder {
 
         let consumer = GcpConsumer::<T> {
             receiver,
-            cancel_token,
+            cancel_token: cancel_token.child_token(),
             read_messages_handle,
             _phantom: PhantomData,
         };
