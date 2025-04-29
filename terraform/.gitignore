@@ -1,0 +1,26 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Terraform lock files
+.terraform.lock.hcl
+
+# Terragrunt cache directories
+**/.terragrunt-cache/*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Local variable files
+terraform.tfvars
+
+# Terragrunt debug output
+terragrunt-debug.tfvars.json
+
+# OS-specific files
+.DS_Store
+Thumbs.db
