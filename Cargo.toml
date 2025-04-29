@@ -98,9 +98,9 @@ bs58 = "0.5"
 redact = { version = "0.1", features = ["serde"] }
 thiserror = "2"
 uuid = { version = "1.2", features = ["v4", "serde", "borsh"] }
-typed-builder = "0.18"
+typed-builder = "0.21"
 derive_builder = "0.20"
-bnum = "0.12"
+bnum = "0.13"
 hex = "0.4"
 quanta = "0.12"
 backoff = { version = "0.4", features = ["tokio"] }
@@ -130,7 +130,7 @@ simd-json = "0.15"
 borsh = { version = "1.5", features = ["derive"] }
 
 # Tests
-rstest = { version = "0.21" }
+rstest = { version = "0.25" }
 test-log = { version = "0.2", features = ["trace"], default-features = false }
 pretty_assertions = "1"
 mockall = "0.13"
