@@ -5,6 +5,7 @@
 
 use google_cloud_pubsub::client::{self, google_cloud_auth};
 use redis::RedisError;
+use tokio::task::JoinError;
 
 /// Errors
 #[derive(Debug, thiserror::Error)]
@@ -45,4 +46,8 @@ pub enum Error {
     RedisGet(RedisError),
     #[error("error deserializing data from redis {0}")]
     RedisDeserialize(serde_json::Error),
+    #[error("consumer read task join error {0}")]
+    ConsumerReadTaskJoin(JoinError),
+    #[error("consumer read task exited without error")]
+    ConsumerReadTaskExited,
 }
