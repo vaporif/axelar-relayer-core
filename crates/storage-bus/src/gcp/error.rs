@@ -1,4 +1,7 @@
-#![expect(missing_docs, reason = "the error macro already is descriptive enough")]
+#![allow(
+    clippy::missing_docs,
+    reason = "the error macro already is descriptive enough"
+)]
 
 use google_cloud_pubsub::client::{self, google_cloud_auth};
 use redis::RedisError;

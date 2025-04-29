@@ -10,6 +10,7 @@ use super::error::Error;
 use super::kv_store::GcpRedis;
 use super::publisher::{GcpPublisher, PeekableGcpPublisher};
 
+/// connect consumer
 pub async fn connect_consumer<T>(
     subscription: &str,
     message_buffer_size: usize,
@@ -30,6 +31,7 @@ where
         .await
 }
 
+/// connect publisher
 pub async fn connect_publisher<T>(topic: &str) -> Result<GcpPublisher<T>, Error>
 where
     T: Send + Sync,
@@ -37,6 +39,7 @@ where
     PubSubBuilder::connect().await?.publisher(topic).await
 }
 
+/// connect peekable publisher with ability to get last pushed message (without consuming it)
 pub async fn connect_peekable_publisher<T>(
     topic: &str,
     redis_connection: String,
