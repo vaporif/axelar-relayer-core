@@ -57,6 +57,7 @@ min_ident_chars = "allow"
 pattern_type_mismatch = "allow"
 use_debug = "allow"
 allow_attributes = "allow"
+integer_division_remainder_used = "allow"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = -1 }

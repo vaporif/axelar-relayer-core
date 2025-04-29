@@ -2,7 +2,7 @@
 use core::panic::AssertUnwindSafe;
 use core::pin::Pin;
 use core::time::Duration;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::{panic, thread};
 
 use eyre::Context as _;
@@ -27,13 +27,13 @@ pub trait Worker: Send {
 /// Run supervisor
 #[tracing::instrument(name = "supervisor", skip_all)]
 pub fn run(
-    worker_builders: HashMap<WorkerName, WorkerBuildFn>,
+    worker_builders: BTreeMap<WorkerName, WorkerBuildFn>,
     cancel_token: &CancellationToken,
     tickrate: Duration,
 ) -> eyre::Result<()> {
     _ = std::thread::scope(|scope| {
         let (worker_crashed_tx, worker_crashed_rx) = std::sync::mpsc::channel();
-        let mut active_workers = HashMap::new();
+        let mut active_workers = BTreeMap::new();
 
         let supervisor_handle = scope.spawn(move || {
             let runtime = tokio::runtime::Builder::new_current_thread()
