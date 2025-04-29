@@ -52,6 +52,7 @@ redundant_pub_crate = "allow"
 option_if_let_else = "allow"
 self_named_module_files = "allow"
 shadow_unrelated = "allow"
+arbitrary_source_item_ordering.level = "allow"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = -1 }
