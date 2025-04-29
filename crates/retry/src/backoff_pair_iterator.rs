@@ -89,6 +89,7 @@ impl Iterator for BackoffPairIterator {
     }
 }
 
+#[allow(clippy::cast_possible_truncation, reason = "truncate is ok")]
 fn jitter(duration_ms: u64) -> u64 {
     let jitter_factor = rand::rng().random_range(0.5_f64..1.5_f64);
     let jittered = duration_ms as f64 * jitter_factor;
