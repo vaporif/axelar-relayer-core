@@ -1,13 +1,13 @@
-use std::fmt::Display;
-use std::num::NonZeroU64;
-use std::time::Duration;
+use core::fmt::Display;
+use core::num::NonZeroU64;
+use core::time::Duration;
 
 use tokio_retry::strategy::ExponentialBackoff;
 
-use crate::backoff_pair_iterator::BackoffPairIterator;
-use crate::retry_fn::RetryFn;
-use crate::retry_pair_fn::RetryPairFn;
-use crate::{Abortable, BackoffParrams};
+use super::backoff_pair_iterator::BackoffPairIterator;
+use super::retry_fn::RetryFn;
+use super::retry_pair_fn::RetryPairFn;
+use super::{Abortable, BackoffParrams};
 
 #[derive(Debug, Clone)]
 pub struct BackoffRetryBuilder {

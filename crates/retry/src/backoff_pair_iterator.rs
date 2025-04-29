@@ -1,7 +1,7 @@
-use std::num::NonZeroU64;
-use std::time::Duration;
+use core::num::NonZeroU64;
+use core::time::Duration;
 
-use rand::Rng;
+use rand::Rng as _;
 
 /// A retry iterator driven by exponential back-off.
 /// Retry returns alternating path of execution
@@ -83,7 +83,7 @@ impl Iterator for BackoffPairIterator {
         };
 
         if duration_ms > self.max_delay_ms {
-            duration_ms = self.max_delay_ms
+            duration_ms = self.max_delay_ms;
         }
 
         Some(Iteration {
@@ -96,14 +96,14 @@ impl Iterator for BackoffPairIterator {
 fn jitter(duration_ms: u64) -> u64 {
     let jitter_factor = rand::rng().random_range(0.5..1.5);
     let jittered = duration_ms as f64 * jitter_factor;
-    if !jittered.is_finite() {
-        u64::MAX
-    } else {
+    if jittered.is_finite() {
         jittered as u64
+    } else {
+        u64::MAX
     }
 }
 
-fn u128_to_u64_saturating(value: u128) -> u64 {
+const fn u128_to_u64_saturating(value: u128) -> u64 {
     if value > u64::MAX as u128 {
         u64::MAX
     } else {
