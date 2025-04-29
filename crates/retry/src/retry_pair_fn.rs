@@ -104,8 +104,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
     use core::time::Duration;
+    use std::sync::{Arc, Mutex};
 
     use super::*;
 
