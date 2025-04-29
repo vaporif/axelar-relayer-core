@@ -9,12 +9,14 @@ use super::retry_fn::RetryFn;
 use super::retry_pair_fn::RetryPairFn;
 use super::{Abortable, BackoffParrams};
 
+/// Backoff builder
 #[derive(Debug, Clone)]
 pub struct Builder {
     backoff: BackoffParrams,
 }
 
 impl Builder {
+    /// Init builder
     #[must_use]
     pub const fn new(
         initial_delay: Duration,
@@ -30,6 +32,7 @@ impl Builder {
         Self { backoff }
     }
 
+    /// Backoff retry
     #[must_use]
     pub fn with_retry<Fn, T, Err>(&self, function: Fn) -> RetryFn<Fn, T, Err>
     where
@@ -45,6 +48,7 @@ impl Builder {
         RetryFn::new(backoff, function)
     }
 
+    /// Backoff retry with two alternating functions
     #[must_use]
     pub fn with_retry_pair<Fn1, Fn2, T, Err>(
         &self,
