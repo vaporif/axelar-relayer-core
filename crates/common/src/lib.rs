@@ -22,6 +22,7 @@ pub fn register_ctrlc_handler() -> CancellationToken {
 
     ctrlc::set_handler(move || {
         if ctrlc_token.is_cancelled() {
+            #[expect(clippy::exit, reason = "ctrl+c")]
             std::process::exit(1);
         } else {
             println!("\nGraceful shutdown initiated. Press Ctrl+C again for immediate exit...");
