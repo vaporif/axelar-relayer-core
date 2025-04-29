@@ -1,5 +1,5 @@
-use core::fmt::Debug;
-use core::marker::PhantomData;
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use async_nats::jetstream;
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -35,17 +35,18 @@ impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T
 {
     type AckFuture = jetstream::context::PublishAckFuture;
 
-    #[expect(refining_impl_trait)]
+    // TODO: always wait for completion?
+    #[allow(refining_impl_trait)]
     #[tracing::instrument(skip_all)]
     async fn publish(
         &self,
         deduplication_id: impl Into<String>,
-        data: T,
+        data: &T,
     ) -> Result<Self::AckFuture, Error> {
         let mut headers = async_nats::HeaderMap::new();
         let deduplication_id: String = deduplication_id.into();
         tracing::debug!(?deduplication_id, ?data, "got message");
-        headers.append(NATS_MSG_ID.to_owned(), deduplication_id);
+        headers.append(NATS_MSG_ID.to_string(), deduplication_id);
         let data = borsh::to_vec(&data).map_err(Error::Serialize)?;
         tracing::debug!("message encoded");
         let publish_ack_future = self
@@ -65,7 +66,7 @@ where
 {
     // TODO: make sure you don't remove message from
     // main stream if moving out to dlq
-    #[expect(refining_impl_trait)]
+    #[allow(refining_impl_trait)]
     #[tracing::instrument(skip_all)]
     async fn peek_last(&mut self) -> Result<Option<T>, Error> {
         let last_sequence = self.stream.info().await?.state.last_sequence;

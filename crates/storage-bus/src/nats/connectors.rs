@@ -10,7 +10,7 @@ pub mod events {
     const EVENTS_PUBLISH_SUBJECT: &str = "amplifier.event.new";
 
     pub async fn connect_consumer(
-        urls: Vec<Url>,
+        urls: &[Url],
     ) -> Result<NatsConsumer<amplifier_api::types::Event>, Error> {
         let consumer = NatsBuilder::connect_to_nats(urls)
             .await?
@@ -26,7 +26,7 @@ pub mod events {
     }
 
     pub async fn connect_publisher(
-        urls: Vec<Url>,
+        urls: &[Url],
     ) -> Result<NatsPublisher<amplifier_api::types::Event>, Error> {
         let publisher = NatsBuilder::connect_to_nats(urls)
             .await?
@@ -53,7 +53,7 @@ pub mod tasks {
     const TASKS_PUBLISH_SUBJECT: &str = "amplifier.tasks.new";
 
     pub async fn connect_consumer(
-        urls: Vec<Url>,
+        urls: &[Url],
     ) -> Result<NatsConsumer<amplifier_api::types::TaskItem>, Error> {
         let consumer = NatsBuilder::connect_to_nats(urls)
             .await?
@@ -69,7 +69,7 @@ pub mod tasks {
     }
 
     pub async fn connect_publisher(
-        urls: Vec<Url>,
+        urls: &[Url],
     ) -> Result<NatsPublisher<amplifier_api::types::TaskItem>, Error> {
         let publisher = NatsBuilder::connect_to_nats(urls)
             .await?

@@ -1,4 +1,5 @@
-use core::marker::PhantomData;
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use async_nats::jetstream::{self, kv};
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -14,12 +15,12 @@ pub struct NatsKvStore<T> {
 }
 
 pub async fn connect<T>(
-    urls: Vec<Url>,
+    urls: &[Url],
     bucket: String,
     description: String,
 ) -> Result<NatsKvStore<T>, Error> {
     let connect_options = async_nats::ConnectOptions::default().retry_on_initial_connect();
-    let client = async_nats::connect_with_options(urls.clone(), connect_options).await?;
+    let client = async_nats::connect_with_options(urls, connect_options).await?;
     let context = jetstream::new(client);
     let store = context
         .create_key_value(async_nats::jetstream::kv::Config {
@@ -39,13 +40,11 @@ pub async fn connect<T>(
 
 impl<T> interfaces::kv_store::KvStore<T> for NatsKvStore<T>
 where
-    T: BorshSerialize + BorshDeserialize,
+    T: BorshSerialize + BorshDeserialize + Debug,
 {
-    #[expect(refining_impl_trait)]
-    async fn update(
-        &self,
-        data: interfaces::kv_store::WithRevision<T>,
-    ) -> Result<interfaces::kv_store::WithRevision<T>, Error> {
+    #[allow(refining_impl_trait)]
+    #[tracing::instrument(skip(self))]
+    async fn update(&self, data: &interfaces::kv_store::WithRevision<T>) -> Result<u64, Error> {
         let value_bytes = borsh::to_vec(&data.value).map_err(Error::Serialize)?;
         let revision = data.revision;
 
@@ -55,25 +54,24 @@ where
             .await
             .map_err(Error::Update)?;
 
-        Ok(interfaces::kv_store::WithRevision {
-            value: data.value,
-            revision,
-        })
+        Ok(revision)
     }
 
-    #[expect(refining_impl_trait)]
-    async fn put(&self, value: T) -> Result<interfaces::kv_store::WithRevision<T>, Error> {
-        let value_bytes = borsh::to_vec(&value).map_err(Error::Serialize)?;
+    #[allow(refining_impl_trait)]
+    #[tracing::instrument(skip(self))]
+    async fn put(&self, value: &T) -> Result<u64, Error> {
+        let value_bytes = borsh::to_vec(value).map_err(Error::Serialize)?;
         let revision = self
             .store
             .put(&self.bucket, value_bytes.clone().into())
             .await
             .map_err(Error::Put)?;
 
-        Ok(interfaces::kv_store::WithRevision { value, revision })
+        Ok(revision)
     }
 
-    #[expect(refining_impl_trait)]
+    #[allow(refining_impl_trait)]
+    #[tracing::instrument(skip(self))]
     async fn get(&self) -> Result<Option<interfaces::kv_store::WithRevision<T>>, Error> {
         let entry = self.store.entry(&self.bucket).await.map_err(Error::Entry)?;
 

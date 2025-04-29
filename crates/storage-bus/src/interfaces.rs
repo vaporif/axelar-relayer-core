@@ -1,8 +1,7 @@
 #[cfg(feature = "consumer-interfaces")]
 pub mod consumer {
-    use core::error::Error;
-    use core::fmt::Debug;
-    use core::future::Future;
+    use std::error::Error;
+    use std::fmt::Debug;
 
     pub trait QueueMessage<T>: Debug
     where
@@ -36,38 +35,39 @@ pub mod consumer {
         /// and processing can move onto the next message, NAK'd
         /// message will be retried.
         Nak,
-        /// When sent before the `AckWait` period indicates that
+        /// When sent before the AckWait period indicates that
         /// work is ongoing and the period should be extended by
-        /// another equal to `AckWait`.
+        /// another equal to AckWait.
         Progress,
     }
 }
 
 #[cfg(feature = "publisher-interfaces")]
 pub mod publisher {
-    use core::error::Error;
-    use core::future::{Future, IntoFuture};
+    use std::error::Error;
 
+    // TODO: peek should return not the full message but just message id
     pub trait PeekMessage<T> {
         fn peek_last(
             &mut self,
         ) -> impl Future<Output = Result<Option<T>, impl Error + Send + Sync + 'static>>;
     }
 
+    // TODO: change to publish_batch
     pub trait Publisher<T: Send + Sync> {
         type AckFuture: IntoFuture;
         fn publish(
             &self,
             deduplication_id: impl Into<String>,
-            data: T,
+            data: &T,
         ) -> impl Future<Output = Result<Self::AckFuture, impl Error + Send + Sync + 'static>>;
     }
 }
 
 #[cfg(feature = "storage-interfaces")]
 pub mod kv_store {
-    use core::error::Error;
-    use core::fmt::Debug;
+    use std::error::Error;
+    use std::fmt::Debug;
 
     #[derive(Debug)]
     pub struct WithRevision<T> {
@@ -78,13 +78,13 @@ pub mod kv_store {
     pub trait KvStore<T> {
         fn update(
             &self,
-            data: WithRevision<T>,
-        ) -> impl Future<Output = Result<WithRevision<T>, impl Error + Send + Sync + 'static>>;
+            data: &WithRevision<T>,
+        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>>;
 
         fn put(
             &self,
-            value: T,
-        ) -> impl Future<Output = Result<WithRevision<T>, impl Error + Send + Sync + 'static>>;
+            value: &T,
+        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>>;
 
         fn get(
             &self,

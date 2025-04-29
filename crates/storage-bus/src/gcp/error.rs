@@ -1,5 +1,5 @@
-use firestore::errors::FirestoreError;
 use google_cloud_pubsub::client::{self, google_cloud_auth};
+use redis::RedisError;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("auth error {0}")]
@@ -7,13 +7,13 @@ pub enum Error {
     #[error("client error {0}")]
     Client(#[from] client::Error),
     #[error("topic exists error {0}")]
-    TopicExists(tonic::Status),
-    #[error("topic create error {0}")]
-    TopicCreate(tonic::Status),
-    #[error("topic exists error {0}")]
-    SubscriptionExists(tonic::Status),
-    #[error("topic create error {0}")]
-    SubscriptionCreate(tonic::Status),
+    TopicExistsCheck(tonic::Status),
+    #[error("topic not found: {topic}")]
+    TopicNotFound { topic: String },
+    #[error("topic exists check error {0}")]
+    SubscriptionExistsCheck(tonic::Status),
+    #[error("subscription not found: {subscription}")]
+    SubscriptionNotFound { subscription: String },
     #[error("publish failure, error: {0}")]
     Publish(tonic::Status),
     #[error("ack error {0}")]
@@ -28,6 +28,14 @@ pub enum Error {
     ReceiverTaskCrash(tonic::Status),
     #[error("failed to serialize val, error: {0}")]
     Serialize(std::io::Error),
-    #[error(transparent)]
-    Firestore(#[from] FirestoreError),
+    #[error("error connecting to redis {0}")]
+    Connection(RedisError),
+    #[error("error serializing data to redis {0}")]
+    RedisSerialize(serde_json::Error),
+    #[error("error saving data to redis {0}")]
+    RedisSave(RedisError),
+    #[error("error getting data from redis {0}")]
+    RedisGet(RedisError),
+    #[error("error deserializing data from redis {0}")]
+    RedisDeserialize(serde_json::Error),
 }

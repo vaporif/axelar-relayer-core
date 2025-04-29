@@ -1,4 +1,3 @@
-//! Crate with storage & message bus
 #[cfg(feature = "gcp")]
 pub mod gcp;
 pub mod interfaces;

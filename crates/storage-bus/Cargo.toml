@@ -10,10 +10,11 @@ license.workspace = true
 [dependencies]
 async-nats = { workspace = true, optional = true }
 google-cloud-pubsub = { workspace = true, optional = true }
-firestore = { workspace = true, optional = true }
+redis = { workspace = true, optional = true }
 google-cloud-googleapis = { workspace = true, optional = true, features = [
   "pubsub",
 ] }
+serde_json = { workspace = true, optional = true }
 tonic = { workspace = true, optional = true }
 flume = { workspace = true, optional = true, features = ["async"] }
 serde = { workspace = true, optional = true }
@@ -42,7 +43,8 @@ nats = [
 gcp = [
   "dep:google-cloud-pubsub",
   "dep:google-cloud-googleapis",
-  "dep:firestore",
+  "dep:redis",
+  "dep:serde_json",
   "dep:serde",
   "dep:tonic",
   "dep:borsh",

@@ -1,64 +1,31 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::time::Duration;
 
 use borsh::BorshDeserialize;
-use google_cloud_googleapis::pubsub::v1::DeadLetterPolicy;
 use google_cloud_pubsub::subscriber::ReceivedMessage;
-use google_cloud_pubsub::subscription::{Subscription, SubscriptionConfig};
+use google_cloud_pubsub::subscription::Subscription;
 use tokio_util::sync::CancellationToken;
 
 use super::Error;
-use super::util::get_or_create_subscription;
+use super::util::get_subscription;
 use crate::interfaces;
-
-pub struct ConsumerConfig {
-    pub ack_deadline_seconds: i32,
-    pub dead_letter_policy: DeadLetterPolicy,
-    pub nak_deadline_secs: i32,
-}
 
 impl super::PubSubBuilder {
     pub async fn consumer<T: Debug + Send + Sync + BorshDeserialize + 'static>(
         self,
-        topic: &str,
-        consumer_config: ConsumerConfig,
+        subscription: &str,
         message_buffer_size: usize,
-        allowed_persistence_regions: Vec<String>,
-        dlq_retention_duration: Duration,
+        nak_deadline_secs: i32,
         cancel_token: CancellationToken,
     ) -> Result<GcpConsumer<T>, Error> {
-        let dlq_topic = consumer_config.dead_letter_policy.dead_letter_topic.clone();
-        let config = SubscriptionConfig {
-            ack_deadline_seconds: consumer_config.ack_deadline_seconds,
-            dead_letter_policy: Some(consumer_config.dead_letter_policy),
-            ..Default::default()
-        };
-
-        // NOTE: Subscription is required, otherwise dlq messages will dissapear
-        _ = get_or_create_subscription(
-            &self.client,
-            &dlq_topic,
-            allowed_persistence_regions.clone(),
-            dlq_retention_duration,
-            SubscriptionConfig::default(),
-        );
-
-        let subscription = get_or_create_subscription(
-            &self.client,
-            topic,
-            allowed_persistence_regions,
-            dlq_retention_duration,
-            config,
-        )
-        .await?;
+        let subscription = get_subscription(&self.client, subscription).await?;
 
         let (sender, receiver) = flume::bounded(message_buffer_size);
 
         let read_messages_handle = start_read_messages_task(
             subscription,
             sender,
-            consumer_config.nak_deadline_secs,
+            nak_deadline_secs,
             cancel_token.clone(),
         );
 
@@ -186,8 +153,6 @@ where
             .map_err(Error::ReceiverTaskCrash)
     })
 }
-
-// TODO: create topic too?
 
 impl<T: Send + Sync> Drop for GcpConsumer<T> {
     fn drop(&mut self) {

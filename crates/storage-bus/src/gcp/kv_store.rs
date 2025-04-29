@@ -1,89 +1,87 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use firestore::FirestoreDb;
+use redis::aio::MultiplexedConnection;
+use redis::{AsyncCommands, Client};
 use serde::{Deserialize, Serialize};
 
 use super::error::Error;
-use crate::interfaces;
+use crate::interfaces::kv_store::WithRevision;
+use crate::interfaces::{self};
 
-pub struct GcpKvStore<T> {
-    collection_id: String,
-    document_id: String,
-    db: FirestoreDb,
+pub struct GcpRedis<T> {
+    key: String,
+    connection: MultiplexedConnection,
     _phantom: PhantomData<T>,
 }
 
-impl<T> GcpKvStore<T>
+impl<T> GcpRedis<T>
 where
     T: Serialize + for<'de> Deserialize<'de> + Send + Sync,
 {
-    pub async fn connect(
-        collection_id: String,
-        document_id: String,
-        project_id: &str,
-    ) -> Result<Self, Error> {
-        let db = FirestoreDb::new(&project_id).await?;
-        Ok(Self {
-            collection_id,
-            document_id,
-            db,
+    pub async fn connect(key: String, connection: String) -> Result<Self, Error> {
+        let client = Client::open(connection).map_err(Error::Connection)?;
+
+        let connection = client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(Error::Connection)?;
+
+        Ok(GcpRedis {
+            key,
+            connection,
             _phantom: PhantomData,
         })
     }
 
-    pub(crate) async fn upsert(
-        &self,
-        value: T,
-    ) -> Result<interfaces::kv_store::WithRevision<T>, Error> {
-        let _: T = self
-            .db
-            .fluent()
-            .update()
-            .in_col(&self.collection_id)
-            .document_id(&self.document_id)
-            .object(&value)
-            .execute()
-            .await?;
-        Ok(interfaces::kv_store::WithRevision { value, revision: 0 })
+    pub async fn upsert(&self, value: &T) -> Result<(), Error> {
+        let json_string = serde_json::to_string(value).map_err(Error::RedisSerialize)?;
+
+        let _: () = self
+            .connection
+            .clone()
+            .set(&self.key, json_string)
+            .await
+            .map_err(Error::RedisSave)?;
+
+        Ok(())
     }
 }
 
 // Revision is not used here
 // TODO: remove it from interfaces?
-impl<T> interfaces::kv_store::KvStore<T> for GcpKvStore<T>
+impl<T> interfaces::kv_store::KvStore<T> for GcpRedis<T>
 where
     T: Serialize + for<'de> Deserialize<'de> + Send + Sync + Debug,
 {
     #[allow(refining_impl_trait)]
     #[tracing::instrument(skip(self))]
-    async fn update(
-        &self,
-        data: interfaces::kv_store::WithRevision<T>,
-    ) -> Result<interfaces::kv_store::WithRevision<T>, Error> {
-        self.upsert(data.value).await
+    async fn update(&self, data: &WithRevision<T>) -> Result<u64, Error> {
+        tracing::debug!(?data, "updating");
+        self.upsert(&data.value).await?;
+        Ok(0)
     }
 
     #[allow(refining_impl_trait)]
     #[tracing::instrument(skip(self))]
-    async fn put(&self, value: T) -> Result<interfaces::kv_store::WithRevision<T>, Error> {
-        self.upsert(value).await
+    async fn put(&self, value: &T) -> Result<u64, Error> {
+        tracing::debug!(?value, "updating");
+        self.upsert(value).await?;
+        Ok(0)
     }
 
     #[allow(refining_impl_trait)]
     #[tracing::instrument(skip(self))]
-    async fn get(&self) -> Result<Option<interfaces::kv_store::WithRevision<T>>, Error> {
-        let document: Option<T> = self
-            .db
-            .fluent()
-            .select()
-            .by_id_in(&self.collection_id)
-            .obj()
-            .one(&self.document_id)
-            .await?;
+    async fn get(&self) -> Result<Option<WithRevision<T>>, Error> {
+        let mut connection = self.connection.clone();
+        let value: Option<String> = connection.get(&self.key).await.map_err(Error::RedisGet)?;
 
-        document
-            .map(|value| Ok(interfaces::kv_store::WithRevision { value, revision: 0 }))
+        value
+            .map(|entry| {
+                let value: T = serde_json::from_str(&entry).map_err(Error::RedisDeserialize)?;
+
+                Ok(interfaces::kv_store::WithRevision { value, revision: 0 })
+            })
             .transpose()
     }
 }

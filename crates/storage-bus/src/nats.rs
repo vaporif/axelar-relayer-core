@@ -1,6 +1,6 @@
 // TODO: Nats dead letter queue publish
 // is expected to be done on application level
-use core::time::Duration;
+use std::time::Duration;
 
 use async_nats::{self, jetstream};
 use error::Error;
@@ -18,9 +18,9 @@ pub mod kv_store;
 pub mod publisher;
 
 impl NatsBuilder {
-    pub async fn connect_to_nats(urls: Vec<Url>) -> Result<Self, Error> {
+    pub async fn connect_to_nats(urls: &[Url]) -> Result<Self, Error> {
         let connect_options = async_nats::ConnectOptions::default().retry_on_initial_connect();
-        let client = async_nats::connect_with_options(urls.clone(), connect_options).await?;
+        let client = async_nats::connect_with_options(urls, connect_options).await?;
         let inbox = client.new_inbox();
         tracing::debug!("connected to nats");
         let context = jetstream::new(client);
