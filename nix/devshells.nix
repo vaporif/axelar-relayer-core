@@ -21,6 +21,7 @@
             nats-server
             cargo-make
             pkg-config
+            opentofu
             rustToolchain
             vscode-extensions.vadimcn.vscode-lldb
           ];
