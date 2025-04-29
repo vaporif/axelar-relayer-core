@@ -1,3 +1,5 @@
+#![expect(missing_docs, reason = "the error macro already is descriptive enough")]
+
 use async_nats::ConnectError;
 use async_nats::jetstream::consumer::StreamError;
 use async_nats::jetstream::consumer::push::MessagesError;
