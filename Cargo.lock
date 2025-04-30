@@ -2308,6 +2308,8 @@ name = "relayer-amplifier-api-integration"
 version = "0.1.1"
 dependencies = [
  "amplifier-api",
+ "base64",
+ "clap",
  "common-serde-utils",
  "eyre",
  "futures",
@@ -2334,6 +2336,7 @@ dependencies = [
 name = "relayer-engine"
 version = "0.1.1"
 dependencies = [
+ "clap",
  "eyre",
  "serde",
  "tokio",
