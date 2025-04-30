@@ -54,13 +54,12 @@ pub mod consumer {
 pub mod publisher {
     use core::error::Error;
 
-    // TODO: peek should return not the full message but just message id
-    /// peekable
-    pub trait PeekMessage<T> {
+    /// trait for peekable publisher
+    pub trait PeekMessage<T: common::Id> {
         /// Get last message from queue without consuming
         fn peek_last(
             &mut self,
-        ) -> impl Future<Output = Result<Option<T>, impl Error + Send + Sync + 'static>>;
+        ) -> impl Future<Output = Result<Option<T::MessageId>, impl Error + Send + Sync + 'static>>;
     }
 
     /// publisher
@@ -77,18 +76,22 @@ pub mod publisher {
     }
 }
 
+/// Kv store interfaces
 #[cfg(feature = "storage-interfaces")]
 pub mod kv_store {
-    use std::error::Error;
-    use std::fmt::Debug;
+    use core::error::Error;
+    use core::fmt::Debug;
 
     /// Value with revision
     #[derive(Debug)]
     pub struct WithRevision<T> {
+        /// value
         pub value: T,
+        /// revision
         pub revision: u64,
     }
 
+    /// ``KvStore`` interface
     pub trait KvStore<T> {
         /// Update value in kvstore
         fn update(

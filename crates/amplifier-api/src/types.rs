@@ -753,6 +753,22 @@ pub enum Event {
     SignersRotated(SignersRotatedEvent),
 }
 
+impl common::Id for Event {
+    type MessageId = TxEvent;
+
+    fn id(&self) -> Self::MessageId {
+        match self {
+            Self::GasCredit(event) => event.base.event_id.clone(),
+            Self::GasRefunded(event) => event.base.event_id.clone(),
+            Self::Call(event) => event.base.event_id.clone(),
+            Self::MessageApproved(event) => event.base.event_id.clone(),
+            Self::MessageExecuted(event) => event.base.event_id.clone(),
+            Self::CannotExecuteMessageV2(evens) => evens.base.event_id.clone(),
+            Self::SignersRotated(event) => event.base.event_id.clone(),
+        }
+    }
+}
+
 impl Event {
     /// Returns event id
     #[allow(clippy::missing_const_for_fn, reason = "not applicable")]
@@ -1077,6 +1093,13 @@ pub struct TaskItem {
     /// the inner task
     #[serde(flatten)]
     pub task: Task,
+}
+
+impl common::Id for TaskItem {
+    type MessageId = TaskItemId;
+    fn id(&self) -> Self::MessageId {
+        self.id.clone()
+    }
 }
 
 #[expect(clippy::min_ident_chars, reason = "comes from trait definition")]

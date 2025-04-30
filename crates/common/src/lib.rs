@@ -33,3 +33,11 @@ pub fn register_ctrlc_handler() -> CancellationToken {
     .expect("Failed to register ctrl+c handler");
     cancel_token
 }
+
+/// Generic trait for Id on a type
+pub trait Id {
+    /// type of message id
+    type MessageId;
+    /// return id
+    fn id(&self) -> Self::MessageId;
+}

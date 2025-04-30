@@ -1,91 +1,281 @@
-/// amplifier events
-pub mod events {
-    use url::Url;
+use core::fmt::Debug;
 
-    use crate::nats::NatsBuilder;
-    use crate::nats::consumer::NatsConsumer;
-    use crate::nats::error::Error;
-    use crate::nats::publisher::NatsPublisher;
+use async_nats::jetstream;
+use url::Url;
 
-    const EVENTS_STREAM: &str = "AMPLIFIER_EVENTS";
-    const EVENTS_PUBLISH_SUBJECT: &str = "amplifier.event.new";
+use super::consumer::NatsConsumer;
+use super::publisher::NatsPublisher;
+use super::{NatsError, kv_store};
+use crate::nats::{Builder, StreamArgs};
 
-    /// conect consumer
-    pub async fn connect_consumer(
-        urls: &[Url],
-    ) -> Result<NatsConsumer<amplifier_api::types::Event>, Error> {
-        let consumer = NatsBuilder::connect_to_nats(urls)
-            .await?
-            .stream(
-                EVENTS_STREAM,
-                EVENTS_PUBLISH_SUBJECT,
-                "amplifier events to send to amplifier api",
-            )
-            .await?
-            .consumer("amplifier events consumer", "permissionless-consumers")
-            .await?;
-        Ok(consumer)
-    }
-
-    /// conect publisher
-    pub async fn connect_publisher(
-        urls: &[Url],
-    ) -> Result<NatsPublisher<amplifier_api::types::Event>, Error> {
-        let publisher = NatsBuilder::connect_to_nats(urls)
-            .await?
-            .stream(
-                EVENTS_STREAM,
-                EVENTS_PUBLISH_SUBJECT,
-                "amplifier events to send to amplifier api",
-            )
-            .await?
-            .publisher(EVENTS_PUBLISH_SUBJECT)?;
-        Ok(publisher)
-    }
+/// Establishes a connection to the NATS server and creates a consumer for a specific stream.
+///
+/// This function connects to a NATS server using the provided URLs, sets up a stream based on the
+/// given stream arguments, and creates a consumer that will handle [`amplifier_api::types::Event`]
+/// messages.
+/// # Type Parameters
+///
+/// * `Message` - The type of messages to be consumed. Must implement [`common::Id`] and [`Debug`]
+///   traits.
+///
+/// # Arguments
+///
+/// * `urls` - A slice of [`Url`]s pointing to NATS server instances to connect to. The function
+///   will attempt to connect to any of these URLs.
+/// * `stream` - A [`StreamArgs`] struct containing configuration for the stream to connect to,
+///   including name, subject pattern, and description.
+/// * `consumer_desc` - A description for the consumer being created. This helps identify the
+///   purpose of this consumer in monitoring and debugging.
+/// * `deliver_group` - The delivery group name for the consumer. Multiple consumers in the same
+///   delivery group will load balance messages between them.
+///
+/// # Returns
+///
+/// * `Result<NatsConsumer<Message>, NatsError>` - On success, returns a NATS consumer configured to
+///   receive messages of type `Message`. On failure, returns an [`NatsError`].
+///
+/// # Errors
+///
+/// This function may fail if:
+/// * Connection to the NATS server cannot be established.
+/// * The stream cannot be created or accessed.
+/// * The consumer cannot be created or configured.
+///
+/// # Example
+///
+/// ```rust
+/// use url::Url;
+/// use storage_bus::nats::StreamArgs;
+/// use storage_bus::nats::connectors::connect_consumer;
+/// use storage_bus::nats::NatsError;
+/// use storage_bus::nats::consumer::NatsConsumer;
+///
+/// // Define a type that implements the required traits
+/// #[derive(Debug, borsh::BorshSerialize)]
+/// struct MyEvent {
+///     id: String,
+///     // other fields...
+/// }
+/// #[tokio::main]
+/// async fn main() -> Result<(), NatsError> {
+///     let urls = vec![
+///         Url::parse("nats://localhost:4222").unwrap(),
+///     ];
+///     
+///     let stream = StreamArgs {
+///         name: "events".to_owned(),
+///         subject: "events.>".to_owned(),
+///         description: "Stream for all system events".to_owned(),
+///     };
+///     
+///     let consumer: NatsConsumer<MyEvent> = connect_consumer(
+///         &urls,
+///         stream,
+///         "Event processor".to_string(),
+///         "event-processors".to_string(),
+///     ).await?;
+///     
+///     // Now use the consumer to process events...
+///     Ok(())
+/// }
+/// ```
+pub async fn connect_consumer<Message: Debug>(
+    urls: &[Url],
+    stream: StreamArgs,
+    consumer_desc: String,
+    deliver_group: String,
+) -> Result<NatsConsumer<Message>, NatsError> {
+    let consumer = Builder::connect_to_nats(urls)
+        .await?
+        .stream(stream)
+        .await?
+        .consumer(consumer_desc, deliver_group)
+        .await?;
+    Ok(consumer)
 }
 
-/// amplifier tasks
-pub mod tasks {
-    use url::Url;
+/// Establishes a connection to the NATS server and creates a publisher for a specific stream.
+///
+/// This function connects to a NATS server using the provided URLs, sets up a stream based on the
+/// given stream arguments, and creates a publisher that will send messages of the specified type.
+///
+/// # Type Parameters
+///
+/// * `Message` - The type of messages to be published. Must implement [`common::Id`] and be both
+///   [`Send`] and [`Sync`].
+///
+/// # Arguments
+///
+/// * `urls` - A slice of [`Url`]s pointing to NATS server instances to connect to. The function
+///   will attempt to connect to any of these URLs.
+/// * `stream` - A [`StreamArgs`] struct containing configuration for the stream to publish to,
+///   including name, subject pattern, and description.
+/// * `subject` - The specific subject to publish messages to. This should match the stream's
+///   subject pattern.
+///
+/// # Returns
+///
+/// * `Result<Publisher<Message>, Error>` - On success, returns a NATS publisher configured to send
+///   messages of type `Message`. On failure, returns an [`Error`].
+///
+/// # Errors
+///
+/// This function may fail if:
+/// * Connection to the NATS server cannot be established.
+/// * The stream cannot be created or accessed.
+///
+/// # Example
+///
+/// ```
+/// use url::Url;
+/// use borsh::BorshSerialize;
+/// use storage_bus::nats::publisher::NatsPublisher;
+/// use storage_bus::nats::connectors::connect_publisher;
+/// use storage_bus::nats::StreamArgs;
+/// use storage_bus::nats::NatsError;
+/// use storage_bus::interfaces::publisher::Publisher;
+///
+/// // Define a type that implements the required traits
+/// #[derive(BorshSerialize, core::fmt::Debug)]
+/// struct MyEvent {
+///     id: String,
+///     // other fields...
+/// }
+///
+/// // Implement common::Id for MyEvent
+/// impl common::Id for MyEvent {
+///     type MessageId = String;
+///     fn id(&self) -> String {
+///         self.id.clone()
+///     }
+/// }
+///
+/// async fn publish_example() -> Result<(), NatsError> {
+///     // Connect to NATS and create a publisher for MyEvent messages
+///     let urls = vec![
+///         Url::parse("nats://localhost:4222").unwrap(),
+///     ];
+///     
+///     let stream = StreamArgs {
+///         name: "events".to_owned(),
+///         subject: "events.>".to_owned(),
+///         description: "Stream for all system events".to_owned(),
+///     };
+///     
+///     let publisher: NatsPublisher<MyEvent> = connect_publisher(
+///         &urls,
+///         stream,
+///         "events.system".to_owned(),
+///     ).await?;
+///     
+///     // Create an event to publish
+///     let event = MyEvent {
+///         id: "example-id".to_owned(),
+///         // set other fields...
+///     };
+///     
+///     // Publish the event
+///     publisher.publish("unique_id", &event).await?;
+///     
+///     Ok(())
+/// }
+/// ```
+pub async fn connect_publisher<Message: common::Id + Send + Sync>(
+    urls: &[Url],
+    stream: StreamArgs,
+    subject: String,
+) -> Result<NatsPublisher<Message>, NatsError> {
+    let publisher = Builder::connect_to_nats(urls)
+        .await?
+        .stream(stream)
+        .await?
+        .publisher(subject);
+    Ok(publisher)
+}
 
-    use crate::nats::NatsBuilder;
-    use crate::nats::consumer::NatsConsumer;
-    use crate::nats::error::Error;
-    use crate::nats::publisher::NatsPublisher;
+/// Connects to a NATS ``JetStream`` Key-Value store with the specified configuration.
+///
+/// This function establishes a connection to a NATS server and creates or gets a Key-Value
+/// store (bucket) that can be used to store and retrieve values of type `T`.
+///
+/// # Type Parameters
+///
+/// * `T` - The type of values to be stored in the Key-Value store. The serialization and
+///   deserialization mechanism depends on the implementation of [`kv_store::Client`].
+///
+/// # Arguments
+///
+/// * `urls` - A slice of [`Url`]s pointing to NATS server instances to connect to. The function
+///   will attempt to connect to any of these URLs with retry on initial connection.
+/// * `bucket` - The name of the Key-Value bucket to create or use. This serves as a namespace for
+///   the stored values.
+/// * `description` - A description for the Key-Value store, useful for identifying its purpose in
+///   monitoring and debugging.
+///
+/// # Returns
+///
+/// * `Result<KvStore<T>, NatsError>` - On success, returns a client for the Key-Value store that
+///   can be used to put, get, and delete values of type `T`. On failure, returns an [`Error`].
+///
+/// # Errors
+///
+/// This function may return an error if:
+/// * Connection to the NATS server cannot be established
+/// * The Key-Value store cannot be created due to permission issues or invalid configuration
+/// * There are network issues during connection
+///
+/// # KV Store Configuration
+///
+/// The Key-Value store is created with default configuration settings except for:
+/// * The specified bucket name
+/// * The provided description
+///
+/// # Example
+///
+/// ```
+/// use url::Url;
+/// use borsh::{BorshDeserialize, BorshSerialize};
+/// use storage_bus::nats::connectors::connect_kv_store;
+/// use storage_bus::nats::kv_store::NatsKvStore;
+/// use storage_bus::nats::NatsError;
+///
+/// // Define a type for our values
+/// #[derive(BorshSerialize, BorshDeserialize)]
+/// struct UserProfile {
+///     username: String,
+///     email: String,
+/// }
+///
+/// async fn setup_kv_store() -> Result<NatsKvStore<UserProfile>, NatsError> {
+///     let urls = vec![Url::parse("nats://localhost:4222").unwrap()];
+///     
+///     // Connect to KV store for UserProfile data
+///     let kv_client = connect_kv_store::<UserProfile>(
+///         &urls,
+///         "user_profiles".to_string(),
+///         "Storage for user profile information".to_string(),
+///     ).await?;
+///     
+///     // Now the KV client is ready to store and retrieve UserProfile objects
+///     Ok(kv_client)
+/// }
+/// ```
+pub async fn connect_kv_store<T>(
+    urls: &[Url],
+    bucket: String,
+    description: String,
+) -> Result<kv_store::NatsKvStore<T>, NatsError> {
+    let connect_options = async_nats::ConnectOptions::default().retry_on_initial_connect();
+    let client = async_nats::connect_with_options(urls, connect_options).await?;
+    let context = jetstream::new(client);
+    let store = context
+        .create_key_value(async_nats::jetstream::kv::Config {
+            bucket: bucket.clone(),
+            description,
+            ..Default::default()
+        })
+        .await?;
 
-    const TASKS_STREAM: &str = "AMPLIFIER_TASKS";
-    const TASKS_PUBLISH_SUBJECT: &str = "amplifier.tasks.new";
-
-    /// conect consumer
-    pub async fn connect_consumer(
-        urls: &[Url],
-    ) -> Result<NatsConsumer<amplifier_api::types::TaskItem>, Error> {
-        let consumer = NatsBuilder::connect_to_nats(urls)
-            .await?
-            .stream(
-                TASKS_STREAM,
-                TASKS_PUBLISH_SUBJECT,
-                "amplifier tasks for ingester in starknet",
-            )
-            .await?
-            .consumer("amplifier tasks consumer", "permissionless-consumers")
-            .await?;
-        Ok(consumer)
-    }
-
-    /// conect publisher
-    pub async fn connect_publisher(
-        urls: &[Url],
-    ) -> Result<NatsPublisher<amplifier_api::types::TaskItem>, Error> {
-        let publisher = NatsBuilder::connect_to_nats(urls)
-            .await?
-            .stream(
-                TASKS_STREAM,
-                TASKS_PUBLISH_SUBJECT,
-                "amplifier tasks for ingester in starknet",
-            )
-            .await?
-            .publisher(TASKS_PUBLISH_SUBJECT)?;
-        Ok(publisher)
-    }
+    let store = kv_store::NatsKvStore::new(bucket, store);
+    Ok(store)
 }

@@ -24,6 +24,7 @@ tokio-util = { workspace = true, optional = true }
 thiserror.workspace = true
 amplifier-api.workspace = true
 futures.workspace = true
+common.workspace = true
 tracing.workspace = true
 borsh = { workspace = true, optional = true }
 

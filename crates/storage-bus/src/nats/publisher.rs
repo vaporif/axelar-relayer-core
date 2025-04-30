@@ -1,35 +1,36 @@
-use std::fmt::Debug;
-use std::marker::PhantomData;
+use core::fmt::Debug;
+use core::marker::PhantomData;
 
 use async_nats::jetstream;
 use borsh::{BorshDeserialize, BorshSerialize};
 
-use super::error::Error;
+use super::NatsError;
 use crate::interfaces;
 
 const NATS_MSG_ID: &str = "Nats-Msg-Id";
 
-impl super::NatsStream {
-    /// connect pulisher
-    pub fn publisher<T: Send + Sync>(
-        self,
-        subject: impl Into<String>,
-    ) -> Result<NatsPublisher<T>, Error> {
-        Ok(NatsPublisher::<T> {
-            context: self.context,
-            stream: self.stream,
-            subject: subject.into(),
-            _phantom: PhantomData,
-        })
-    }
-}
-
 /// Queue publisher
+#[allow(clippy::module_name_repetitions, reason = "Descriptive name")]
 pub struct NatsPublisher<T> {
     context: jetstream::Context,
     stream: jetstream::stream::Stream,
     subject: String,
     _phantom: PhantomData<T>,
+}
+
+impl<T> NatsPublisher<T> {
+    pub(crate) const fn new(
+        context: jetstream::Context,
+        stream: jetstream::stream::Stream,
+        subject: String,
+    ) -> Self {
+        Self {
+            context,
+            stream,
+            subject,
+            _phantom: PhantomData,
+        }
+    }
 }
 
 impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T>
@@ -38,18 +39,18 @@ impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T
     type AckFuture = jetstream::context::PublishAckFuture;
 
     // TODO: always wait for completion?
-    #[allow(refining_impl_trait)]
+    #[allow(refining_impl_trait, reason = "simplify")]
     #[tracing::instrument(skip_all)]
     async fn publish(
         &self,
         deduplication_id: impl Into<String>,
         data: &T,
-    ) -> Result<Self::AckFuture, Error> {
+    ) -> Result<Self::AckFuture, NatsError> {
         let mut headers = async_nats::HeaderMap::new();
         let deduplication_id: String = deduplication_id.into();
         tracing::debug!(?deduplication_id, ?data, "got message");
-        headers.append(NATS_MSG_ID.to_string(), deduplication_id);
-        let data = borsh::to_vec(&data).map_err(Error::Serialize)?;
+        headers.append(NATS_MSG_ID.to_owned(), deduplication_id);
+        let data = borsh::to_vec(&data).map_err(NatsError::Serialize)?;
         tracing::debug!("message encoded");
         let publish_ack_future = self
             .context
@@ -64,13 +65,13 @@ impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T
 
 impl<T> interfaces::publisher::PeekMessage<T> for NatsPublisher<T>
 where
-    T: BorshDeserialize + Send + Sync,
+    T: BorshDeserialize + Send + Sync + common::Id,
 {
     // TODO: make sure you don't remove message from
     // main stream if moving out to dlq
-    #[allow(refining_impl_trait)]
+    #[allow(refining_impl_trait, reason = "simplify")]
     #[tracing::instrument(skip_all)]
-    async fn peek_last(&mut self) -> Result<Option<T>, Error> {
+    async fn peek_last(&mut self) -> Result<Option<T::MessageId>, NatsError> {
         let last_sequence = self.stream.info().await?.state.last_sequence;
         if last_sequence == 0 {
             tracing::debug!("no messages");
@@ -80,7 +81,7 @@ where
         let msg = self.stream.direct_get(last_sequence).await?;
 
         tracing::debug!(?msg, "found message");
-        let msg = T::deserialize(&mut msg.payload.as_ref()).map_err(Error::Deserialize)?;
-        Ok(Some(msg))
+        let msg = T::deserialize(&mut msg.payload.as_ref()).map_err(NatsError::Deserialize)?;
+        Ok(Some(msg.id()))
     }
 }
