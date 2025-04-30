@@ -1087,7 +1087,7 @@ impl core::fmt::Debug for TaskItem {
             Task::GatewayTx(_) => "GatewayTx",
             Task::Execute(_) => "Execute",
             Task::Refund(_) => "Refund",
-            Task::ConstructProof(_) => "ConsructProof",
+            Task::ConstructProof(_) => "ConstructProof",
         };
 
         f.debug_struct("TaskItem")
