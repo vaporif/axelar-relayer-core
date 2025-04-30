@@ -2308,7 +2308,7 @@ name = "relayer-amplifier-api-integration"
 version = "0.1.1"
 dependencies = [
  "amplifier-api",
- "base64",
+ "base64 0.22.1",
  "clap",
  "common-serde-utils",
  "eyre",
