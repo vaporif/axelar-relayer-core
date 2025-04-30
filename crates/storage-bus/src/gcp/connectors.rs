@@ -15,7 +15,7 @@ use super::publisher::{GcpPublisher, PeekableGcpPublisher};
 ///
 /// This function creates a GCP Pub/Sub consumer that can receive and process messages of type `T`
 /// from the specified subscription. The consumer handles connection management, message
-/// deserialization, and acknowledgement/negative acknowledgement automatically.
+/// deserialization, and allows acknowledgement/negative/extend acknowledgement.
 ///
 /// # Type Parameters
 ///
@@ -26,8 +26,8 @@ use super::publisher::{GcpPublisher, PeekableGcpPublisher};
 ///
 /// * `subscription` - The GCP Pub/Sub subscription path to consume from, typically in the format
 ///   `projects/{project}/subscriptions/{subscription}`.
-/// * `message_buffer_size` - The size of the internal message buffer. Controls how many messages
-///   can be processed in parallel.
+/// * `message_buffer_size` - The size of the internal message buffer. Controls how many message
+///   will be in buffer to process.
 /// * `nak_deadline_secs` - The deadline (in seconds) for message processing. If a message isn't
 ///   acknowledged within this deadline, GCP will attempt to redeliver it.
 /// * `cancel_token` - A [`CancellationToken`] used to gracefully shut down the consumer when
@@ -205,8 +205,8 @@ where
 /// * `T` - The type of messages that will be published. Must implement the following traits:
 ///   * `common::Id` - For associating a unique identifier with each message
 ///   * `Send` and `Sync` - To ensure thread safety when publishing messages
-///   * `Serialize` and `Deserialize<'de>` - For serializing messages to/from Redis storage
-///   * `T::MessageId` must implement `Serialize`, `Deserialize<'de>`, and `Debug` traits
+///   * `T::MessageId` must implement `Serialize`, `Deserialize<'de>` (to save in redis), and
+///     `Debug` traits
 ///
 /// # Arguments
 ///
