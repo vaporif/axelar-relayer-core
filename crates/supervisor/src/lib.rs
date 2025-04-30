@@ -140,6 +140,7 @@ pub fn run(
     eyre::Ok(())
 }
 
+#[allow(clippy::cognitive_complexity, reason = "used only dusing development")]
 fn spawn_worker<'scope>(
     worker_name: &WorkerName,
     mut worker: Box<dyn Worker>,
