@@ -8,6 +8,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::{DateTime, Utc};
 pub use id::*;
 use serde::{Deserialize, Serialize};
+use storage_bus::interfaces::publisher::QueueMsgId;
 use typed_builder::TypedBuilder;
 pub use {bnum, uuid};
 
@@ -753,7 +754,7 @@ pub enum Event {
     SignersRotated(SignersRotatedEvent),
 }
 
-impl common::Id for Event {
+impl QueueMsgId for Event {
     type MessageId = TxEvent;
 
     fn id(&self) -> Self::MessageId {
@@ -1095,7 +1096,7 @@ pub struct TaskItem {
     pub task: Task,
 }
 
-impl storage_bus::interfaces::publisher::Id for TaskItem {
+impl QueueMsgId for TaskItem {
     type MessageId = TaskItemId;
     fn id(&self) -> Self::MessageId {
         self.id.clone()

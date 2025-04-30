@@ -2,8 +2,15 @@
 /// nats implementation
 use core::time::Duration;
 
-use async_nats::{self, jetstream};
+use async_nats::jetstream::consumer::StreamError;
+use async_nats::jetstream::consumer::push::MessagesError;
+use async_nats::jetstream::context::{CreateKeyValueError, CreateStreamError, PublishError};
+use async_nats::jetstream::kv::{EntryError, PutError, UpdateError};
+use async_nats::jetstream::stream::{ConsumerError, DirectGetError, InfoError};
+use async_nats::{self, ConnectError, jetstream};
 use url::Url;
+
+use crate::interfaces::publisher::QueueMsgId;
 
 /// Nats clients builder
 pub struct Builder {
@@ -19,13 +26,6 @@ pub mod consumer;
 pub mod kv_store;
 /// publisher
 pub mod publisher;
-
-use async_nats::ConnectError;
-use async_nats::jetstream::consumer::StreamError;
-use async_nats::jetstream::consumer::push::MessagesError;
-use async_nats::jetstream::context::{CreateKeyValueError, CreateStreamError, PublishError};
-use async_nats::jetstream::kv::{EntryError, PutError, UpdateError};
-use async_nats::jetstream::stream::{ConsumerError, DirectGetError, InfoError};
 
 /// Errors
 #[allow(clippy::module_name_repetitions, reason = "Descriptive name")]
@@ -124,7 +124,7 @@ pub struct ConfiguredStream {
 
 impl ConfiguredStream {
     #[must_use]
-    pub(crate) fn publisher<T: Send + Sync + common::Id>(
+    pub(crate) fn publisher<T: Send + Sync + QueueMsgId>(
         self,
         subject: String,
     ) -> publisher::NatsPublisher<T> {

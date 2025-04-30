@@ -6,6 +6,7 @@ use url::Url;
 use super::consumer::NatsConsumer;
 use super::publisher::NatsPublisher;
 use super::{NatsError, kv_store};
+use crate::interfaces::publisher::QueueMsgId;
 use crate::nats::{Builder, StreamArgs};
 
 /// Establishes a connection to the NATS server and creates a consumer for a specific stream.
@@ -15,8 +16,8 @@ use crate::nats::{Builder, StreamArgs};
 /// messages.
 /// # Type Parameters
 ///
-/// * `Message` - The type of messages to be consumed. Must implement [`common::Id`] and [`Debug`]
-///   traits.
+/// * `Message` - The type of messages to be consumed. Must implement [`Debug`] and
+///   [`BorshDeserialize`] traits.
 ///
 /// # Arguments
 ///
@@ -101,8 +102,8 @@ pub async fn connect_consumer<Message: Debug>(
 ///
 /// # Type Parameters
 ///
-/// * `Message` - The type of messages to be published. Must implement [`common::Id`] and be both
-///   [`Send`] and [`Sync`].
+/// * `Message` - The type of messages to be published. Must implement [`QueueMsgId`]/
+///   [`BorshSerialize`] and be both [`Send`] and [`Sync`].
 ///
 /// # Arguments
 ///
@@ -134,6 +135,7 @@ pub async fn connect_consumer<Message: Debug>(
 /// use storage_bus::nats::StreamArgs;
 /// use storage_bus::nats::NatsError;
 /// use storage_bus::interfaces::publisher::Publisher;
+/// use crate::interfaces::publisher::QueueMsgId;
 ///
 /// // Define a type that implements the required traits
 /// #[derive(BorshSerialize, core::fmt::Debug)]
@@ -142,8 +144,8 @@ pub async fn connect_consumer<Message: Debug>(
 ///     // other fields...
 /// }
 ///
-/// // Implement common::Id for MyEvent
-/// impl common::Id for MyEvent {
+/// // Implement QueueMsgId for MyEvent
+/// impl QueueMsgId for MyEvent {
 ///     type MessageId = String;
 ///     fn id(&self) -> String {
 ///         self.id.clone()
@@ -180,7 +182,7 @@ pub async fn connect_consumer<Message: Debug>(
 ///     Ok(())
 /// }
 /// ```
-pub async fn connect_publisher<Message: common::Id + Send + Sync>(
+pub async fn connect_publisher<Message: QueueMsgId + Send + Sync>(
     urls: &[Url],
     stream: StreamArgs,
     subject: String,
