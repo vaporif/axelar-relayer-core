@@ -9,6 +9,7 @@ use super::GcpError;
 use super::consumer::GcpConsumer;
 use super::kv_store::RedisClient;
 use super::publisher::{GcpPublisher, PeekableGcpPublisher};
+use crate::interfaces::publisher::QueueMsgId;
 
 /// Establishes a connection to Google Cloud Pub/Sub and creates a consumer for a specific
 /// subscription.
@@ -203,7 +204,8 @@ where
 /// # Type Parameters
 ///
 /// * `T` - The type of messages that will be published. Must implement the following traits:
-///   * `common::Id` - For associating a unique identifier with each message
+///   * `Id` - For associating a unique identifier with each message, pushed as last msg id to Redis
+///     and returned when peeking at last msg
 ///   * `Send` and `Sync` - To ensure thread safety when publishing messages
 ///   * `T::MessageId` must implement `Serialize`, `Deserialize<'de>` (to save in redis), and
 ///     `Debug` traits
@@ -250,7 +252,7 @@ where
 /// }
 ///
 /// // Implement common::Id for EventMessage
-/// impl common::Id for EventMessage {
+/// impl storage_bus::interfaces::publisher::QueueMsgId for EventMessage {
 ///     type MessageId = String;
 ///     fn id(&self) -> String {
 ///         self.id.clone()
@@ -288,7 +290,7 @@ pub async fn connect_peekable_publisher<T>(
     redis_key: String,
 ) -> Result<PeekableGcpPublisher<T>, GcpError>
 where
-    T: common::Id + Send + Sync,
+    T: QueueMsgId + Send + Sync,
     T::MessageId: Serialize + for<'de> Deserialize<'de> + Debug,
 {
     let kv_store = RedisClient::connect(redis_key, redis_connection).await?;

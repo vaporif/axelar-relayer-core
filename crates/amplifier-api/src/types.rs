@@ -1095,7 +1095,7 @@ pub struct TaskItem {
     pub task: Task,
 }
 
-impl common::Id for TaskItem {
+impl storage_bus::interfaces::publisher::Id for TaskItem {
     type MessageId = TaskItemId;
     fn id(&self) -> Self::MessageId {
         self.id.clone()

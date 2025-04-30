@@ -6,6 +6,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 use super::NatsError;
 use crate::interfaces;
+use crate::interfaces::publisher::QueueMsgId;
 
 const NATS_MSG_ID: &str = "Nats-Msg-Id";
 
@@ -65,7 +66,7 @@ impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T
 
 impl<T> interfaces::publisher::PeekMessage<T> for NatsPublisher<T>
 where
-    T: BorshDeserialize + Send + Sync + common::Id,
+    T: BorshDeserialize + Send + Sync + QueueMsgId,
 {
     // TODO: make sure you don't remove message from
     // main stream if moving out to dlq

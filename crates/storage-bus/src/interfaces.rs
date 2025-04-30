@@ -54,8 +54,16 @@ pub mod consumer {
 pub mod publisher {
     use core::error::Error;
 
+    /// Generic trait for Id on a type
+    pub trait QueueMsgId {
+        /// type of message id
+        type MessageId;
+        /// return id
+        fn id(&self) -> Self::MessageId;
+    }
+
     /// trait for peekable publisher
-    pub trait PeekMessage<T: common::Id> {
+    pub trait PeekMessage<T: QueueMsgId> {
         /// Get last message from queue without consuming
         fn peek_last(
             &mut self,

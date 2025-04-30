@@ -53,6 +53,7 @@ dependencies = [
  "rstest",
  "serde",
  "simd-json",
+ "storage-bus",
  "thiserror 2.0.12",
  "tokio",
  "tracing",

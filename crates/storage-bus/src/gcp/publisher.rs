@@ -13,6 +13,7 @@ use super::GcpError;
 use super::kv_store::RedisClient;
 use super::util::get_topic;
 use crate::interfaces;
+use crate::interfaces::publisher::QueueMsgId;
 
 /// Queue publisher
 #[allow(clippy::module_name_repetitions, reason = "Descriptive name")]
@@ -67,14 +68,14 @@ where
 
 /// Queue publisher with ability to get last message (without consuming)
 #[allow(clippy::module_name_repetitions, reason = "Descriptive name")]
-pub struct PeekableGcpPublisher<T: common::Id> {
+pub struct PeekableGcpPublisher<T: QueueMsgId> {
     publisher: GcpPublisher<T>,
     last_message_kv_store: RedisClient<T::MessageId>,
 }
 
 impl<T> PeekableGcpPublisher<T>
 where
-    T: Send + Sync + common::Id,
+    T: Send + Sync + QueueMsgId,
     T::MessageId: Serialize + for<'de> Deserialize<'de>,
 {
     pub(crate) async fn new(
@@ -93,7 +94,7 @@ where
 
 impl<T> interfaces::publisher::Publisher<T> for PeekableGcpPublisher<T>
 where
-    T: common::Id + BorshSerialize + Debug + Send + Clone + Sync,
+    T: QueueMsgId + BorshSerialize + Debug + Send + Clone + Sync,
     T::MessageId: Serialize + for<'de> Deserialize<'de>,
 {
     // NOTE: Ack future is always finished since only after it finishes we can
@@ -115,7 +116,7 @@ where
 
 impl<T> interfaces::publisher::PeekMessage<T> for PeekableGcpPublisher<T>
 where
-    T: common::Id,
+    T: QueueMsgId,
     T::MessageId: Serialize + for<'de> Deserialize<'de> + Send + Sync + Debug,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
