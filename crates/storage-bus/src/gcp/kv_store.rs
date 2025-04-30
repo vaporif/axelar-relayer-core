@@ -36,7 +36,7 @@ where
     }
 
     pub(crate) async fn upsert(&self, value: &T) -> Result<(), GcpError> {
-        let json_string = borsh::to_vec(value).map_err(|err| GcpError::RedisSerialize {
+        let bytes = borsh::to_vec(value).map_err(|err| GcpError::RedisSerialize {
             value: value.to_string(),
             err,
         })?;
@@ -44,7 +44,7 @@ where
         let _: () = self
             .connection
             .clone()
-            .set(&self.key, json_string)
+            .set(&self.key, bytes)
             .await
             .map_err(GcpError::RedisSave)?;
 
@@ -78,14 +78,13 @@ where
     #[tracing::instrument(skip(self))]
     async fn get(&self) -> Result<Option<WithRevision<T>>, GcpError> {
         let mut connection = self.connection.clone();
-        let value: Option<String> = connection
+        let value: Option<Vec<u8>> = connection
             .get(&self.key)
             .await
             .map_err(GcpError::RedisGet)?;
 
         value
-            .map(|entry| {
-                let bytes = entry.as_bytes().to_owned();
+            .map(|bytes| {
                 let value: T =
                     borsh::from_slice(&bytes).map_err(|err| GcpError::RedisDeserialize {
                         value: hex::encode(bytes),
