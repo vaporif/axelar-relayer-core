@@ -1,6 +1,7 @@
 use core::fmt::Debug;
 use core::future::{Ready, ready};
 use core::marker::PhantomData;
+use std::collections::HashMap;
 
 use borsh::BorshSerialize;
 use google_cloud_googleapis::pubsub::v1::PubsubMessage;
@@ -14,6 +15,8 @@ use super::kv_store::RedisClient;
 use super::util::get_topic;
 use crate::interfaces;
 use crate::interfaces::publisher::QueueMsgId;
+
+const MSG_ID: &str = "Msg-Id";
 
 /// Queue publisher
 #[allow(clippy::module_name_repetitions, reason = "Descriptive name")]
@@ -48,12 +51,15 @@ where
     async fn publish(
         &self,
         // Deduplication is automatic
-        _deduplication_id: impl Into<String>,
+        deduplication_id: impl Into<String>,
         data: &T,
     ) -> Result<Self::AckFuture, GcpError> {
         let encoded = borsh::to_vec(&data).map_err(GcpError::Serialize)?;
+        let mut attributes = HashMap::new();
+        attributes.insert(MSG_ID.to_owned(), deduplication_id.into());
         let message = PubsubMessage {
             data: encoded,
+            attributes,
             ..Default::default()
         };
         let awaiter = self.publisher.publish(message.clone()).await;
