@@ -11,7 +11,7 @@ use crate::nats::{Builder, StreamArgs};
 /// Establishes a connection to the NATS server and creates a consumer for a specific stream.
 ///
 /// This function connects to a NATS server using the provided URLs, sets up a stream based on the
-/// given stream arguments, and creates a consumer that will handle [`amplifier_api::types::Event`]
+/// given stream arguments, and creates a consumer that will handle ``T`` messges
 /// messages.
 /// # Type Parameters
 ///
