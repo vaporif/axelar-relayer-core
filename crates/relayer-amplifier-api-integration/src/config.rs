@@ -1,6 +1,6 @@
 use amplifier_api::identity::Identity;
-use base64::prelude::BASE64_STANDARD;
 use base64::Engine as _;
+use base64::prelude::BASE64_STANDARD;
 use clap::Parser;
 use eyre::Result;
 use serde::Deserialize;
