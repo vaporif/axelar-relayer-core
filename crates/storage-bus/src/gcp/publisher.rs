@@ -2,7 +2,7 @@ use core::fmt::Debug;
 use core::future::{Ready, ready};
 use core::marker::PhantomData;
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshSerialize;
 use google_cloud_googleapis::pubsub::v1::PubsubMessage;
 use google_cloud_pubsub::client::Client;
 use google_cloud_pubsub::publisher::Publisher;
@@ -115,14 +115,7 @@ where
 
 impl<T> interfaces::publisher::PeekMessage<T> for PeekableGcpPublisher<T>
 where
-    T: common::Id
-        + BorshDeserialize
-        + Serialize
-        + for<'de> Deserialize<'de>
-        + Clone
-        + Send
-        + Sync
-        + Debug,
+    T: common::Id,
     T::MessageId: Serialize + for<'de> Deserialize<'de> + Send + Sync + Debug,
 {
     #[allow(refining_impl_trait, reason = "simplification")]

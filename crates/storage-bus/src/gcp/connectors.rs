@@ -168,14 +168,6 @@ where
 ///     payload: Vec<u8>,
 /// }
 ///
-/// // Implement common::Id for EventMessage
-/// impl common::Id for EventMessage {
-///     type MessageId = String;
-///     fn id(&self) -> String {
-///         self.id.clone()
-///     }
-/// }
-///
 /// async fn publish_example() -> Result<(), GcpError> {
 ///     // Connect to the "blockchain-transactions" topic
 ///     let publisher: GcpPublisher<EventMessage> = connect_publisher("events").await?;
@@ -201,14 +193,102 @@ where
     Ok(publisher)
 }
 
-/// connect peekable publisher with ability to get last pushed message (without consuming it)
+/// Creates and connects a Peekable Google Cloud Platform Publisher for the specified topic with
+/// Redis integration.
+///
+/// This function establishes a connection to Google Cloud Pub/Sub and creates a peekable publisher
+/// for the specified topic. The peekable publisher extends the standard GCP Publisher functionality
+/// by integrating with Redis to enable inspecting latest message without consuming it.
+///
+/// # Type Parameters
+///
+/// * `T` - The type of messages that will be published. Must implement the following traits:
+///   * `common::Id` - For associating a unique identifier with each message
+///   * `Send` and `Sync` - To ensure thread safety when publishing messages
+///   * `Serialize` and `Deserialize<'de>` - For serializing messages to/from Redis storage
+///   * `T::MessageId` must implement `Serialize`, `Deserialize<'de>`, and `Debug` traits
+///
+/// # Arguments
+///
+/// * `topic` - The name of the Pub/Sub topic to connect to
+/// * `redis_connection` - Connection string for the Redis instance
+/// * `redis_key` - Key prefix to use for storing message data in Redis
+///
+/// # Returns
+///
+/// * `Result<PeekableGcpPublisher<T>, GcpError>` - A Result containing either:
+///   * `PeekableGcpPublisher<T>` - A connected peekable publisher instance ready to publish
+///     messages of type `T`
+///   * `GcpError` - Error that occurred during client connection, publisher initialization, or
+///     Redis connection
+///
+/// # Errors
+///
+/// This function may fail if:
+/// * The Redis connection cannot be established
+/// * The underlying GCP client connection fails (authentication issues, network problems)
+/// * The specified topic doesn't exist or the authenticated account lacks permissions
+/// * The peekable publisher creation fails for any reason
+///
+/// # Examples
+///
+/// ```
+/// use storage_bus::gcp::connectors::connect_publisher;
+/// use storage_bus::gcp::publisher::GcpPublisher;
+/// use storage_bus::gcp::GcpError;
+/// use crate::storage_bus::interfaces::publisher::Publisher;
+/// use storage_bus::gcp::connectors::connect_peekable_publisher;
+/// use storage_bus::gcp::publisher::PeekableGcpPublisher;
+/// use crate::storage_bus::interfaces::publisher::PeekMessage;
+///
+///
+/// #[derive(Clone, Debug, borsh::BorshSerialize)]
+/// struct EventMessage {
+///     id: String,
+///     timestamp: u64,
+///     payload: Vec<u8>,
+/// }
+///
+/// // Implement common::Id for EventMessage
+/// impl common::Id for EventMessage {
+///     type MessageId = String;
+///     fn id(&self) -> String {
+///         self.id.clone()
+///     }
+/// }
+/// async fn publish_with_peek_ability() -> Result<(), GcpError> {
+///     let mut publisher: PeekableGcpPublisher<EventMessage> = connect_peekable_publisher(
+///         "events-topic",
+///         "redis://redis-server:6379".to_owned(),
+///         "my-events".to_owned()
+///     ).await?;
+///     
+///     let msg = EventMessage {
+///       id: "something".to_owned(),
+///       timestamp: 6,
+///       payload: Vec::<_>::default()
+///     };
+///
+///     // Create and publish
+///     publisher.publish("".to_owned(), &msg).await?;
+///     
+///     // Later, we can peek at the transaction status
+///     let msg_id = publisher.peek_last().await?;
+///     
+///     Ok(())
+/// }
+/// ```
+///
+/// # Note
+///
+/// The `PeekableGcpPublisher` allows you to get latest published message id without consuming it
 pub async fn connect_peekable_publisher<T>(
     topic: &str,
     redis_connection: String,
     redis_key: String,
 ) -> Result<PeekableGcpPublisher<T>, GcpError>
 where
-    T: common::Id + Send + Sync + Serialize + for<'de> Deserialize<'de>,
+    T: common::Id + Send + Sync,
     T::MessageId: Serialize + for<'de> Deserialize<'de> + Debug,
 {
     let kv_store = RedisClient::connect(redis_key, redis_connection).await?;

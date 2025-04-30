@@ -41,8 +41,7 @@ where
             .task_queue_publisher
             .peek_last()
             .await
-            .wrap_err("could not get last retrieved task id")?
-            .map(|t| t.id);
+            .wrap_err("could not get last retrieved task id")?;
 
         tracing::debug!(?last_task_id, "last retrieved task");
 
