@@ -12,18 +12,17 @@ use crate::nats::{Builder, StreamArgs};
 /// Establishes a connection to the NATS server and creates a consumer for a specific stream.
 ///
 /// This function connects to a NATS server using the provided URLs, sets up a stream based on the
-/// given stream arguments, and creates a consumer that will handle ``T`` messges
-/// messages.
+/// given stream arguments, and creates a consumer that will handle messages of type `Message`.
+///
 /// # Type Parameters
 ///
-/// * `Message` - The type of messages to be consumed. Must implement [`Debug`] and
-///   [`BorshDeserialize`] traits.
+/// * `Message` - The type of messages to be consumed. Must implement `Debug` trait.
 ///
 /// # Arguments
 ///
-/// * `urls` - A slice of [`Url`]s pointing to NATS server instances to connect to. The function
-///   will attempt to connect to any of these URLs.
-/// * `stream` - A [`StreamArgs`] struct containing configuration for the stream to connect to,
+/// * `urls` - A slice of `Url`s pointing to NATS server instances to connect to. The function will
+///   attempt to connect to any of these URLs.
+/// * `stream` - A `StreamArgs` struct containing configuration for the stream to connect to,
 ///   including name, subject pattern, and description.
 /// * `consumer_desc` - A description for the consumer being created. This helps identify the
 ///   purpose of this consumer in monitoring and debugging.
@@ -33,7 +32,7 @@ use crate::nats::{Builder, StreamArgs};
 /// # Returns
 ///
 /// * `Result<NatsConsumer<Message>, NatsError>` - On success, returns a NATS consumer configured to
-///   receive messages of type `Message`. On failure, returns an [`NatsError`].
+///   receive messages of type `Message`. On failure, returns a `NatsError`.
 ///
 /// # Errors
 ///
@@ -50,9 +49,10 @@ use crate::nats::{Builder, StreamArgs};
 /// use storage_bus::nats::connectors::connect_consumer;
 /// use storage_bus::nats::NatsError;
 /// use storage_bus::nats::consumer::NatsConsumer;
+/// use borsh::BorshSerialize;
 ///
 /// // Define a type that implements the required traits
-/// #[derive(Debug, borsh::BorshSerialize)]
+/// #[derive(Debug, BorshSerialize)]
 /// struct MyEvent {
 ///     id: String,
 ///     // other fields...
@@ -102,22 +102,22 @@ pub async fn connect_consumer<Message: Debug>(
 ///
 /// # Type Parameters
 ///
-/// * `Message` - The type of messages to be published. Must implement [`QueueMsgId`]/
-///   [`BorshSerialize`] and be both [`Send`] and [`Sync`].
+/// * `Message` - The type of messages to be published. Must implement `QueueMsgId` and be both
+///   `Send` and `Sync`.
 ///
 /// # Arguments
 ///
-/// * `urls` - A slice of [`Url`]s pointing to NATS server instances to connect to. The function
-///   will attempt to connect to any of these URLs.
-/// * `stream` - A [`StreamArgs`] struct containing configuration for the stream to publish to,
+/// * `urls` - A slice of `Url`s pointing to NATS server instances to connect to. The function will
+///   attempt to connect to any of these URLs.
+/// * `stream` - A `StreamArgs` struct containing configuration for the stream to publish to,
 ///   including name, subject pattern, and description.
 /// * `subject` - The specific subject to publish messages to. This should match the stream's
 ///   subject pattern.
 ///
 /// # Returns
 ///
-/// * `Result<Publisher<Message>, Error>` - On success, returns a NATS publisher configured to send
-///   messages of type `Message`. On failure, returns an [`Error`].
+/// * `Result<NatsPublisher<Message>, NatsError>` - On success, returns a NATS publisher configured
+///   to send messages of type `Message`. On failure, returns a `NatsError`.
 ///
 /// # Errors
 ///
@@ -203,12 +203,12 @@ pub async fn connect_publisher<Message: QueueMsgId + Send + Sync>(
 /// # Type Parameters
 ///
 /// * `T` - The type of values to be stored in the Key-Value store. The serialization and
-///   deserialization mechanism depends on the implementation of [`kv_store::Client`].
+///   deserialization mechanism is handled by the `NatsKvStore` implementation.
 ///
 /// # Arguments
 ///
-/// * `urls` - A slice of [`Url`]s pointing to NATS server instances to connect to. The function
-///   will attempt to connect to any of these URLs with retry on initial connection.
+/// * `urls` - A slice of `Url`s pointing to NATS server instances to connect to. The function will
+///   attempt to connect to any of these URLs with retry on initial connection.
 /// * `bucket` - The name of the Key-Value bucket to create or use. This serves as a namespace for
 ///   the stored values.
 /// * `description` - A description for the Key-Value store, useful for identifying its purpose in
@@ -216,8 +216,9 @@ pub async fn connect_publisher<Message: QueueMsgId + Send + Sync>(
 ///
 /// # Returns
 ///
-/// * `Result<KvStore<T>, NatsError>` - On success, returns a client for the Key-Value store that
-///   can be used to put, get, and delete values of type `T`. On failure, returns an [`Error`].
+/// * `Result<NatsKvStore<T>, NatsError>` - On success, returns a client for the Key-Value store
+///   that can be used to put, get, and delete values of type `T`. On failure, returns a
+///   `NatsError`.
 ///
 /// # Errors
 ///
