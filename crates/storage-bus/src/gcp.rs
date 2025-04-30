@@ -48,14 +48,14 @@ pub enum GcpError {
     Serialize(std::io::Error),
     #[error("error connecting to redis {0}")]
     Connection(RedisError),
-    #[error("error serializing data to redis {0}")]
-    RedisSerialize(serde_json::Error),
+    #[error("error serializing data `{value}` to redis {err}")]
+    RedisSerialize { value: String, err: std::io::Error },
     #[error("error saving data to redis {0}")]
     RedisSave(RedisError),
     #[error("error getting data from redis {0}")]
     RedisGet(RedisError),
-    #[error("error deserializing data from redis {0}")]
-    RedisDeserialize(serde_json::Error),
+    #[error("error deserializing data (hex representation) `{value}` from redis {err}")]
+    RedisDeserialize { value: String, err: std::io::Error },
     #[error("consumer read task join error {0}")]
     ConsumerReadTaskJoin(JoinError),
     #[error("consumer read task exited without error")]

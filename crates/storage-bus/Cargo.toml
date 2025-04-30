@@ -14,10 +14,8 @@ redis = { workspace = true, optional = true }
 google-cloud-googleapis = { workspace = true, optional = true, features = [
   "pubsub",
 ] }
-serde_json = { workspace = true, optional = true }
 tonic = { workspace = true, optional = true }
 flume = { workspace = true, optional = true, features = ["async"] }
-serde = { workspace = true, optional = true }
 url.workspace = true
 tokio.workspace = true
 tokio-util = { workspace = true, optional = true }
@@ -25,6 +23,7 @@ thiserror.workspace = true
 futures.workspace = true
 tracing.workspace = true
 borsh = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
 
 uuid.workspace = true
 
@@ -43,9 +42,8 @@ gcp = [
   "dep:google-cloud-pubsub",
   "dep:google-cloud-googleapis",
   "dep:redis",
-  "dep:serde_json",
-  "dep:serde",
   "dep:tonic",
+  "dep:hex",
   "dep:borsh",
   "dep:tokio-util",
   "dep:flume",
@@ -55,4 +53,4 @@ gcp = [
 ]
 consumer-interfaces = []
 publisher-interfaces = []
-storage-interfaces = []
+storage-interfaces = ["dep:hex"]

@@ -1,14 +1,13 @@
-use core::fmt::Debug;
+use core::fmt::{Debug, Display};
 use core::future::{Ready, ready};
 use core::marker::PhantomData;
 use std::collections::HashMap;
 
-use borsh::BorshSerialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use google_cloud_googleapis::pubsub::v1::PubsubMessage;
 use google_cloud_pubsub::client::Client;
 use google_cloud_pubsub::publisher::Publisher;
 use interfaces::kv_store::KvStore as _;
-use serde::{Deserialize, Serialize};
 
 use super::GcpError;
 use super::kv_store::RedisClient;
@@ -76,13 +75,13 @@ where
 #[allow(clippy::module_name_repetitions, reason = "Descriptive name")]
 pub struct PeekableGcpPublisher<T: QueueMsgId> {
     publisher: GcpPublisher<T>,
-    last_message_kv_store: RedisClient<T::MessageId>,
+    last_message_id_store: RedisClient<T::MessageId>,
 }
 
 impl<T> PeekableGcpPublisher<T>
 where
     T: Send + Sync + QueueMsgId,
-    T::MessageId: Serialize + for<'de> Deserialize<'de>,
+    T::MessageId: BorshSerialize + BorshDeserialize + Display,
 {
     pub(crate) async fn new(
         client: &Client,
@@ -93,7 +92,7 @@ where
 
         Ok(Self {
             publisher,
-            last_message_kv_store: kv_store,
+            last_message_id_store: kv_store,
         })
     }
 }
@@ -101,7 +100,7 @@ where
 impl<T> interfaces::publisher::Publisher<T> for PeekableGcpPublisher<T>
 where
     T: QueueMsgId + BorshSerialize + Debug + Send + Clone + Sync,
-    T::MessageId: Serialize + for<'de> Deserialize<'de>,
+    T::MessageId: BorshSerialize + BorshDeserialize + AsRef<[u8]> + Send + Sync + Debug + Display,
 {
     // NOTE: Ack future is always finished since only after it finishes we can
     // update last pushed message
@@ -115,7 +114,7 @@ where
         data: &T,
     ) -> Result<Self::AckFuture, GcpError> {
         let future = self.publisher.publish(deduplication_id, data).await?;
-        self.last_message_kv_store.upsert(&data.id()).await?;
+        self.last_message_id_store.upsert(&data.id()).await?;
         Ok(future)
     }
 }
@@ -123,12 +122,12 @@ where
 impl<T> interfaces::publisher::PeekMessage<T> for PeekableGcpPublisher<T>
 where
     T: QueueMsgId,
-    T::MessageId: Serialize + for<'de> Deserialize<'de> + Send + Sync + Debug,
+    T::MessageId: BorshSerialize + BorshDeserialize + AsRef<[u8]> + Send + Sync + Debug + Display,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]
     async fn peek_last(&mut self) -> Result<Option<T::MessageId>, GcpError> {
-        self.last_message_kv_store
+        self.last_message_id_store
             .get()
             .await?
             .map(|data| Ok(data.value))

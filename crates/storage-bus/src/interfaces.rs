@@ -88,7 +88,7 @@ pub mod publisher {
 #[cfg(feature = "storage-interfaces")]
 pub mod kv_store {
     use core::error::Error;
-    use core::fmt::Debug;
+    use core::fmt::{Debug, Display};
 
     /// Value with revision
     #[derive(Debug)]
@@ -97,6 +97,12 @@ pub mod kv_store {
         pub value: T,
         /// revision
         pub revision: u64,
+    }
+
+    impl<T: Display> Display for WithRevision<T> {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            write!(f, "{} (rev: {})", self.value, self.revision)
+        }
     }
 
     /// ``KvStore`` interface

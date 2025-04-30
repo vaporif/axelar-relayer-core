@@ -1,8 +1,7 @@
 use core::fmt::Debug;
 
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use google_cloud_pubsub::client::{Client, ClientConfig};
-use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
 
 use super::GcpError;
@@ -207,8 +206,8 @@ where
 ///   * `Id` - For associating a unique identifier with each message, pushed as last msg id to Redis
 ///     and returned when peeking at last msg
 ///   * `Send` and `Sync` - To ensure thread safety when publishing messages
-///   * `T::MessageId` must implement `Serialize`, `Deserialize<'de>` (to save in redis), and
-///     `Debug` traits
+///   * `T::MessageId` must implement `BorshSerialize`, `BorshDeserialize` (to save in redis), ///
+///     Display and Debug traits
 ///
 /// # Arguments
 ///
@@ -291,7 +290,7 @@ pub async fn connect_peekable_publisher<T>(
 ) -> Result<PeekableGcpPublisher<T>, GcpError>
 where
     T: QueueMsgId + Send + Sync,
-    T::MessageId: Serialize + for<'de> Deserialize<'de> + Debug,
+    T::MessageId: BorshSerialize + BorshDeserialize + core::fmt::Display,
 {
     let kv_store = RedisClient::connect(redis_key, redis_connection).await?;
     let client = connect_client().await?;

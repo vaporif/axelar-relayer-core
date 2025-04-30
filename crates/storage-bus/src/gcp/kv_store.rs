@@ -1,9 +1,9 @@
-use core::fmt::Debug;
+use core::fmt::{Debug, Display};
 use core::marker::PhantomData;
 
+use borsh::{BorshDeserialize, BorshSerialize};
 use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands as _, Client};
-use serde::{Deserialize, Serialize};
 
 use super::GcpError;
 use crate::interfaces;
@@ -18,7 +18,7 @@ pub struct RedisClient<T> {
 
 impl<T> RedisClient<T>
 where
-    T: Serialize + for<'de> Deserialize<'de>,
+    T: BorshSerialize + BorshDeserialize + Display,
 {
     pub(crate) async fn connect(key: String, connection: String) -> Result<Self, GcpError> {
         let client = Client::open(connection).map_err(GcpError::Connection)?;
@@ -36,7 +36,10 @@ where
     }
 
     pub(crate) async fn upsert(&self, value: &T) -> Result<(), GcpError> {
-        let json_string = serde_json::to_string(value).map_err(GcpError::RedisSerialize)?;
+        let json_string = borsh::to_vec(value).map_err(|err| GcpError::RedisSerialize {
+            value: value.to_string(),
+            err,
+        })?;
 
         let _: () = self
             .connection
@@ -53,7 +56,7 @@ where
 // TODO: remove it from interfaces?
 impl<T> interfaces::kv_store::KvStore<T> for RedisClient<T>
 where
-    T: Serialize + for<'de> Deserialize<'de> + Debug,
+    T: BorshSerialize + BorshDeserialize + Display + Debug,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip(self))]
@@ -82,7 +85,12 @@ where
 
         value
             .map(|entry| {
-                let value: T = serde_json::from_str(&entry).map_err(GcpError::RedisDeserialize)?;
+                let bytes = entry.as_bytes().to_owned();
+                let value: T =
+                    borsh::from_slice(&bytes).map_err(|err| GcpError::RedisDeserialize {
+                        value: hex::encode(bytes),
+                        err,
+                    })?;
 
                 Ok(interfaces::kv_store::WithRevision { value, revision: 0 })
             })

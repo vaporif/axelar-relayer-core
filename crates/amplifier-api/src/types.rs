@@ -75,9 +75,7 @@ mod id {
     /// `NewType` for tracking task ids
     ///
     /// for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
-    #[derive(
-        Clone, Debug, PartialEq, Eq, Serialize, Deserialize, BorshSerialize, BorshDeserialize,
-    )]
+    #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
     pub struct TaskItemId(pub uuid::Uuid);
 
     /// `NewType` for tracking command ids.
