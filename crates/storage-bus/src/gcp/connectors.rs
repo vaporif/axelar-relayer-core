@@ -124,8 +124,74 @@ where
 
     Ok(consumer)
 }
-
-/// connect publisher
+/// Creates and connects a Google Cloud Platform Publisher for the specified topic.
+///
+/// This function establishes a connection to Google Cloud Pub/Sub and creates a publisher
+/// for the specified topic. It handles the client connection and publisher initialization
+/// in a single convenient function.
+///
+/// # Type Parameters
+///
+/// * `T` - The type of messages that will be published. Must implement `Send` and `Sync` traits to
+///   ensure thread safety when publishing messages.
+///
+/// # Arguments
+///
+/// * `topic` - The name of the Pub/Sub topic to connect to.
+///
+/// # Returns
+///
+/// * `Result<GcpPublisher<T>, GcpError>` - A Result containing either:
+///   * `GcpPublisher<T>` - A connected publisher instance ready to publish messages of type `T`
+///   * `GcpError` - Error that occurred during client connection or publisher initialization
+///
+/// # Errors
+///
+/// This function may fail if:
+/// * The underlying client connection fails (authentication issues, network problems)
+/// * The specified topic doesn't exist or the authenticated account lacks permissions
+/// * The publisher creation fails for any reason
+///
+/// # Examples
+///
+/// ```
+/// use storage_bus::gcp::connectors::connect_publisher;
+/// use storage_bus::gcp::publisher::GcpPublisher;
+/// use storage_bus::gcp::GcpError;
+/// use crate::storage_bus::interfaces::publisher::Publisher;
+///
+///
+/// #[derive(Debug, borsh::BorshSerialize)]
+/// struct EventMessage {
+///     id: String,
+///     timestamp: u64,
+///     payload: Vec<u8>,
+/// }
+///
+/// // Implement common::Id for EventMessage
+/// impl common::Id for EventMessage {
+///     type MessageId = String;
+///     fn id(&self) -> String {
+///         self.id.clone()
+///     }
+/// }
+///
+/// async fn publish_example() -> Result<(), GcpError> {
+///     // Connect to the "blockchain-transactions" topic
+///     let publisher: GcpPublisher<EventMessage> = connect_publisher("events").await?;
+///     
+///     let msg = EventMessage {
+///       id: "something".to_owned(),
+///       timestamp: 6,
+///       payload: Vec::<_>::default()
+///     };
+///
+///     // Create and publish
+///     publisher.publish("".to_owned(), &msg).await?;
+///     
+///     Ok(())
+/// }
+/// ```
 pub async fn connect_publisher<T>(topic: &str) -> Result<GcpPublisher<T>, GcpError>
 where
     T: Send + Sync,

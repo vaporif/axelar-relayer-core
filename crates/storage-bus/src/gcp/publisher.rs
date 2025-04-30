@@ -46,6 +46,7 @@ where
     #[tracing::instrument(skip_all)]
     async fn publish(
         &self,
+        // Deduplication is automatic
         _deduplication_id: impl Into<String>,
         data: &T,
     ) -> Result<Self::AckFuture, GcpError> {
