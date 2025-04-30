@@ -21,7 +21,6 @@ chrono.workspace = true
 bnum.workspace = true
 typed-builder.workspace = true
 borsh.workspace = true
-common.workspace = true
 storage-bus = { workspace = true, features = ["publisher-interfaces"]}
 
 [dev-dependencies]
