@@ -62,20 +62,20 @@ use crate::nats::{Builder, StreamArgs};
 ///     let urls = vec![
 ///         Url::parse("nats://localhost:4222").unwrap(),
 ///     ];
-///     
+///
 ///     let stream = StreamArgs {
 ///         name: "events".to_owned(),
 ///         subject: "events.>".to_owned(),
 ///         description: "Stream for all system events".to_owned(),
 ///     };
-///     
+///
 ///     let consumer: NatsConsumer<MyEvent> = connect_consumer(
 ///         &urls,
 ///         stream,
 ///         "Event processor".to_string(),
 ///         "event-processors".to_string(),
 ///     ).await?;
-///     
+///
 ///     // Now use the consumer to process events...
 ///     Ok(())
 /// }
@@ -157,28 +157,28 @@ pub async fn connect_consumer<Message: Debug>(
 ///     let urls = vec![
 ///         Url::parse("nats://localhost:4222").unwrap(),
 ///     ];
-///     
+///
 ///     let stream = StreamArgs {
 ///         name: "events".to_owned(),
 ///         subject: "events.>".to_owned(),
 ///         description: "Stream for all system events".to_owned(),
 ///     };
-///     
+///
 ///     let publisher: NatsPublisher<MyEvent> = connect_publisher(
 ///         &urls,
 ///         stream,
 ///         "events.system".to_owned(),
 ///     ).await?;
-///     
+///
 ///     // Create an event to publish
 ///     let event = MyEvent {
 ///         id: "example-id".to_owned(),
 ///         // set other fields...
 ///     };
-///     
+///
 ///     // Publish the event
 ///     publisher.publish("unique_id", &event).await?;
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -251,7 +251,7 @@ pub async fn connect_publisher<Message: QueueMsgId + Send + Sync>(
 ///
 /// async fn setup_kv_store() -> Result<NatsKvStore<UserProfile>, NatsError> {
 ///     let urls = vec![Url::parse("nats://localhost:4222").unwrap()];
-///     
+///
 ///     // Connect to KV store for UserProfile data
 ///     let kv_client = connect_kv_store::<UserProfile>(
 ///         &urls,

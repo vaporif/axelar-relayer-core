@@ -71,7 +71,7 @@ use crate::interfaces::publisher::QueueMsgId;
 /// async fn setup_consumer() -> Result<(), GcpError> {
 ///     // Create a cancellation token for graceful shutdown
 ///     let cancel_token = CancellationToken::new();
-///     
+///
 ///     // Set up the consumer with a 30-second NAK deadline
 ///     let consumer = connect_consumer::<EventMessage>(
 ///         "projects/my-project/subscriptions/my-events",
@@ -79,7 +79,7 @@ use crate::interfaces::publisher::QueueMsgId;
 ///         30,  // NAK deadline in seconds
 ///         cancel_token.clone(),
 ///     ).await?;
-///     
+///
 ///     // Process messages until cancellation is requested
 ///
 ///     consumer
@@ -97,10 +97,10 @@ use crate::interfaces::publisher::QueueMsgId;
 ///
 ///             queue_msg.ack(AckKind::Ack).await.expect("Failed to ack message");
 ///        });
-///     
+///
 ///     // Later, when you want to shut down:
 ///     cancel_token.cancel();
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -172,7 +172,7 @@ where
 /// async fn publish_example() -> Result<(), GcpError> {
 ///     // Connect to the "blockchain-transactions" topic
 ///     let publisher: GcpPublisher<EventMessage> = connect_publisher("events").await?;
-///     
+///
 ///     let msg = EventMessage {
 ///       id: "something".to_owned(),
 ///       timestamp: 6,
@@ -181,7 +181,7 @@ where
 ///
 ///     // Create and publish
 ///     publisher.publish("".to_owned(), &msg).await?;
-///     
+///
 ///     Ok(())
 /// }
 /// ```
@@ -264,7 +264,7 @@ where
 ///         "redis://redis-server:6379".to_owned(),
 ///         "my-events".to_owned()
 ///     ).await?;
-///     
+///
 ///     let msg = EventMessage {
 ///       id: "something".to_owned(),
 ///       timestamp: 6,
@@ -273,10 +273,10 @@ where
 ///
 ///     // Create and publish
 ///     publisher.publish("".to_owned(), &msg).await?;
-///     
+///
 ///     // Later, we can peek at the transaction status
 ///     let msg_id = publisher.peek_last().await?;
-///     
+///
 ///     Ok(())
 /// }
 /// ```
