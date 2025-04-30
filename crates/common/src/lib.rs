@@ -1,4 +1,4 @@
-//! Crate with amplifier component connectors.
+//! Crate with common stuff.
 
 use tokio_util::sync::CancellationToken;
 
