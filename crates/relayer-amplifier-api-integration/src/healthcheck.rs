@@ -21,11 +21,7 @@ pub(crate) async fn process_healthcheck(
         tracing::info!(execution_duration = ?delta, "healthcheck duration");
 
         // check if amplifier api is unreachable for a long time already
-        let Some(invalid_healthchecks_before_shutdown) =
-            config.invalid_healthchecks_before_shutdown
-        else {
-            continue
-        };
+        let invalid_healthchecks_before_shutdown = config.invalid_healthchecks_before_shutdown;
 
         if healthceck_succeeded {
             healthcheck_current_failures = 0;
