@@ -75,6 +75,7 @@ amplifier-api = { path = "crates/amplifier-api" }
 common-serde-utils = { path = "crates/common-serde-utils" }
 supervisor = { path = "crates/supervisor" }
 storage-bus = { path = "crates/storage-bus" }
+bin-util = { path = "crates/bin-util" }
 retry = { path = "crates/retry" }
 amplifier-subscriber = { path = "crates/amplifier-subscriber" }
 amplifier-ingester = { path = "crates/amplifier-ingester" }

@@ -5,10 +5,7 @@ pub mod consumer {
     use core::fmt::Debug;
 
     /// queue message trait
-    pub trait QueueMessage<T>: Debug
-    where
-        T: Debug,
-    {
+    pub trait QueueMessage<T>: Debug {
         /// Decoded message
         fn decoded(&self) -> &T;
         /// Ack response
