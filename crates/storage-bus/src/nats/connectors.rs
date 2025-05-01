@@ -135,7 +135,7 @@ pub async fn connect_consumer<Message: Debug>(
 /// use storage_bus::nats::StreamArgs;
 /// use storage_bus::nats::NatsError;
 /// use storage_bus::interfaces::publisher::Publisher;
-/// use crate::interfaces::publisher::QueueMsgId;
+/// use storage_bus::interfaces::publisher::QueueMsgId;
 ///
 /// // Define a type that implements the required traits
 /// #[derive(BorshSerialize, core::fmt::Debug)]

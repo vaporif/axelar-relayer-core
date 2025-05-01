@@ -2,6 +2,7 @@ use core::fmt::Debug;
 use core::marker::PhantomData;
 
 use async_nats::jetstream;
+use async_nats::jetstream::publish::PublishAck;
 use borsh::{BorshDeserialize, BorshSerialize};
 
 use super::NatsError;
@@ -37,7 +38,7 @@ impl<T> NatsPublisher<T> {
 impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T>
     for NatsPublisher<T>
 {
-    type AckFuture = jetstream::context::PublishAckFuture;
+    type Return = PublishAck;
 
     // TODO: always wait for completion?
     #[allow(refining_impl_trait, reason = "simplify")]
@@ -46,21 +47,22 @@ impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T
         &self,
         deduplication_id: impl Into<String>,
         data: &T,
-    ) -> Result<Self::AckFuture, NatsError> {
+    ) -> Result<Self::Return, NatsError> {
         let mut headers = async_nats::HeaderMap::new();
         let deduplication_id: String = deduplication_id.into();
         tracing::debug!(?deduplication_id, ?data, "got message");
         headers.append(NATS_MSG_ID.to_owned(), deduplication_id);
         let data = borsh::to_vec(&data).map_err(NatsError::Serialize)?;
         tracing::debug!("message encoded");
-        let publish_ack_future = self
+        let publish_ack = self
             .context
             .publish_with_headers(self.subject.clone(), headers, data.into())
+            .await?
             .await?;
 
         tracing::debug!("message published");
 
-        Ok(publish_ack_future)
+        Ok(publish_ack)
     }
 }
 

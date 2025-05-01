@@ -73,14 +73,14 @@ pub mod publisher {
     /// publisher
     #[allow(clippy::impl_trait_in_params, reason = "improves readability")]
     pub trait Publisher<T: Send + Sync> {
-        /// ack future type
-        type AckFuture: IntoFuture;
+        /// Return type
+        type Return;
         /// Publish message to queue
         fn publish(
             &self,
             deduplication_id: impl Into<String>,
             data: &T,
-        ) -> impl Future<Output = Result<Self::AckFuture, impl Error + Send + Sync + 'static>>;
+        ) -> impl Future<Output = Result<Self::Return, impl Error + Send + Sync + 'static>>;
     }
 }
 

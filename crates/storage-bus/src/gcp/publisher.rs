@@ -1,5 +1,4 @@
 use core::fmt::{Debug, Display};
-use core::future::{Ready, ready};
 use core::marker::PhantomData;
 use std::collections::HashMap;
 
@@ -41,9 +40,7 @@ impl<T> interfaces::publisher::Publisher<T> for GcpPublisher<T>
 where
     T: BorshSerialize + Debug + Send + Sync,
 {
-    // NOTE: Ack future is always finished since only after it finishes we can
-    // update last pushed message
-    type AckFuture = Ready<String>;
+    type Return = String;
 
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]
@@ -52,7 +49,7 @@ where
         // Deduplication is automatic
         deduplication_id: impl Into<String>,
         data: &T,
-    ) -> Result<Self::AckFuture, GcpError> {
+    ) -> Result<Self::Return, GcpError> {
         let encoded = borsh::to_vec(&data).map_err(GcpError::Serialize)?;
         let mut attributes = HashMap::new();
         attributes.insert(MSG_ID.to_owned(), deduplication_id.into());
@@ -66,8 +63,7 @@ where
             .get()
             .await
             .map_err(|err| GcpError::Publish(Box::new(err)))?;
-        let ready_future: Ready<String> = ready(result);
-        Ok(ready_future)
+        Ok(result)
     }
 }
 
@@ -102,20 +98,17 @@ where
     T: QueueMsgId + BorshSerialize + Debug + Send + Clone + Sync,
     T::MessageId: BorshSerialize + BorshDeserialize + AsRef<[u8]> + Send + Sync + Debug + Display,
 {
-    // NOTE: Ack future is always finished since only after it finishes we can
-    // update last pushed message
-    type AckFuture = Ready<String>;
-
+    type Return = String;
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]
     async fn publish(
         &self,
         deduplication_id: impl Into<String>,
         data: &T,
-    ) -> Result<Self::AckFuture, GcpError> {
-        let future = self.publisher.publish(deduplication_id, data).await?;
+    ) -> Result<Self::Return, GcpError> {
+        let res = self.publisher.publish(deduplication_id, data).await?;
         self.last_message_id_store.upsert(&data.id()).await?;
-        Ok(future)
+        Ok(res)
     }
 }
 
