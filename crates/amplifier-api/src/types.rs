@@ -66,6 +66,12 @@ mod id {
         }
     }
 
+    impl core::fmt::Display for TxEvent {
+        fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+            write!(f, "{}", self.0)
+        }
+    }
+
     /// `NewType` for tracking message ids
     pub type MessageId = TxEvent;
 
@@ -81,7 +87,7 @@ mod id {
     pub struct TaskItemId(pub uuid::Uuid);
 
     impl core::fmt::Display for TaskItemId {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
             write!(f, "{}", self.0)
         }
     }
