@@ -173,7 +173,7 @@ fn spawn_worker<'scope>(
                         let result: Result<(), _> = loop {
                             interval.tick().await;
                             if let Err(err) = worker.do_work().await {
-                                break Err(err)
+                                break Err(err);
                             }
                         };
                         result

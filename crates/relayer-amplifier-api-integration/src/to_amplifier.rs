@@ -29,7 +29,7 @@ pub(crate) async fn process(
                 let res = internal(command, &chain_with_trailing_slash, &client, &mut join_set);
 
                 cx.waker().wake_by_ref();
-                return Poll::Ready(Some(Ok(res)))
+                return Poll::Ready(Some(Ok(res)));
             }
             Poll::Pending => (),
             Poll::Ready(None) => {
@@ -43,7 +43,7 @@ pub(crate) async fn process(
             // join set returns `Poll::Ready(None)` when it's empty
             Poll::Ready(None) => {
                 if receiver.is_terminated() {
-                    return Poll::Ready(None)
+                    return Poll::Ready(None);
                 }
                 Poll::Pending
             }
