@@ -59,6 +59,8 @@ where
             ..Default::default()
         };
         let awaiter = self.publisher.publish(message.clone()).await;
+
+        // NOTE: We always await since messages should be sent sequentially
         let result = awaiter
             .get()
             .await

@@ -54,6 +54,7 @@ impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T
         headers.append(NATS_MSG_ID.to_owned(), deduplication_id);
         let data = borsh::to_vec(&data).map_err(NatsError::Serialize)?;
         tracing::debug!("message encoded");
+        // NOTE: We always await since messages should be sent sequentially
         let publish_ack = self
             .context
             .publish_with_headers(self.subject.clone(), headers, data.into())
