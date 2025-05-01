@@ -103,6 +103,7 @@ use crate::interfaces::publisher::QueueMsgId;
 ///     Ok(())
 /// }
 /// ```
+#[tracing::instrument]
 pub async fn connect_consumer<T>(
     subscription: &str,
     message_buffer_size: usize,
@@ -184,6 +185,7 @@ where
 ///     Ok(())
 /// }
 /// ```
+#[tracing::instrument]
 pub async fn connect_publisher<T>(topic: &str) -> Result<GcpPublisher<T>, GcpError> {
     let client = connect_client().await?;
     let publisher = GcpPublisher::new(&client, topic).await?;
@@ -280,6 +282,7 @@ pub async fn connect_publisher<T>(topic: &str) -> Result<GcpPublisher<T>, GcpErr
 /// # Note
 ///
 /// The `PeekableGcpPublisher` allows you to get latest published message id without consuming it
+#[tracing::instrument]
 pub async fn connect_peekable_publisher<T>(
     topic: &str,
     redis_connection: String,

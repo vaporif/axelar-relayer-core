@@ -80,6 +80,7 @@ use crate::nats::{Builder, StreamArgs};
 ///     Ok(())
 /// }
 /// ```
+#[tracing::instrument]
 pub async fn connect_consumer<Message: Debug>(
     urls: &[Url],
     stream: StreamArgs,
@@ -181,6 +182,7 @@ pub async fn connect_consumer<Message: Debug>(
 ///     Ok(())
 /// }
 /// ```
+#[tracing::instrument]
 pub async fn connect_publisher<Message: QueueMsgId>(
     urls: &[Url],
     stream: StreamArgs,
@@ -262,6 +264,7 @@ pub async fn connect_publisher<Message: QueueMsgId>(
 ///     Ok(kv_client)
 /// }
 /// ```
+#[tracing::instrument]
 pub async fn connect_kv_store<T>(
     urls: &[Url],
     bucket: String,

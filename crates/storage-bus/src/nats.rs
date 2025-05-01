@@ -64,6 +64,7 @@ pub enum NatsError {
 }
 
 /// args for selecting stream
+#[derive(Debug)]
 pub struct StreamArgs {
     /// stream name
     pub name: String,
@@ -127,6 +128,7 @@ impl ConfiguredStream {
     pub(crate) fn publisher<T: QueueMsgId>(self, subject: String) -> publisher::NatsPublisher<T> {
         publisher::NatsPublisher::new(self.context, self.stream, subject)
     }
+
     pub(crate) async fn consumer<T: core::fmt::Debug>(
         self,
         description: String,
