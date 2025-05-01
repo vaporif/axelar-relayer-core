@@ -80,6 +80,12 @@ mod id {
     )]
     pub struct TaskItemId(pub uuid::Uuid);
 
+    impl core::fmt::Display for TaskItemId {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.0)
+        }
+    }
+
     /// `NewType` for tracking command ids.
     ///
     /// for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
