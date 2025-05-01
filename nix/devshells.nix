@@ -1,15 +1,15 @@
 { self, ... }: {
   perSystem = { system, pkgs, ... }:
     let
-      rust = pkgs.fenix.latest;
+      rust = pkgs.fenix.stable;
       rustToolchain = pkgs.fenix.combine [
         (rust.withComponents [
           "cargo"
           "clippy"
           "rustc"
-          "rustfmt"
-          "rust-analyzer"
         ])
+        pkgs.fenix.latest.rustfmt
+        pkgs.fenix.latest.rust-analyzer
       ];
     in
     {
