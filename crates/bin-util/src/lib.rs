@@ -3,7 +3,7 @@ use tokio_util::sync::CancellationToken;
 
 /// Ensures backtrace is enabled
 #[allow(dead_code, reason = "temporary")]
-fn ensure_backtrace_set() {
+pub fn ensure_backtrace_set() {
     // SAFETY: safe in single thread
     unsafe {
         std::env::set_var("RUST_BACKTRACE", "full");
@@ -11,12 +11,16 @@ fn ensure_backtrace_set() {
 }
 
 /// Register cancel token and ctrl+c handler
+///
+/// # Panics
+///   on failure to register ctr+c handler
 #[allow(
     clippy::print_stdout,
     reason = "not a tracing msg, should always display"
 )]
 #[allow(dead_code, reason = "temporary")]
-fn register_cancel() -> CancellationToken {
+#[must_use]
+pub fn register_cancel() -> CancellationToken {
     let cancel_token = CancellationToken::new();
     let ctrlc_token = cancel_token.clone();
     ctrlc::set_handler(move || {
