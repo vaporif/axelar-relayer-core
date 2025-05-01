@@ -102,8 +102,7 @@ pub async fn connect_consumer<Message: Debug>(
 ///
 /// # Type Parameters
 ///
-/// * `Message` - The type of messages to be published. Must implement `QueueMsgId` and be both
-///   `Send` and `Sync`.
+/// * `Message` - The type of messages to be published. Must implement `QueueMsgId`
 ///
 /// # Arguments
 ///
@@ -182,7 +181,7 @@ pub async fn connect_consumer<Message: Debug>(
 ///     Ok(())
 /// }
 /// ```
-pub async fn connect_publisher<Message: QueueMsgId + Send + Sync>(
+pub async fn connect_publisher<Message: QueueMsgId>(
     urls: &[Url],
     stream: StreamArgs,
     subject: String,

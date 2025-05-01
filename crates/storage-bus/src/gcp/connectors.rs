@@ -110,10 +110,10 @@ pub async fn connect_consumer<T>(
     cancel_token: CancellationToken,
 ) -> Result<GcpConsumer<T>, GcpError>
 where
-    T: Debug + Send + Sync + BorshDeserialize + 'static,
+    T: BorshDeserialize + Send + Sync + Debug + 'static,
 {
     let client = connect_client().await?;
-    let consumer = GcpConsumer::<T>::new(
+    let consumer = GcpConsumer::new(
         &client,
         subscription,
         message_buffer_size,
@@ -184,12 +184,9 @@ where
 ///     Ok(())
 /// }
 /// ```
-pub async fn connect_publisher<T>(topic: &str) -> Result<GcpPublisher<T>, GcpError>
-where
-    T: Send + Sync,
-{
+pub async fn connect_publisher<T>(topic: &str) -> Result<GcpPublisher<T>, GcpError> {
     let client = connect_client().await?;
-    let publisher = GcpPublisher::<T>::new(&client, topic).await?;
+    let publisher = GcpPublisher::new(&client, topic).await?;
     Ok(publisher)
 }
 
@@ -289,7 +286,7 @@ pub async fn connect_peekable_publisher<T>(
     redis_key: String,
 ) -> Result<PeekableGcpPublisher<T>, GcpError>
 where
-    T: QueueMsgId + Send + Sync,
+    T: QueueMsgId,
     T::MessageId: BorshSerialize + BorshDeserialize + core::fmt::Display,
 {
     let kv_store = RedisClient::connect(redis_key, redis_connection).await?;

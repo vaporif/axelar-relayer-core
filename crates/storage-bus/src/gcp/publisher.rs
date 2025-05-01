@@ -23,7 +23,7 @@ pub struct GcpPublisher<T> {
     _phantom: PhantomData<T>,
 }
 
-impl<T: Send + Sync> GcpPublisher<T> {
+impl<T> GcpPublisher<T> {
     pub(crate) async fn new(client: &Client, topic: &str) -> Result<Self, GcpError> {
         let topic = get_topic(client, topic).await?;
 
@@ -38,7 +38,7 @@ impl<T: Send + Sync> GcpPublisher<T> {
 
 impl<T> interfaces::publisher::Publisher<T> for GcpPublisher<T>
 where
-    T: BorshSerialize + Debug + Send + Sync,
+    T: BorshSerialize + Debug,
 {
     type Return = String;
 
@@ -79,7 +79,7 @@ pub struct PeekableGcpPublisher<T: QueueMsgId> {
 
 impl<T> PeekableGcpPublisher<T>
 where
-    T: Send + Sync + QueueMsgId,
+    T: QueueMsgId,
     T::MessageId: BorshSerialize + BorshDeserialize + Display,
 {
     pub(crate) async fn new(
@@ -98,8 +98,8 @@ where
 
 impl<T> interfaces::publisher::Publisher<T> for PeekableGcpPublisher<T>
 where
-    T: QueueMsgId + BorshSerialize + Debug + Send + Clone + Sync,
-    T::MessageId: BorshSerialize + BorshDeserialize + AsRef<[u8]> + Send + Sync + Debug + Display,
+    T: QueueMsgId + BorshSerialize + Debug + Clone,
+    T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display,
 {
     type Return = String;
     #[allow(refining_impl_trait, reason = "simplification")]
@@ -118,7 +118,7 @@ where
 impl<T> interfaces::publisher::PeekMessage<T> for PeekableGcpPublisher<T>
 where
     T: QueueMsgId,
-    T::MessageId: BorshSerialize + BorshDeserialize + AsRef<[u8]> + Send + Sync + Debug + Display,
+    T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]

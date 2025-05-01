@@ -13,7 +13,7 @@ use crate::interfaces;
 
 /// Decoded queue message
 #[derive(Debug)]
-pub struct GcpMessage<T: Send + Sync> {
+pub struct GcpMessage<T> {
     msg: ReceivedMessage,
     decoded: T,
     nak_deadline_secs: i32,
@@ -33,7 +33,7 @@ impl<T: BorshDeserialize + Send + Sync + Debug> GcpMessage<T> {
     }
 }
 
-impl<T: Debug + Send + Sync> interfaces::consumer::QueueMessage<T> for GcpMessage<T> {
+impl<T: Debug> interfaces::consumer::QueueMessage<T> for GcpMessage<T> {
     fn decoded(&self) -> &T {
         &self.decoded
     }
@@ -67,7 +67,7 @@ impl<T: Debug + Send + Sync> interfaces::consumer::QueueMessage<T> for GcpMessag
 
 /// Queue consumer
 #[allow(clippy::module_name_repetitions, reason = "Descriptive name")]
-pub struct GcpConsumer<T: Send + Sync> {
+pub struct GcpConsumer<T> {
     receiver: flume::Receiver<Result<GcpMessage<T>, GcpError>>,
     cancel_token: CancellationToken,
     read_messages_handle: tokio::task::JoinHandle<Result<(), GcpError>>,
@@ -76,7 +76,7 @@ pub struct GcpConsumer<T: Send + Sync> {
 
 impl<T> GcpConsumer<T>
 where
-    T: Send + Sync + BorshDeserialize + Debug + 'static,
+    T: BorshDeserialize + Send + Sync + Debug + 'static,
 {
     pub(crate) async fn new(
         client: &Client,
@@ -109,7 +109,7 @@ where
 
 impl<T> interfaces::consumer::Consumer<T> for GcpConsumer<T>
 where
-    T: BorshDeserialize + Sync + Send + Debug,
+    T: BorshDeserialize + Debug,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]
@@ -174,7 +174,7 @@ where
     })
 }
 
-impl<T: Send + Sync> Drop for GcpConsumer<T> {
+impl<T> Drop for GcpConsumer<T> {
     fn drop(&mut self) {
         self.cancel_token.cancel();
     }

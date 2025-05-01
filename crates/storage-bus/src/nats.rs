@@ -124,10 +124,7 @@ pub struct ConfiguredStream {
 
 impl ConfiguredStream {
     #[must_use]
-    pub(crate) fn publisher<T: Send + Sync + QueueMsgId>(
-        self,
-        subject: String,
-    ) -> publisher::NatsPublisher<T> {
+    pub(crate) fn publisher<T: QueueMsgId>(self, subject: String) -> publisher::NatsPublisher<T> {
         publisher::NatsPublisher::new(self.context, self.stream, subject)
     }
     pub(crate) async fn consumer<T: core::fmt::Debug>(

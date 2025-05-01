@@ -72,7 +72,7 @@ pub mod publisher {
 
     /// publisher
     #[allow(clippy::impl_trait_in_params, reason = "improves readability")]
-    pub trait Publisher<T: Send + Sync> {
+    pub trait Publisher<T> {
         /// Return type
         type Return;
         /// Publish message to queue

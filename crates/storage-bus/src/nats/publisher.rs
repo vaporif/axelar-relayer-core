@@ -35,9 +35,7 @@ impl<T> NatsPublisher<T> {
     }
 }
 
-impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T>
-    for NatsPublisher<T>
-{
+impl<T: BorshSerialize + Debug> interfaces::publisher::Publisher<T> for NatsPublisher<T> {
     type Return = PublishAck;
 
     // TODO: always wait for completion?
@@ -69,7 +67,7 @@ impl<T: BorshSerialize + Send + Sync + Debug> interfaces::publisher::Publisher<T
 
 impl<T> interfaces::publisher::PeekMessage<T> for NatsPublisher<T>
 where
-    T: BorshDeserialize + Send + Sync + QueueMsgId,
+    T: BorshDeserialize + QueueMsgId,
 {
     // TODO: make sure you don't remove message from
     // main stream if moving out to dlq
