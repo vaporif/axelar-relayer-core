@@ -20,7 +20,10 @@ impl<T> RedisClient<T>
 where
     T: BorshSerialize + BorshDeserialize + Display,
 {
-    pub(crate) async fn connect(key: String, connection: String) -> Result<Self, GcpError> {
+    /// Connect to redis
+    /// # Errors
+    ///  on connection issues
+    pub async fn connect(key: String, connection: String) -> Result<Self, GcpError> {
         let client = Client::open(connection).map_err(GcpError::Connection)?;
 
         let connection = client
