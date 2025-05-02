@@ -18,7 +18,7 @@ pub struct AmplifierApiClient {
 pub enum TlsType {
     /// Embedded pem certificate
     Certificate(Box<identity::Identity>),
-    /// Custom tls, like use of GCP KSM
+    /// Custom tls, like use of HSM
     CustomProvider(Box<rustls::ClientConfig>),
 }
 
