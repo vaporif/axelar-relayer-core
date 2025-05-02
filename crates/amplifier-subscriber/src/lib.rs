@@ -4,7 +4,7 @@ use core::pin::Pin;
 use amplifier_api::requests::WithTrailingSlash;
 use amplifier_api::{AmplifierApiClient, requests};
 use eyre::Context as _;
-use storage_bus::interfaces::publisher::{PeekMessage, Publisher};
+use infrastructure::interfaces::publisher::{PeekMessage, Publisher};
 
 /// subscribes to tasks from amplifier and sends them to queue
 pub struct Subscriber<TaskQueuePublisher> {

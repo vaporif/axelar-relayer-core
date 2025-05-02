@@ -12,7 +12,7 @@ amplifier-api.workspace = true
 supervisor.workspace = true
 tracing.workspace = true
 eyre.workspace = true
-storage-bus = { workspace = true, features = ["publisher-interfaces"] }
+infrastructure = { workspace = true, features = ["publisher-interfaces"] }
 
 [lints]
 workspace = true

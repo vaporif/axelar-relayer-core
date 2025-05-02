@@ -46,6 +46,7 @@ dependencies = [
  "bnum",
  "borsh",
  "chrono",
+ "infrastructure",
  "pretty_assertions",
  "redact",
  "reqwest",
@@ -53,7 +54,6 @@ dependencies = [
  "rustls",
  "serde",
  "simd-json",
- "storage-bus",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -68,8 +68,8 @@ version = "0.1.1"
 dependencies = [
  "eyre",
  "futures",
+ "infrastructure",
  "relayer-amplifier-api-integration",
- "storage-bus",
  "supervisor",
  "tracing",
 ]
@@ -80,7 +80,7 @@ version = "0.1.1"
 dependencies = [
  "amplifier-api",
  "eyre",
- "storage-bus",
+ "infrastructure",
  "supervisor",
  "tracing",
 ]
@@ -1526,6 +1526,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "infrastructure"
+version = "0.1.1"
+dependencies = [
+ "async-nats",
+ "borsh",
+ "flume",
+ "futures",
+ "gcloud-googleapis",
+ "gcloud-pubsub",
+ "hex",
+ "redis",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-util",
+ "tonic",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2830,27 +2851,6 @@ name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
-
-[[package]]
-name = "storage-bus"
-version = "0.1.1"
-dependencies = [
- "async-nats",
- "borsh",
- "flume",
- "futures",
- "gcloud-googleapis",
- "gcloud-pubsub",
- "hex",
- "redis",
- "thiserror 2.0.12",
- "tokio",
- "tokio-util",
- "tonic",
- "tracing",
- "url",
- "uuid",
-]
 
 [[package]]
 name = "strsim"

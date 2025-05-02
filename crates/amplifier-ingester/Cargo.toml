@@ -12,7 +12,7 @@ relayer-amplifier-api-integration.workspace = true
 supervisor.workspace = true
 tracing.workspace = true
 eyre.workspace = true
-storage-bus = { workspace = true, features = ["consumer-interfaces"] }
+infrastructure = { workspace = true, features = ["consumer-interfaces"] }
 futures.workspace = true
 
 [lints]

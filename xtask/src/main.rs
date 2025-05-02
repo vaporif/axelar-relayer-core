@@ -77,7 +77,7 @@ fn main() -> eyre::Result<()> {
             cmd!(sh, "cargo clippy --workspace --locked -- -D warnings").run()?;
             cmd!(
                 sh,
-                "cargo clippy -p storage-bus --features=gcp,nats --locked -- -D warnings"
+                "cargo clippy -p infrastructure --features=gcp,nats --locked -- -D warnings"
             )
             .run()?;
             cmd!(sh, "cargo fmt --all --check").run()?;

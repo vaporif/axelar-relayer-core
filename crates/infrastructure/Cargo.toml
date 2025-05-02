@@ -1,5 +1,5 @@
 [package]
-name = "storage-bus"
+name = "infrastructure"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -31,6 +31,7 @@ uuid.workspace = true
 workspace = true
 
 [features]
+default = ["gcp"]
 nats = [
   "dep:async-nats",
   "dep:borsh",

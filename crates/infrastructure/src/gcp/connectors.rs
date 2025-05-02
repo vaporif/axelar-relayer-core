@@ -53,12 +53,12 @@ use crate::interfaces::publisher::QueueMsgId;
 /// use std::time::Duration;
 /// use borsh::BorshDeserialize;
 /// use tokio_util::sync::CancellationToken;
-/// use storage_bus::gcp::connectors::connect_consumer;
-/// use storage_bus::gcp::GcpError;
-/// use crate::storage_bus::interfaces::consumer::Consumer;
+/// use infrastructure::gcp::connectors::connect_consumer;
+/// use infrastructure::gcp::GcpError;
+/// use crate::infrastructure::interfaces::consumer::Consumer;
 /// use futures::StreamExt as _;
-/// use storage_bus::interfaces::consumer::AckKind;
-/// use crate::storage_bus::interfaces::consumer::QueueMessage;
+/// use infrastructure::interfaces::consumer::AckKind;
+/// use crate::infrastructure::interfaces::consumer::QueueMessage;
 ///
 /// #[derive(Debug, BorshDeserialize)]
 /// struct EventMessage {
@@ -89,7 +89,7 @@ use crate::interfaces::publisher::QueueMsgId;
 ///             let queue_msg = match queue_msg {
 ///                 Ok(queue_msg) => queue_msg,
 ///                 Err(err) => {
-///                     tracing::error!(?err, "could not receive queue msg");               
+///                     tracing::error!(?err, "could not receive queue msg");
 ///                     return;
 ///                 }
 ///             };
@@ -156,10 +156,10 @@ where
 /// # Examples
 ///
 /// ```
-/// use storage_bus::gcp::connectors::connect_publisher;
-/// use storage_bus::gcp::publisher::GcpPublisher;
-/// use storage_bus::gcp::GcpError;
-/// use crate::storage_bus::interfaces::publisher::Publisher;
+/// use infrastructure::gcp::connectors::connect_publisher;
+/// use infrastructure::gcp::publisher::GcpPublisher;
+/// use infrastructure::gcp::GcpError;
+/// use crate::infrastructure::interfaces::publisher::Publisher;
 ///
 ///
 /// #[derive(Debug, borsh::BorshSerialize)]
@@ -233,13 +233,13 @@ pub async fn connect_publisher<T>(topic: &str) -> Result<GcpPublisher<T>, GcpErr
 /// # Examples
 ///
 /// ```
-/// use storage_bus::gcp::connectors::connect_publisher;
-/// use storage_bus::gcp::publisher::GcpPublisher;
-/// use storage_bus::gcp::GcpError;
-/// use crate::storage_bus::interfaces::publisher::Publisher;
-/// use storage_bus::gcp::connectors::connect_peekable_publisher;
-/// use storage_bus::gcp::publisher::PeekableGcpPublisher;
-/// use crate::storage_bus::interfaces::publisher::PeekMessage;
+/// use infrastructure::gcp::connectors::connect_publisher;
+/// use infrastructure::gcp::publisher::GcpPublisher;
+/// use infrastructure::gcp::GcpError;
+/// use crate::infrastructure::interfaces::publisher::Publisher;
+/// use infrastructure::gcp::connectors::connect_peekable_publisher;
+/// use infrastructure::gcp::publisher::PeekableGcpPublisher;
+/// use crate::infrastructure::interfaces::publisher::PeekMessage;
 ///
 ///
 /// #[derive(Clone, Debug, borsh::BorshSerialize)]
@@ -250,7 +250,7 @@ pub async fn connect_publisher<T>(topic: &str) -> Result<GcpPublisher<T>, GcpErr
 /// }
 ///
 /// // Implement common::Id for EventMessage
-/// impl storage_bus::interfaces::publisher::QueueMsgId for EventMessage {
+/// impl infrastructure::interfaces::publisher::QueueMsgId for EventMessage {
 ///     type MessageId = String;
 ///     fn id(&self) -> String {
 ///         self.id.clone()

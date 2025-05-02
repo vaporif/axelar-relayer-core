@@ -72,7 +72,7 @@ relayer-amplifier-state = { path = "crates/relayer-amplifier-state" }
 amplifier-api = { path = "crates/amplifier-api" }
 common-serde-utils = { path = "crates/common-serde-utils" }
 supervisor = { path = "crates/supervisor" }
-storage-bus = { path = "crates/storage-bus" }
+infrastructure = { path = "crates/infrastructure" }
 bin-util = { path = "crates/bin-util" }
 retry = { path = "crates/retry" }
 amplifier-subscriber = { path = "crates/amplifier-subscriber" }

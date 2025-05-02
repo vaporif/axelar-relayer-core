@@ -1,0 +1,250 @@
+FUNCTION  CursorHold_Cb()
+    Defined: ~/.local/share/nvim/lazy/FixCursorHold.nvim/plugin/fix_cursorhold_nvim.vim:19
+Called 16 times
+Total time:   0.020088
+ Self time:   0.001214
+
+count  total (s)   self (s)
+   16              0.000415   if v:exiting isnot v:null
+                                return
+   16              0.000032   endif
+   16   0.001079   0.000394   set eventignore-=CursorHold
+   16   0.018134   0.000125   doautocmd <nomodeline> CursorHold
+   16   0.000295   0.000114   set eventignore+=CursorHold
+
+FUNCTION  <SNR>46_SynSet()
+    Defined: /nix/store/wn0cf2cyng82qrc04sa4sd5ayc6fll29-neovim-unwrapped-0.11.1/share/nvim/runtime/syntax/synload.vim:27
+Called 4 times
+Total time:   0.008774
+ Self time:   0.008774
+
+count  total (s)   self (s)
+                              " clear syntax for :set syntax=OFF  and any syntax name that doesn't exist
+    4              0.000026   syn clear
+    4              0.000031   if exists("b:current_syntax")
+                                unlet b:current_syntax
+    4              0.000004   endif
+                            
+    4              0.000035   0verbose let s = expand("<amatch>")
+    4              0.000009   if s == "ON"
+                                " :set syntax=ON
+                                if &filetype == ""
+                                  echohl ErrorMsg
+                                  echo "filetype unknown"
+                                  echohl None
+                                endif
+                                let s = &filetype
+    4              0.000010   elseif s == "OFF"
+                                let s = ""
+    4              0.000002   endif
+                            
+    4              0.000005   if s != ""
+                                " Load the syntax file(s).  When there are several, separated by dots,
+                                " load each in sequence.  Skip empty entries.
+    8              0.000047     for name in split(s, '\.')
+    4              0.000010       if !empty(name)
+                                    " XXX: "[.]" in the first pattern makes it a wildcard on Windows
+    4              0.008478         exe $'runtime! syntax/{name}[.]{{vim,lua}} syntax/{name}/*.{{vim,lua}}'
+    4              0.000006       endif
+    8              0.000007     endfor
+    4              0.000002   endif
+
+FUNCTION  <SNR>31_Highlight_Matching_Pair()
+    Defined: /nix/store/wn0cf2cyng82qrc04sa4sd5ayc6fll29-neovim-unwrapped-0.11.1/share/nvim/runtime/plugin/matchparen.vim:45
+Called 194 times
+Total time:   0.021958
+ Self time:   0.020175
+
+count  total (s)   self (s)
+  194              0.000623   if !exists("w:matchparen_ids")
+                                let w:matchparen_ids = []
+  194              0.000099   endif
+                              " Remove any previous match.
+  194   0.002755   0.000971   call s:Remove_Matches()
+                            
+                              " Avoid that we remove the popup menu.
+                              " Return when there are no colors (looks like the cursor jumps).
+  194              0.000499   if pumvisible() || (&t_Co < 8 && !has("gui_running"))
+                                return
+  194              0.000041   endif
+                            
+                              " Get the character under the cursor and check if it's in 'matchpairs'.
+  194              0.000303   let c_lnum = line('.')
+  194              0.000215   let c_col = col('.')
+  194              0.000104   let before = 0
+                            
+  194              0.000338   let text = getline(c_lnum)
+  194              0.000612   let c_before = text->strpart(0, c_col - 1)->slice(-1)
+  194              0.000334   let c = text->strpart(c_col - 1)->slice(0, 1)
+  194              0.001842   let plist = split(&matchpairs, '.\zs[:,]')
+  194              0.000330   let i = index(plist, c)
+  194              0.000098   if i < 0
+                                " not found, in Insert mode try character before the cursor
+  165              0.000272     if c_col > 1 && (mode() == 'i' || mode() == 'R')
+                                  let before = strlen(c_before)
+                                  let c = c_before
+                                  let i = index(plist, c)
+  165              0.000042     endif
+  165              0.000072     if i < 0
+                                  " not found, nothing to do
+  165              0.000097       return
+                                endif
+   29              0.000005   endif
+                            
+                              " Figure out the arguments for searchpairpos().
+   29              0.000015   if i % 2 == 0
+    8              0.000004     let s_flags = 'nW'
+    8              0.000009     let c2 = plist[i + 1]
+   21              0.000009   else
+   21              0.000011     let s_flags = 'nbW'
+   21              0.000011     let c2 = c
+   21              0.000020     let c = plist[i - 1]
+   29              0.000006   endif
+   29              0.000019   if c == '['
+    5              0.000001     let c = '\['
+    5              0.000002     let c2 = '\]'
+   29              0.000005   endif
+                            
+                              " Find the match.  When it was just before the cursor move it there for a
+                              " moment.
+   29              0.000013   if before > 0
+                                let save_cursor = getcurpos()
+                                call cursor(c_lnum, c_col - before)
+                                defer setpos('.', save_cursor)
+   29              0.000004   endif
+                            
+   29              0.000076   if !has("syntax") || !exists("g:syntax_on")
+                                let s_skip = "0"
+   29              0.000063   elseif exists("b:ts_highlight") && &syntax != 'on'
+   29              0.000062     let s_skip = "match(v:lua.vim.treesitter.get_captures_at_cursor(), '" .. 'string\|character\|singlequote\|escape\|symbol\|comment' .. "') != -1"
+                              else
+                                " do not attempt to match when the syntax item where the cursor is
+                                " indicates there does not exist a matching parenthesis, e.g. for shells
+                                " case statement: "case $var in foobar)"
+                                "
+                                " add the check behind a filetype check, so it only needs to be
+                                " evaluated for certain filetypes
+                                if ['sh']->index(&filetype) >= 0 && synstack(".", col("."))->indexof({_, id -> synIDattr(id, "name") =~? "shSnglCase"}) >= 0
+                                  return
+                                endif
+                                " Build an expression that detects whether the current cursor position is
+                                " in certain syntax types (string, comment, etc.), for use as
+                                " searchpairpos()'s skip argument.
+                                " We match "escape" for special items, such as lispEscapeSpecial, and
+                                " match "symbol" for lispBarSymbol.
+                                let s_skip = 'synstack(".", col("."))' . '->indexof({_, id -> synIDattr(id, "name") =~? ' . '"string\\|character\\|singlequote\\|escape\\|symbol\\|comment"}) >= 0'
+                                " If executing the expression determines that the cursor is currently in
+                                " one of the syntax types, then we want searchpairpos() to find the pair
+                                " within those syntax types (i.e., not skip).  Otherwise, the cursor is
+                                " outside of the syntax types and s_skip should keep its value so we skip
+                                " any matching pair inside the syntax types.
+                                " Catch if this throws E363: pattern uses more memory than 'maxmempattern'.
+                                try
+                                  execute 'if ' . s_skip . ' | let s_skip = "0" | endif'
+                                catch /^Vim\%((\a\+)\)\=:E363/
+                                  " We won't find anything, so skip searching, should keep Vim responsive.
+                                  return
+                                endtry
+   29              0.000005   endif
+                            
+                              " Limit the search to lines visible in the window.
+   29              0.000089   let stoplinebottom = line('w$')
+   29              0.000024   let stoplinetop = line('w0')
+   29              0.000017   if i % 2 == 0
+    8              0.000006     let stopline = stoplinebottom
+   21              0.000005   else
+   21              0.000015     let stopline = stoplinetop
+   29              0.000005   endif
+                            
+                              " Limit the search time to 300 msec to avoid a hang on very long lines.
+                              " This fails when a timeout is not supported.
+   29              0.000031   if mode() == 'i' || mode() == 'R'
+                                let timeout = exists("b:matchparen_insert_timeout") ? b:matchparen_insert_timeout : g:matchparen_insert_timeout
+   29              0.000005   else
+   29              0.000063     let timeout = exists("b:matchparen_timeout") ? b:matchparen_timeout : g:matchparen_timeout
+   29              0.000005   endif
+   29              0.000008   try
+   29              0.009685     let [m_lnum, m_col] = searchpairpos(c, '', c2, s_flags, s_skip, stopline, timeout)
+                              catch /E118/
+                                " Can't use the timeout, restrict the stopline a bit more to avoid taking
+                                " a long time on closed folds and long lines.
+                                " The "viewable" variables give a range in which we can scroll while
+                                " keeping the cursor at the same position.
+                                " adjustedScrolloff accounts for very large numbers of scrolloff.
+                                let adjustedScrolloff = min([&scrolloff, (line('w$') - line('w0')) / 2])
+                                let bottom_viewable = min([line('$'), c_lnum + &lines - adjustedScrolloff - 2])
+                                let top_viewable = max([1, c_lnum-&lines+adjustedScrolloff + 2])
+                                " one of these stoplines will be adjusted below, but the current values are
+                                " minimal boundaries within the current window
+                                if i % 2 == 0
+                                  if has("byte_offset") && has("syntax_items") && &smc > 0
+                            	let stopbyte = min([line2byte("$"), line2byte(".") + col(".") + &smc * 2])
+                            	let stopline = min([bottom_viewable, byte2line(stopbyte)])
+                                  else
+                            	let stopline = min([bottom_viewable, c_lnum + 100])
+                                  endif
+                                  let stoplinebottom = stopline
+                                else
+                                  if has("byte_offset") && has("syntax_items") && &smc > 0
+                            	let stopbyte = max([1, line2byte(".") + col(".") - &smc * 2])
+                            	let stopline = max([top_viewable, byte2line(stopbyte)])
+                                  else
+                            	let stopline = max([top_viewable, c_lnum - 100])
+                                  endif
+                                  let stoplinetop = stopline
+                                endif
+                                let [m_lnum, m_col] = searchpairpos(c, '', c2, s_flags, s_skip, stopline)
+   29              0.000014   endtry
+                            
+                              " If a match is found setup match highlighting.
+   29              0.000035   if m_lnum > 0 && m_lnum >= stoplinetop && m_lnum <= stoplinebottom
+   27              0.000021     if !g:matchparen_disable_cursor_hl
+   27              0.000117       call add(w:matchparen_ids, matchaddpos('MatchParen', [[c_lnum, c_col - before], [m_lnum, m_col]], 10))
+                                else
+                                  call add(w:matchparen_ids, matchaddpos('MatchParen', [[m_lnum, m_col]], 10))
+   27              0.000005     endif
+   27              0.000019     let w:paren_hl_on = 1
+   29              0.000006   endif
+
+FUNCTION  CursorHoldTimer()
+    Defined: ~/.local/share/nvim/lazy/FixCursorHold.nvim/plugin/fix_cursorhold_nvim.vim:37
+Called 150 times
+Total time:   0.002551
+ Self time:   0.002551
+
+count  total (s)   self (s)
+  150              0.000854   call timer_stop(g:fix_cursorhold_nvim_timer)
+  150              0.000470   if mode() == 'n'
+  150              0.000814     let g:fix_cursorhold_nvim_timer = timer_start(g:cursorhold_updatetime, 'CursorHold_Cb')
+  150              0.000117   endif
+
+FUNCTION  <SNR>31_Remove_Matches()
+    Defined: /nix/store/wn0cf2cyng82qrc04sa4sd5ayc6fll29-neovim-unwrapped-0.11.1/share/nvim/runtime/plugin/matchparen.vim:203
+Called 196 times
+Total time:   0.001861
+ Self time:   0.001861
+
+count  total (s)   self (s)
+  196              0.000352   if exists('w:paren_hl_on') && w:paren_hl_on
+   54              0.000078     while !empty(w:matchparen_ids)
+   27              0.000109       silent! call remove(w:matchparen_ids, 0)->matchdelete()
+   54              0.000060     endwhile
+   27              0.000050     let w:paren_hl_on = 0
+  196              0.000049   endif
+
+FUNCTIONS SORTED ON TOTAL TIME
+count  total (s)   self (s)  function
+  194   0.021958   0.020175  <SNR>31_Highlight_Matching_Pair()
+   16   0.020088   0.001214  CursorHold_Cb()
+    4   0.008774             <SNR>46_SynSet()
+  150   0.002551             CursorHoldTimer()
+  196   0.001861             <SNR>31_Remove_Matches()
+
+FUNCTIONS SORTED ON SELF TIME
+count  total (s)   self (s)  function
+  194   0.021958   0.020175  <SNR>31_Highlight_Matching_Pair()
+    4              0.008774  <SNR>46_SynSet()
+  150              0.002551  CursorHoldTimer()
+  196              0.001861  <SNR>31_Remove_Matches()
+   16   0.020088   0.001214  CursorHold_Cb()
+

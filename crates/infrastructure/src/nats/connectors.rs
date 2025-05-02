@@ -45,10 +45,10 @@ use crate::nats::{Builder, StreamArgs};
 ///
 /// ```rust
 /// use url::Url;
-/// use storage_bus::nats::StreamArgs;
-/// use storage_bus::nats::connectors::connect_consumer;
-/// use storage_bus::nats::NatsError;
-/// use storage_bus::nats::consumer::NatsConsumer;
+/// use infrastructure::nats::StreamArgs;
+/// use infrastructure::nats::connectors::connect_consumer;
+/// use infrastructure::nats::NatsError;
+/// use infrastructure::nats::consumer::NatsConsumer;
 /// use borsh::BorshSerialize;
 ///
 /// // Define a type that implements the required traits
@@ -130,12 +130,12 @@ pub async fn connect_consumer<Message: Debug>(
 /// ```
 /// use url::Url;
 /// use borsh::BorshSerialize;
-/// use storage_bus::nats::publisher::NatsPublisher;
-/// use storage_bus::nats::connectors::connect_publisher;
-/// use storage_bus::nats::StreamArgs;
-/// use storage_bus::nats::NatsError;
-/// use storage_bus::interfaces::publisher::Publisher;
-/// use storage_bus::interfaces::publisher::QueueMsgId;
+/// use infrastructure::nats::publisher::NatsPublisher;
+/// use infrastructure::nats::connectors::connect_publisher;
+/// use infrastructure::nats::StreamArgs;
+/// use infrastructure::nats::NatsError;
+/// use infrastructure::interfaces::publisher::Publisher;
+/// use infrastructure::interfaces::publisher::QueueMsgId;
 ///
 /// // Define a type that implements the required traits
 /// #[derive(BorshSerialize, core::fmt::Debug)]
@@ -239,9 +239,9 @@ pub async fn connect_publisher<Message: QueueMsgId>(
 /// ```
 /// use url::Url;
 /// use borsh::{BorshDeserialize, BorshSerialize};
-/// use storage_bus::nats::connectors::connect_kv_store;
-/// use storage_bus::nats::kv_store::NatsKvStore;
-/// use storage_bus::nats::NatsError;
+/// use infrastructure::nats::connectors::connect_kv_store;
+/// use infrastructure::nats::kv_store::NatsKvStore;
+/// use infrastructure::nats::NatsError;
 ///
 /// // Define a type for our values
 /// #[derive(BorshSerialize, BorshDeserialize)]
@@ -259,7 +259,7 @@ pub async fn connect_publisher<Message: QueueMsgId>(
 ///         "user_profiles".to_string(),
 ///         "Storage for user profile information".to_string(),
 ///     ).await?;
-///     
+///
 ///     // Now the KV client is ready to store and retrieve UserProfile objects
 ///     Ok(kv_client)
 /// }

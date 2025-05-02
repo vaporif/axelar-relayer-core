@@ -7,8 +7,8 @@ pub use big_int::BigInt;
 use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::{DateTime, Utc};
 pub use id::*;
+use infrastructure::interfaces::publisher::QueueMsgId;
 use serde::{Deserialize, Serialize};
-use storage_bus::interfaces::publisher::QueueMsgId;
 use typed_builder::TypedBuilder;
 pub use {bnum, uuid};
 

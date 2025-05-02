@@ -4,10 +4,10 @@ use std::sync::Arc;
 
 use eyre::Context as _;
 use futures::StreamExt as _;
+use infrastructure::interfaces::consumer::{AckKind, Consumer, QueueMessage};
 use relayer_amplifier_api_integration::amplifier_api::requests::{self, WithTrailingSlash};
 use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEventsRequest};
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
-use storage_bus::interfaces::consumer::{AckKind, Consumer, QueueMessage};
 
 /// Consumes events queue and sends it to include to amplifier api
 pub struct Ingester<EventQueueConsumer> {
@@ -21,7 +21,7 @@ impl<EventQueueConsumer> Ingester<EventQueueConsumer>
 where
     EventQueueConsumer: Consumer<amplifier_api::types::Event>,
 {
-    /// create injester
+    /// create ingester
     pub fn new(
         amplifier_client: AmplifierApiClient,
         event_queue_consumer: EventQueueConsumer,
