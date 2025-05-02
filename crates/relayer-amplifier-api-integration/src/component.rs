@@ -102,27 +102,25 @@ where
 
     #[tracing::instrument(skip_all, name = "Amplifier")]
     pub(crate) async fn process_internal(self) -> eyre::Result<()> {
-        let client =
-            amplifier_api::AmplifierApiClient::new(self.config.url.clone(), &self.config.identity)?;
+        let config = self.config.clone();
+        let client = amplifier_api::AmplifierApiClient::new(
+            self.config.url.clone(),
+            amplifier_api::TlsType::Certificate(Box::new(self.config.identity)),
+        )?;
         let clock = get_clock()?;
 
         // spawn tasks
-        let healthcheck =
-            healthcheck::process_healthcheck(self.config.clone(), clock, client.clone())
-                .instrument(info_span!("healthcheck"))
-                .in_current_span();
+        let healthcheck = healthcheck::process_healthcheck(config.clone(), clock, client.clone())
+            .instrument(info_span!("healthcheck"))
+            .in_current_span();
         let to_amplifier_msgs =
-            to_amplifier::process(self.config.clone(), self.receiver, client.clone())
+            to_amplifier::process(config.clone(), self.receiver, client.clone())
                 .instrument(info_span!("to amplifier"))
                 .in_current_span();
-        let from_amplifier_msgs = from_amplifier::process(
-            self.config.clone(),
-            client.clone(),
-            self.sender.clone(),
-            self.state,
-        )
-        .instrument(info_span!("from amplifier"))
-        .in_current_span();
+        let from_amplifier_msgs =
+            from_amplifier::process(config, client.clone(), self.sender.clone(), self.state)
+                .instrument(info_span!("from amplifier"))
+                .in_current_span();
 
         // await tasks until one of them exits (fatal)
         healthcheck

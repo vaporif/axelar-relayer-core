@@ -111,6 +111,7 @@ rand = "0.9"
 ctrlc = "3"
 tonic = "0.13"
 flume = "0.11"
+rustls = { version = "0.23", default-features = false }
 
 redis = { version = "0.30", features = [
   "tokio-comp",

@@ -14,6 +14,14 @@ pub struct AmplifierApiClient {
     url: url::Url,
 }
 
+/// Type of TLS
+pub enum TlsType {
+    /// Embedded pem certificate
+    Certificate(Box<identity::Identity>),
+    /// Custom tls, like use of GCP KSM
+    Custom(Box<rustls::ClientConfig>),
+}
+
 impl AmplifierApiClient {
     /// Create a new `AmplifierApiClient`.
     ///
@@ -23,8 +31,8 @@ impl AmplifierApiClient {
     /// # Errors
     ///
     /// This function will return an error if the underlying reqwest client cannot be constructed
-    pub fn new(url: url::Url, identity: &identity::Identity) -> Result<Self, AmplifierApiError> {
-        let authenticated_client = authenticated_client(identity)?;
+    pub fn new(url: url::Url, tls_type: TlsType) -> Result<Self, AmplifierApiError> {
+        let authenticated_client = authenticated_client(tls_type)?;
         Ok(Self {
             url,
             inner: authenticated_client,
@@ -167,9 +175,7 @@ where
     let error = simd_json::from_slice::<E>(bytes.as_mut())?;
     Ok(error)
 }
-fn authenticated_client(
-    identity: &identity::Identity,
-) -> Result<reqwest::Client, AmplifierApiError> {
+fn authenticated_client(tls_type: TlsType) -> Result<reqwest::Client, AmplifierApiError> {
     const KEEP_ALIVE_INTERVAL: core::time::Duration = core::time::Duration::from_secs(15);
     let mut headers = header::HeaderMap::new();
     headers.insert(
@@ -185,9 +191,14 @@ fn authenticated_client(
         header::HeaderValue::from_static("application/json"),
     );
 
-    let temp_client = reqwest::Client::builder()
-        .use_rustls_tls()
-        .identity(identity.0.expose_secret().clone())
+    let temp_client = reqwest::Client::builder().use_rustls_tls();
+
+    let temp_client = match tls_type {
+        TlsType::Certificate(identity) => temp_client.identity(identity.0.expose_secret().clone()),
+        TlsType::Custom(client_config) => temp_client.use_preconfigured_tls(client_config),
+    };
+
+    let temp_client = temp_client
         .http2_keep_alive_interval(KEEP_ALIVE_INTERVAL)
         .http2_keep_alive_while_idle(true)
         .default_headers(headers)

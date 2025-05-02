@@ -50,6 +50,7 @@ dependencies = [
  "redact",
  "reqwest",
  "rstest",
+ "rustls",
  "serde",
  "simd-json",
  "storage-bus",

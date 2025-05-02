@@ -22,6 +22,7 @@ bnum.workspace = true
 typed-builder.workspace = true
 borsh.workspace = true
 storage-bus = { workspace = true, features = ["publisher-interfaces"]}
+rustls.workspace = true
 
 [dev-dependencies]
 pretty_assertions.workspace = true
