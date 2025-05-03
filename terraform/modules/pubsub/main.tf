@@ -7,16 +7,6 @@ locals {
   amplifier_tasks_dlq_topic  = "amplifier-tasks-dlq"
 }
 
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "6.31.0"
-    }
-  }
-  required_version = "1.9.0"
-}
-
 resource "google_pubsub_topic" "amplifier_events" {
   name = local.amplifier_events_topic
 

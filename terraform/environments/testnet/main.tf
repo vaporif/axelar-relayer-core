@@ -1,3 +1,13 @@
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "6.31.0"
+    }
+  }
+  required_version = ">=1.9.0"
+}
+
 provider "google" {
   project = "amplifier-relayer-testnet"
   region  = "europe-north2"
