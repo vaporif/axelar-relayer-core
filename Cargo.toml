@@ -119,7 +119,6 @@ redis = { version = "0.30", features = [
   "connection-manager",
 ] }
 
-firestore = "0.45"
 # Serde
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
