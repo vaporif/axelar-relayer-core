@@ -1,5 +1,5 @@
 resource "google_container_cluster" "primary" {
-  name               = "axelar-starknet-k8s"
+  name               = var.cluster_name
   location           = var.cluster_location
   initial_node_count = 4
 
