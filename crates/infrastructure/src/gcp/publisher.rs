@@ -29,6 +29,7 @@ impl<T> GcpPublisher<T> {
         let num_cpu = num_cpus::get();
 
         let config = PublisherConfig {
+            // NOTE: scaling factor of 2-4 is recommended for io-bound work
             workers: num_cpu.checked_mul(2).unwrap_or(num_cpu),
             // TODO: move to config
             bundle_size: 100,
