@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use borsh::{BorshDeserialize, BorshSerialize};
 use google_cloud_googleapis::pubsub::v1::PubsubMessage;
 use google_cloud_pubsub::client::Client;
-use google_cloud_pubsub::publisher::Publisher;
+use google_cloud_pubsub::publisher::{Publisher, PublisherConfig};
 use interfaces::kv_store::KvStore as _;
 
 use super::GcpError;
@@ -26,8 +26,16 @@ pub struct GcpPublisher<T> {
 impl<T> GcpPublisher<T> {
     pub(crate) async fn new(client: &Client, topic: &str) -> Result<Self, GcpError> {
         let topic = get_topic(client, topic).await?;
+        let num_cpu = num_cpus::get();
 
-        let publisher = topic.new_publisher(None);
+        let config = PublisherConfig {
+            workers: num_cpu.checked_mul(2).unwrap_or(num_cpu),
+            // TODO: move to config
+            bundle_size: 100,
+            ..Default::default()
+        };
+
+        let publisher = topic.new_publisher(Some(config));
 
         Ok(Self {
             publisher,

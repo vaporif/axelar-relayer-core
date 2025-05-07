@@ -112,12 +112,8 @@ ctrlc = "3"
 tonic = "0.13"
 flume = "0.11"
 rustls = { version = "0.23", default-features = false }
+num_cpus = "1"
 
-redis = { version = "0.30", features = [
-  "tokio-comp",
-  "aio",
-  "connection-manager",
-] }
 
 # Serde
 serde = { version = "1", features = ["derive"] }
@@ -163,10 +159,15 @@ futures-util = "0.3"
 futures = "0.3"
 async-trait = "0"
 
-# queues
+# queues / kv
 async-nats = "0.40"
 google-cloud-pubsub = { package = "gcloud-pubsub", version = "1.2" }
 google-cloud-googleapis = { package = "gcloud-googleapis", version = "1.1.0" }
+redis = { version = "0.30", features = [
+  "tokio-comp",
+  "aio",
+  "connection-manager",
+] }
 
 # tracing
 tracing = "0.1"
