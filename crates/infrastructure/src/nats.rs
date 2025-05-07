@@ -76,7 +76,8 @@ pub struct StreamArgs {
 
 impl Builder {
     pub(crate) async fn connect_to_nats(urls: &[Url]) -> Result<Self, NatsError> {
-        let connect_options = async_nats::ConnectOptions::default().retry_on_initial_connect();
+        let connect_options: async_nats::ConnectOptions =
+            async_nats::ConnectOptions::default().retry_on_initial_connect();
         let client = async_nats::connect_with_options(urls, connect_options).await?;
         let inbox = client.new_inbox();
         tracing::debug!("connected to nats");

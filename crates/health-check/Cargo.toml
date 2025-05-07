@@ -1,0 +1,25 @@
+[package]
+name = "health-check"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+eyre.workspace = true
+
+reqwest.workspace = true
+axum.workspace = true
+serde_json.workspace = true
+futures.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+tokio_console = []

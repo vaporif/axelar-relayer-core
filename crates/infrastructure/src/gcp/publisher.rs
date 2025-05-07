@@ -38,7 +38,7 @@ impl<T> GcpPublisher<T> {
 
 impl<T> interfaces::publisher::Publisher<T> for GcpPublisher<T>
 where
-    T: BorshSerialize + Debug,
+    T: BorshSerialize + Debug + Send + Sync,
 {
     type Return = String;
 
@@ -66,6 +66,13 @@ where
             .await
             .map_err(|err| GcpError::Publish(Box::new(err)))?;
         Ok(result)
+    }
+
+    #[allow(refining_impl_trait)]
+    async fn check_health(&self) -> Result<(), GcpError> {
+        tracing::debug!("checking health");
+        // TODO: check health
+        Ok(())
     }
 }
 
@@ -97,8 +104,8 @@ where
 
 impl<T> interfaces::publisher::Publisher<T> for PeekableGcpPublisher<T>
 where
-    T: QueueMsgId + BorshSerialize + Debug + Clone,
-    T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display,
+    T: QueueMsgId + BorshSerialize + Debug + Clone + Send + Sync,
+    T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display + Send + Sync,
 {
     type Return = String;
     #[allow(refining_impl_trait, reason = "simplification")]
@@ -111,6 +118,13 @@ where
         let res = self.publisher.publish(deduplication_id, data).await?;
         self.last_message_id_store.upsert(&data.id()).await?;
         Ok(res)
+    }
+
+    #[allow(refining_impl_trait)]
+    async fn check_health(&self) -> Result<(), GcpError> {
+        tracing::debug!("checking health");
+        // TODO: check health
+        Ok(())
     }
 }
 

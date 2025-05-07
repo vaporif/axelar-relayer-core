@@ -123,6 +123,50 @@ where
 
         Ok(())
     }
+
+    /// Checks the health status of the ingester components.
+    ///
+    /// This method verifies:
+    /// - The connection to the event queue consumer
+    /// - The connection to the Amplifier API
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(())` - If all components are healthy
+    /// - `Err(...)` - If any component fails its health check, with details about the failure
+    pub async fn check_health(&self) -> eyre::Result<()> {
+        tracing::debug!("checking health");
+
+        // Check if the event queue consumer is healthy
+        match self.event_queue_consumer.check_health().await {
+            Ok(_) => {
+                tracing::debug!("event queue consumer is healthy");
+            }
+            Err(err) => {
+                tracing::warn!(%err, "event queue consumer health check failed");
+                return Err(err.into());
+            }
+        };
+
+        // Check if the amplifier client is healthy
+        match self
+            .ampf_client
+            .build_request(&requests::HealthCheck)
+            .wrap_err("could not build health check request")?
+            .execute()
+            .await
+        {
+            Ok(_) => {
+                tracing::debug!("amplifier client is healthy");
+            }
+            Err(err) => {
+                tracing::warn!(%err, "amplifier client health check failed");
+                return Err(err.into());
+            }
+        };
+
+        Ok(())
+    }
 }
 
 impl<EventQueueConsumer> supervisor::Worker for Ingester<EventQueueConsumer>
