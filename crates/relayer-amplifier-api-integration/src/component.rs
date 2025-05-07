@@ -6,7 +6,7 @@ use futures_concurrency::future::FutureExt as _;
 use quanta::Upkeep;
 use relayer_amplifier_state::State;
 use serde::{Deserialize, Serialize};
-use tracing::{info_span, Instrument as _};
+use tracing::{Instrument as _, info_span};
 
 use crate::{config, from_amplifier, healthcheck, to_amplifier};
 
@@ -23,7 +23,7 @@ pub(crate) type AmplifierTaskSender = futures::channel::mpsc::UnboundedSender<Ta
 /// The core Amplifier API abstraction.
 ///
 /// Internally, it spawns processes for:
-/// - monitoring the liveliness of the Amplifier API (via helathcheck)
+/// - monitoring the liveliness of the Amplifier API (via healthcheck)
 /// - listening for new tasks coming form Amplifeir API (Listener subprocess)
 /// - sending events to the Amplifier API (Subscriber subprocess)
 #[derive(Debug)]
@@ -32,6 +32,21 @@ pub struct Amplifier<S: State> {
     receiver: CommandReceiver,
     sender: AmplifierTaskSender,
     state: S,
+}
+
+impl core::fmt::Display for AmplifierCommand {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::PublishEvents(request) => {
+                writeln!(f, "AmplifierCommand::PublishEvents:")?;
+                writeln!(f, "  request:")?;
+                for line in request.to_string().lines() {
+                    writeln!(f, "    {line}")?;
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Utility client used for communicating with the `Amplifier` instance
@@ -87,27 +102,25 @@ where
 
     #[tracing::instrument(skip_all, name = "Amplifier")]
     pub(crate) async fn process_internal(self) -> eyre::Result<()> {
-        let client =
-            amplifier_api::AmplifierApiClient::new(self.config.url.clone(), &self.config.identity)?;
+        let config = self.config.clone();
+        let client = amplifier_api::AmplifierApiClient::new(
+            self.config.url.clone(),
+            amplifier_api::TlsType::Certificate(Box::new(self.config.identity)),
+        )?;
         let clock = get_clock()?;
 
         // spawn tasks
-        let healthcheck =
-            healthcheck::process_healthcheck(self.config.clone(), clock, client.clone())
-                .instrument(info_span!("healthcheck"))
-                .in_current_span();
+        let healthcheck = healthcheck::process_healthcheck(config.clone(), clock, client.clone())
+            .instrument(info_span!("healthcheck"))
+            .in_current_span();
         let to_amplifier_msgs =
-            to_amplifier::process(self.config.clone(), self.receiver, client.clone())
+            to_amplifier::process(config.clone(), self.receiver, client.clone())
                 .instrument(info_span!("to amplifier"))
                 .in_current_span();
-        let from_amplifier_msgs = from_amplifier::process(
-            self.config.clone(),
-            client.clone(),
-            self.sender.clone(),
-            self.state,
-        )
-        .instrument(info_span!("from amplifier"))
-        .in_current_span();
+        let from_amplifier_msgs =
+            from_amplifier::process(config, client.clone(), self.sender.clone(), self.state)
+                .instrument(info_span!("from amplifier"))
+                .in_current_span();
 
         // await tasks until one of them exits (fatal)
         healthcheck

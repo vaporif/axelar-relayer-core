@@ -15,6 +15,7 @@ pub struct WithTrailingSlash(String);
 
 impl WithTrailingSlash {
     /// Create a new dynamic URL identifier that uses the trailing slash
+    #[allow(clippy::missing_const_for_fn, reason = "not applicable")]
     #[must_use]
     pub fn new(base: String) -> Self {
         Self(base.add("/"))

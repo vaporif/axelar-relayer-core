@@ -1,12 +1,12 @@
 use core::task::Poll;
 
+use amplifier_api::AmplifierRequest;
 use amplifier_api::requests::{self, WithTrailingSlash};
 use amplifier_api::types::{ErrorResponse, PublishEventsResult};
-use amplifier_api::AmplifierRequest;
-use futures::stream::FusedStream as _;
 use futures::StreamExt as _;
+use futures::stream::FusedStream as _;
 use tokio::task::JoinSet;
-use tracing::{info_span, Instrument as _};
+use tracing::{Instrument as _, info_span};
 
 use super::component::{AmplifierCommand, CommandReceiver};
 use super::config::Config;
@@ -29,7 +29,7 @@ pub(crate) async fn process(
                 let res = internal(command, &chain_with_trailing_slash, &client, &mut join_set);
 
                 cx.waker().wake_by_ref();
-                return Poll::Ready(Some(Ok(res)))
+                return Poll::Ready(Some(Ok(res)));
             }
             Poll::Pending => (),
             Poll::Ready(None) => {
@@ -43,7 +43,7 @@ pub(crate) async fn process(
             // join set returns `Poll::Ready(None)` when it's empty
             Poll::Ready(None) => {
                 if receiver.is_terminated() {
-                    return Poll::Ready(None)
+                    return Poll::Ready(None);
                 }
                 Poll::Pending
             }
@@ -85,7 +85,7 @@ pub(crate) fn internal(
                     .in_current_span(),
             );
         }
-    };
+    }
 
     Ok(())
 }

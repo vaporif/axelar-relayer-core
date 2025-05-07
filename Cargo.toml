@@ -1,12 +1,10 @@
-cargo-features = ["codegen-backend"]
-
 [workspace.package]
 version = "0.1.1"
 authors = []
 repository = "https://github.com/eigerco/axelar-relayer"
 homepage = "https://github.com/eigerco/axelar-relayer"
 license = "MIT/Apache-2.0"
-edition = "2021"
+edition = "2024"
 
 [workspace]
 resolver = "2"
@@ -52,6 +50,12 @@ redundant_pub_crate = "allow"
 option_if_let_else = "allow"
 self_named_module_files = "allow"
 shadow_unrelated = "allow"
+arbitrary_source_item_ordering.level = "allow"
+min_ident_chars = "allow"
+pattern_type_mismatch = "allow"
+use_debug = "allow"
+allow_attributes = "allow"
+integer_division_remainder_used = "allow"
 
 [workspace.lints.rust]
 missing_docs = { level = "warn", priority = -1 }
@@ -67,6 +71,12 @@ relayer-amplifier-api-integration = { path = "crates/relayer-amplifier-api-integ
 relayer-amplifier-state = { path = "crates/relayer-amplifier-state" }
 amplifier-api = { path = "crates/amplifier-api" }
 common-serde-utils = { path = "crates/common-serde-utils" }
+supervisor = { path = "crates/supervisor" }
+infrastructure = { path = "crates/infrastructure" }
+bin-util = { path = "crates/bin-util" }
+retry = { path = "crates/retry" }
+amplifier-subscriber = { path = "crates/amplifier-subscriber" }
+amplifier-ingester = { path = "crates/amplifier-ingester" }
 
 # CLI
 clap = { version = "4", features = ["derive", "env", "string"] }
@@ -84,28 +94,37 @@ chrono = { version = "0.4", default-features = false, features = [
 base64 = "0.22"
 bs58 = "0.5"
 redact = { version = "0.1", features = ["serde"] }
-thiserror = "1"
-uuid = { version = "1.2", features = ["v4", "serde"] }
-typed-builder = "0.18"
+thiserror = "2"
+uuid = { version = "1.2", features = ["v4", "serde", "borsh"] }
+typed-builder = "0.21"
 derive_builder = "0.20"
-bnum = "0.12"
+bnum = "0.13"
 hex = "0.4"
 quanta = "0.12"
 backoff = { version = "0.4", features = ["tokio"] }
 indoc = "2"
-itertools = "0.12"
+itertools = "0.14"
 num-traits = "0.2"
 memmap2 = "0.9"
 bytemuck = "1.19"
+rand = "0.9"
+ctrlc = "3"
+tonic = "0.13"
+flume = "0.11"
+rustls = { version = "0.23", default-features = false }
+num_cpus = "1"
+
 
 # Serde
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 serde_json = "1"
-simd-json = "0.13"
+simd-json = "0.15"
+
+borsh = { version = "1.5", features = ["derive"] }
 
 # Tests
-rstest = { version = "0.21" }
+rstest = { version = "0.25" }
 test-log = { version = "0.2", features = ["trace"], default-features = false }
 pretty_assertions = "1"
 mockall = "0.13"
@@ -124,19 +143,31 @@ reqwest = { version = "0.12", default-features = false, features = [
     "http2",
 ] }
 
-# Async
+# async
 tokio = { version = "1", features = [
     "rt",
     "signal",
     "rt-multi-thread",
     "macros",
+    "time",
 ] }
 tokio-stream = { version = "0.1" }
 tokio-util = "0.7"
+tokio-retry = "0.3"
 futures-concurrency = "7.4"
 futures-util = "0.3"
 futures = "0.3"
 async-trait = "0"
+
+# queues / kv
+async-nats = "0.40"
+google-cloud-pubsub = { package = "gcloud-pubsub", version = "1.2" }
+google-cloud-googleapis = { package = "gcloud-googleapis", version = "1.1.0" }
+redis = { version = "0.30", features = [
+  "tokio-comp",
+  "aio",
+  "connection-manager",
+] }
 
 # tracing
 tracing = "0.1"

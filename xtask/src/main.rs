@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use xshell::{cmd, Shell};
+use xshell::{Shell, cmd};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -75,6 +75,11 @@ fn main() -> eyre::Result<()> {
         Commands::Check => {
             println!("cargo check");
             cmd!(sh, "cargo clippy --workspace --locked -- -D warnings").run()?;
+            cmd!(
+                sh,
+                "cargo clippy -p infrastructure --features=gcp,nats --locked -- -D warnings"
+            )
+            .run()?;
             cmd!(sh, "cargo fmt --all --check").run()?;
         }
         Commands::Fmt => {

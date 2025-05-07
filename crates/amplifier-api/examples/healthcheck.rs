@@ -19,8 +19,11 @@ async fn main() {
     let identity =
         Identity::new(reqwest::Identity::from_pem(&identity).expect("invalid identity file"));
 
-    let client = amplifier_api::AmplifierApiClient::new(amplifier_api_url, &identity)
-        .expect("could not construct client");
+    let client = amplifier_api::AmplifierApiClient::new(
+        amplifier_api_url,
+        amplifier_api::TlsType::Certificate(Box::new(identity)),
+    )
+    .expect("could not construct client");
     client
         .build_request(&HealthCheck)
         .unwrap()

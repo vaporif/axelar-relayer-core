@@ -1,0 +1,59 @@
+[package]
+name = "infrastructure"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+async-nats = { workspace = true, optional = true }
+google-cloud-pubsub = { workspace = true, optional = true }
+redis = { workspace = true, optional = true }
+google-cloud-googleapis = { workspace = true, optional = true, features = [
+  "pubsub",
+] }
+tonic = { workspace = true, optional = true }
+flume = { workspace = true, optional = true, features = ["async"] }
+url.workspace = true
+tokio.workspace = true
+tokio-util = { workspace = true, optional = true }
+thiserror.workspace = true
+futures.workspace = true
+tracing.workspace = true
+borsh = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
+num_cpus = { workspace = true, optional = true }
+
+uuid.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = ["gcp"]
+nats = [
+  "dep:async-nats",
+  "dep:borsh",
+  "consumer-interfaces",
+  "publisher-interfaces",
+  "storage-interfaces",
+]
+gcp = [
+  "dep:google-cloud-pubsub",
+  "dep:google-cloud-googleapis",
+  "dep:redis",
+  "dep:tonic",
+  "dep:hex",
+  "dep:borsh",
+  "dep:tokio-util",
+  "dep:flume",
+  "dep:num_cpus",
+  "consumer-interfaces",
+  "publisher-interfaces",
+  "storage-interfaces",
+]
+consumer-interfaces = []
+publisher-interfaces = []
+storage-interfaces = ["dep:hex"]

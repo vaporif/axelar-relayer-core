@@ -1,10 +1,10 @@
 use core::task::Poll;
 
+use amplifier_api::AmplifierRequest;
 use amplifier_api::requests::{self, WithTrailingSlash};
 use amplifier_api::types::{ErrorResponse, GetTasksResult};
-use amplifier_api::AmplifierRequest;
-use futures::stream::StreamExt as _;
 use futures::SinkExt as _;
+use futures::stream::StreamExt as _;
 use relayer_amplifier_state::State;
 use tokio::task::JoinSet;
 use tokio_stream::wrappers::IntervalStream;
@@ -102,13 +102,13 @@ where
 {
     if !fan_out_sender.is_empty() {
         // the downstream client is still processing the events, don't send any new ones
-        return Ok(())
+        return Ok(());
     }
     let latest_processed_task = state.latest_processed_task_id();
     let latest_queried_task = state.latest_queried_task_id();
     if latest_processed_task != latest_queried_task {
         tracing::debug!("downstream processor still processing the last batch");
-        return Ok(())
+        return Ok(());
     }
     tracing::debug!(?latest_processed_task, "latest task to query");
     let request = requests::GetChains::builder()

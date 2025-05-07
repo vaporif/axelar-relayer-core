@@ -4,7 +4,7 @@
 mod config;
 pub use config::{Config, HealthCheckConfig, RelayerComponent};
 use tokio::task::JoinSet;
-use tracing::{info_span, Instrument as _};
+use tracing::{Instrument as _, info_span};
 pub use url;
 
 /// Generic array of components to be consumed by the engine
@@ -47,7 +47,6 @@ impl RelayerEngine {
             match task_result {
                 Ok(Ok(())) => {
                     tracing::warn!("A task exited successfully");
-                    continue;
                 }
                 Ok(Err(err)) => {
                     tracing::error!(?err, "A task returned an error, shutting down the system");
