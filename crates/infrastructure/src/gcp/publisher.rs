@@ -42,7 +42,6 @@ where
 {
     type Return = String;
 
-    // TODO: remake to publish batch so there's no way they will be run concurrent
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]
     async fn publish(

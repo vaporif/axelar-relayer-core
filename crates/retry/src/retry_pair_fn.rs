@@ -27,7 +27,7 @@ where
             backoff,
             first_function,
             second_function,
-            // TODO: config
+            // TODO: put into config
             max_attempts: 20,
             _phantom: PhantomData,
         }

@@ -9,7 +9,7 @@ resource "google_redis_instance" "kvstore" {
 }
 
 
-# TODO: Complete iam
+# TODO: Complete iam after implementing k8s
 # resource "google_redis_instance_iam_binding" "redis_instance_user" {
 #   instance = google_redis_instance.kvstore.name
 #   role     = "roles/redis.editor"  # Basic access role

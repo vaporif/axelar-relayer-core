@@ -86,7 +86,6 @@ impl Builder {
     }
 
     pub(crate) async fn stream(self, args: StreamArgs) -> Result<ConfiguredStream, NatsError> {
-        // TODO: Revisit config
         let StreamArgs {
             name,
             subject,
@@ -134,9 +133,7 @@ impl ConfiguredStream {
         description: String,
         deliver_group: String,
     ) -> Result<consumer::NatsConsumer<T>, NatsError> {
-        // TODO: Revisit config
         let config = jetstream::consumer::push::Config {
-            // TODO: generate proper name,
             deliver_subject: self.inbox.clone(),
             name: Some(uuid::Uuid::new_v4().to_string()),
             deliver_group: Some(deliver_group),

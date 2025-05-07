@@ -1,3 +1,4 @@
+// TODO: finish it and import in env
 resource "google_container_cluster" "primary" {
   name               = var.cluster_name
   location           = var.cluster_location

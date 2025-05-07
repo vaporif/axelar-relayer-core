@@ -43,7 +43,6 @@ where
 
         let event = queue_msg.decoded().clone();
         tracing::info!(%event, "processing");
-        // TODO: Refactor
         let payload = PublishEventsRequest {
             events: vec![event.clone()],
         };

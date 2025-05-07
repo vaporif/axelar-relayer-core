@@ -38,7 +38,6 @@ impl<T> NatsPublisher<T> {
 impl<T: BorshSerialize + Debug> interfaces::publisher::Publisher<T> for NatsPublisher<T> {
     type Return = PublishAck;
 
-    // TODO: always wait for completion?
     #[allow(refining_impl_trait, reason = "simplify")]
     #[tracing::instrument(skip_all)]
     async fn publish(

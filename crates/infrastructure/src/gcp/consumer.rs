@@ -120,10 +120,6 @@ where
         GcpError,
     > {
         if self.read_messages_handle.is_finished() {
-            // TODO: write err
-            // self.read_messages_handle
-            //     .await
-            //     .map_err(Error::ConsumerReadTaskJoin)??;
             return Err(GcpError::ConsumerReadTaskExited);
         }
         tracing::debug!("getting message stream");

@@ -17,7 +17,7 @@ graph TD
             amp_ing[Amplifier Ingester]
         end
     end
- 
+
     %% External systems
     amp_api[/"Amplifier REST API"\]
     bcx["Blockchain"]
@@ -27,7 +27,7 @@ graph TD
     amp_sub -->|pushes amplifier tasks| tasks_queue
     tasks_queue -->|consumes amplifier tasks| bcx_ing
     bcx_ing -->|transforms & includes amplifier tasks| bcx
- 
+
     %% Blockchain to Amplifier flow
     bcx -->|blockchain events| bcx_sub
     bcx_sub -->|transforms to amplifier events| events_queue
@@ -49,7 +49,7 @@ graph TD
     classDef component stroke:#333,stroke-width:2px;
     classDef queue fill:#ff9,stroke:#333,stroke-width:2px;
     classDef external fill:#bbf,stroke:#333,stroke-width:1px;
- 
+
     class amp_sub,bcx_ing,bcx_sub,amp_ing component;
     class tasks_queue,events_queue queue;
     class amp_api,bcx external;
@@ -65,15 +65,15 @@ The relayer establishes bidirectional communication between an Amplifier API and
 - **Blockchain Ingester**: Consumes tasks from the queue, transforms them to a compatible format, and includes them in the blockchain
 
 ### Blockchain to Amplifier Flow
-- **Blockchain Subscriber**: Subscribes to blockchain events, transforms them into amplifier events and sends to queue 
+- **Blockchain Subscriber**: Subscribes to blockchain events, transforms them into amplifier events and sends to queue
 - **Amplifier Events Queue**: Stores amplifier events
 - **Amplifier Ingester**: Consumes events from the queue and sends them to the Amplifier API
 
 ## Internal Relayer Architecture
 
-The relayer uses threading and supervision model:
+The relayer is designed as 4 components: 2 ingestors & 2 subscribers - 1 for each chain (Axelar/amplifier API and the connecting chain)
 
-1. **Supervisor**:
+1. **Supervisor**(optional):
    - Runs on its own dedicated thread with a Tokio runtime
    - Spawns and monitors worker threads only for the components selected via CLI
    - Detects crashes and automatically restarts failed components
@@ -82,17 +82,16 @@ The relayer uses threading and supervision model:
 
 2. **Termination Handling**:
    - A dedicated thread listens for Ctrl+C signals
-   - Uses an AtomicBool as a shared termination flag
-   - When Ctrl+C is received, the AtomicBool is set to true
-   - All components, including the supervisor, watch this AtomicBool
+   - Uses an CancellationToken as a shared termination flag
+   - When Ctrl+C is received, the CancellationToken is set to true
+   - All components, including optional supervisor, watch this CancellationToken
    - Upon termination, components have graceful period to finish current work
 
 3. **Worker Components**:
-   - Each component (Amplifier Subscriber, Blockchain Ingester, Blockchain Subscriber, Amplifier Ingester) runs on its own thread
-   - Each thread has an isolated Tokio runtime
+   - Each component (Amplifier Subscriber, Blockchain Ingester, Blockchain Subscriber, Amplifier Ingester) runs isolated
    - Components check the termination flag regularly and shut down when needed
    - Isolation ensures a failure in one component doesn't affect others
-   - It's up to the implementation to run all components at once or as separate binaries
+   - It's up to the implementation to run all components at once (and isolate via supervisor) or as separate binaries
 
 4. **Queue Abstraction**:
    - Queue is push based
@@ -101,3 +100,4 @@ The relayer uses threading and supervision model:
    - Components interact with queues only through trait interfaces, maintaining loose coupling
    - Supports horizontal scaling by allowing multiple instances to consume from the same queue
 
+The supervisor is optional, and each component can be started as a separate binary.RetryClaude can make mistakes. Please double-check responses.
