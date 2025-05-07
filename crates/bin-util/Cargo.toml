@@ -9,7 +9,15 @@ edition.workspace = true
 
 [dependencies]
 ctrlc.workspace = true
+tokio.workspace = true
+tracing.workspace = true
 tokio-util.workspace = true
+axum.workspace = true
+eyre.workspace = true
+serde.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+futures.workspace = true
 
 [lints]
 workspace = true

@@ -20,7 +20,7 @@ clap.workspace = true
 ctrlc.workspace = true
 toml.workspace = true
 url.workspace = true
-health-check.workspace = true
+bin-util.workspace = true
 
 async-nats = { workspace = true, optional = true }
 google-cloud-pubsub = { workspace = true, optional = true }

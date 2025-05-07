@@ -31,6 +31,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bin_util::health_check;
 use clap::Parser;
 use config::Config;
 use health_check::HealthCheckServer;

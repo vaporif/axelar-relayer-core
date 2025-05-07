@@ -77,7 +77,6 @@ bin-util = { path = "crates/bin-util" }
 retry = { path = "crates/retry" }
 amplifier-subscriber = { path = "crates/amplifier-subscriber" }
 amplifier-ingester = { path = "crates/amplifier-ingester" }
-health-check = { path = "crates/health-check" }
 
 # CLI
 clap = { version = "4", features = ["derive", "env", "string"] }

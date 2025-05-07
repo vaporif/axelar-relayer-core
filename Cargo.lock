@@ -67,6 +67,7 @@ name = "amplifier-ingester"
 version = "0.1.1"
 dependencies = [
  "async-nats",
+ "bin-util",
  "borsh",
  "clap",
  "color-eyre",
@@ -76,7 +77,6 @@ dependencies = [
  "futures",
  "gcloud-googleapis",
  "gcloud-pubsub",
- "health-check",
  "infrastructure",
  "redis",
  "relayer-amplifier-api-integration",
@@ -97,6 +97,7 @@ version = "0.1.1"
 dependencies = [
  "amplifier-api",
  "async-nats",
+ "bin-util",
  "borsh",
  "clap",
  "color-eyre",
@@ -106,7 +107,6 @@ dependencies = [
  "futures",
  "gcloud-googleapis",
  "gcloud-pubsub",
- "health-check",
  "infrastructure",
  "redis",
  "relayer-amplifier-api-integration",
@@ -403,8 +403,16 @@ checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 name = "bin-util"
 version = "0.1.1"
 dependencies = [
+ "axum",
  "ctrlc",
+ "eyre",
+ "futures",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
  "tokio-util",
+ "tracing",
 ]
 
 [[package]]
@@ -1234,20 +1242,6 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash",
-]
-
-[[package]]
-name = "health-check"
-version = "0.1.1"
-dependencies = [
- "axum",
- "eyre",
- "futures",
- "reqwest",
- "serde_json",
- "tokio",
- "tokio-util",
- "tracing",
 ]
 
 [[package]]
