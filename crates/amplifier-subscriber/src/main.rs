@@ -27,7 +27,6 @@ mod components;
 mod config;
 
 use core::time::Duration;
-use std::path::PathBuf;
 
 use bin_util::health_check;
 use clap::Parser;
@@ -46,7 +45,7 @@ pub(crate) struct Cli {
         default_value = "relayer-config.toml",
         help = "Config path"
     )]
-    pub config_path: PathBuf,
+    pub config_path: String,
 }
 
 #[tokio::main]
@@ -55,7 +54,8 @@ async fn main() {
 
     let cli = Cli::parse();
 
-    let config: Config = config::try_deserialize(&cli.config_path).expect("generic config");
+    let config: Config =
+        bin_util::try_deserialize(&cli.config_path).expect("common config correct");
     let cancel_token = bin_util::register_cancel();
 
     tokio::try_join!(
@@ -73,7 +73,7 @@ async fn main() {
 
 fn spawn_subscriber_worker(
     tickrate: Duration,
-    config_path: PathBuf,
+    config_path: String,
     cancel_token: &CancellationToken,
 ) -> tokio::task::JoinHandle<()> {
     tokio::task::spawn({
@@ -81,12 +81,12 @@ fn spawn_subscriber_worker(
 
         async move {
             #[cfg(feature = "nats")]
-            let mut subscriber = components::nats::new_amplifier_subscriber(config_path)
+            let mut subscriber = components::nats::new_amplifier_subscriber(&config_path)
                 .await
                 .expect("subscriber is created");
 
             #[cfg(feature = "gcp")]
-            let mut subscriber = components::gcp::new_amplifier_subscriber(config_path)
+            let mut subscriber = components::gcp::new_amplifier_subscriber(&config_path)
                 .await
                 .expect("subscriber is created");
 
@@ -120,7 +120,7 @@ fn spawn_subscriber_worker(
 
 fn spawn_health_check_server(
     port: u16,
-    config_path: PathBuf,
+    config_path: String,
     cancel_token: CancellationToken,
 ) -> tokio::task::JoinHandle<()> {
     tokio::task::spawn(async move {
@@ -131,12 +131,12 @@ fn spawn_health_check_server(
                 let config_path = config_path.clone();
                 async move {
                     #[cfg(feature = "nats")]
-                    let subscriber = components::nats::new_amplifier_subscriber(config_path)
+                    let subscriber = components::nats::new_amplifier_subscriber(&config_path)
                         .await
                         .expect("subscriber is created");
 
                     #[cfg(feature = "gcp")]
-                    let subscriber = components::gcp::new_amplifier_subscriber(config_path)
+                    let subscriber = components::gcp::new_amplifier_subscriber(&config_path)
                         .await
                         .expect("subscriber is created");
                     subscriber.check_health().await

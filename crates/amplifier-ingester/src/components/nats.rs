@@ -1,6 +1,6 @@
 use core::time::Duration;
-use std::path::PathBuf;
 
+use bin_util::{ValidateConfig, deserialize_duration_from_secs};
 use eyre::{Context as _, ensure, eyre};
 use infrastructure::nats::consumer::NatsConsumer;
 use infrastructure::nats::{self, StreamArgs};
@@ -9,7 +9,6 @@ use serde::Deserialize;
 use url::Url;
 
 use crate::Config;
-use crate::config::{self, Validate, deserialize_duration_from_secs};
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) struct NatsSectionConfig {
@@ -31,7 +30,7 @@ pub(crate) struct NatsConfig {
     pub deliver_group: String,
 }
 
-impl Validate for NatsSectionConfig {
+impl ValidateConfig for NatsSectionConfig {
     fn validate(&self) -> eyre::Result<()> {
         ensure!(
             !self.nats.urls.is_empty(),
@@ -43,11 +42,11 @@ impl Validate for NatsSectionConfig {
 }
 
 pub(crate) async fn new_amplifier_ingester(
-    config_path: PathBuf,
+    config_path: &str,
 ) -> eyre::Result<amplifier_ingester::Ingester<NatsConsumer<amplifier_api::types::Event>>> {
-    let config = config::try_deserialize(&config_path).wrap_err("config file issues")?;
-    let nats_config: NatsSectionConfig =
-        config::try_deserialize(&config_path).wrap_err("nats config issues")?;
+    let config: Config = bin_util::try_deserialize(config_path)?;
+    let nats_config: NatsSectionConfig = bin_util::try_deserialize(config_path)?;
+
     let amplifier_client = amplifier_client(&config)?;
 
     let stream = StreamArgs {
@@ -75,7 +74,13 @@ pub(crate) async fn new_amplifier_ingester(
 fn amplifier_client(config: &Config) -> eyre::Result<AmplifierApiClient> {
     AmplifierApiClient::new(
         config.amplifier_component.url.clone(),
-        amplifier_api::TlsType::Certificate(Box::new(config.amplifier_component.identity.clone())),
+        amplifier_api::TlsType::Certificate(Box::new(
+            config
+                .amplifier_component
+                .identity
+                .clone()
+                .ok_or_else(|| eyre::Report::msg("identity not set"))?,
+        )),
     )
     .wrap_err("amplifier api client failed to create")
 }

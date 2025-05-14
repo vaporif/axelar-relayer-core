@@ -1,14 +1,17 @@
 use core::fmt::Display;
 use core::marker::PhantomData;
+use core::time::Duration;
 
 use super::{Abortable, RetryError};
 use crate::backoff_pair_iterator::{AlternationStep, BackoffPairIterator};
+use crate::{MAX_ATTEMPTS, RATE_LIMIT_WAIT_SECS};
 
 pub struct RetryPairFn<Fn1, Fn2, T, Err> {
     backoff: BackoffPairIterator,
     first_function: Fn1,
     second_function: Fn2,
     max_attempts: usize,
+    rate_limit_wait: Duration,
     _phantom: PhantomData<(T, Err)>,
 }
 
@@ -28,7 +31,8 @@ where
             first_function,
             second_function,
             // TODO: put into config
-            max_attempts: 20,
+            max_attempts: MAX_ATTEMPTS,
+            rate_limit_wait: Duration::from_secs(RATE_LIMIT_WAIT_SECS),
             _phantom: PhantomData,
         }
     }
@@ -38,7 +42,9 @@ where
     #[tracing::instrument(skip_all)]
     pub async fn retry(self) -> Result<T, RetryError<Err>> {
         let mut primary_fn_aborted = false;
+        let mut primary_fn_rate_limitted = false;
         let mut secondary_fn_aborted = false;
+        let mut secondary_fn_rate_limitted = false;
         let mut last_abort_err: Option<Err> = None;
         for (retry_count, iteration) in self.backoff.enumerate().take(self.max_attempts) {
             match iteration.alteration_step {
@@ -49,14 +55,15 @@ where
                         }
                         continue;
                     }
-                    tokio::time::sleep(iteration.duration).await;
+                    if primary_fn_rate_limitted {
+                        tokio::time::sleep(self.rate_limit_wait).await;
+                        primary_fn_rate_limitted = false;
+                    } else {
+                        tokio::time::sleep(iteration.duration).await;
+                    }
                     match (self.first_function)().await {
                         Ok(res) => return Ok(res),
-                        Err(err) => {
-                            if !err.abortable() {
-                                tracing::error!(%err, retry_count, "retry attempt with primary lambda failed");
-                                continue;
-                            }
+                        Err(err) if err.abortable() => {
                             tracing::error!(%err, retry_count, "primary lambda aborted");
                             primary_fn_aborted = true;
                             last_abort_err = Some(err);
@@ -67,6 +74,13 @@ where
                                 ));
                             }
                         }
+                        Err(err) if err.rate_limit() => {
+                            primary_fn_rate_limitted = true;
+                            tracing::error!(%err, retry_count, "retry attempt with primary lambda faced rate_limit");
+                        }
+                        Err(err) => {
+                            tracing::error!(%err, retry_count, "retry attempt with primary lambda failed");
+                        }
                     }
                 }
                 AlternationStep::Second => {
@@ -76,14 +90,15 @@ where
                         }
                         continue;
                     }
-                    tokio::time::sleep(iteration.duration).await;
+                    if secondary_fn_rate_limitted {
+                        tokio::time::sleep(self.rate_limit_wait).await;
+                        secondary_fn_rate_limitted = false;
+                    } else {
+                        tokio::time::sleep(iteration.duration).await;
+                    }
                     match (self.second_function)().await {
                         Ok(res) => return Ok(res),
-                        Err(err) => {
-                            if !err.abortable() {
-                                tracing::error!(%err, retry_count, "retry attempt with secondary lambda failed");
-                                continue;
-                            }
+                        Err(err) if err.abortable() => {
                             tracing::error!(%err, retry_count, "secondary lambda aborted");
                             secondary_fn_aborted = true;
                             last_abort_err = Some(err);
@@ -93,6 +108,13 @@ where
                                     last_abort_err.expect("abort error"),
                                 ));
                             }
+                        }
+                        Err(err) if err.rate_limit() => {
+                            secondary_fn_rate_limitted = true;
+                            tracing::error!(%err, retry_count, "retry attempt with primary lambda faced rate_limit");
+                        }
+                        Err(err) => {
+                            tracing::error!(%err, retry_count, "retry attempt with secondary lambda failed");
                         }
                     }
                 }
@@ -122,6 +144,10 @@ mod tests {
     impl Abortable for TestError {
         fn abortable(&self) -> bool {
             self.abort
+        }
+
+        fn rate_limit(&self) -> bool {
+            false
         }
     }
 

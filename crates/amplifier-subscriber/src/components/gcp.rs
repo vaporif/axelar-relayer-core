@@ -1,39 +1,37 @@
-use std::path::PathBuf;
-
+use bin_util::ValidateConfig;
 use eyre::{Context as _, ensure, eyre};
 use infrastructure::gcp;
+use infrastructure::gcp::connectors::KmsConfig;
 use infrastructure::gcp::publisher::PeekableGcpPublisher;
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use serde::Deserialize;
 
-use crate::config::{self, Config, Validate};
+use crate::config::Config;
 
 const TASK_KEY: &str = "last-task";
 const WORKERS_SCALE_FACTOR: usize = 4;
 const BUNDLE_SIZE_SCALE_FACTOR: usize = 4;
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct GcpSectionConfig {
-    pub gcp: GcpConfig,
+    gcp: GcpConfig,
+    kms: KmsConfig,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct GcpConfig {
     redis_connection: String,
-
     tasks_topic: String,
     tasks_subscription: String,
-
     events_topic: String,
     events_subscription: String,
-
     nak_deadline_secs: i32,
-
     message_buffer_size: usize,
 }
 
-impl Validate for GcpSectionConfig {
+impl ValidateConfig for GcpSectionConfig {
     fn validate(&self) -> eyre::Result<()> {
+        self.kms.validate().map_err(|err| eyre::eyre!(err))?;
         ensure!(
             !self.gcp.redis_connection.is_empty(),
             eyre!("gcp redis_connection should be set")
@@ -67,19 +65,17 @@ impl Validate for GcpSectionConfig {
 }
 
 pub(crate) async fn new_amplifier_subscriber(
-    config_path: PathBuf,
+    config_path: &str,
 ) -> eyre::Result<
     amplifier_subscriber::Subscriber<PeekableGcpPublisher<amplifier_api::types::TaskItem>>,
 > {
-    let config = config::try_deserialize(&config_path).wrap_err("config file issues")?;
-    let queue_config: GcpSectionConfig =
-        config::try_deserialize(&config_path).wrap_err("gcp pubsub config issues")?;
-    let amplifier_client = amplifier_client(&config)?;
+    let config: Config = bin_util::try_deserialize(config_path)?;
+    let infra_config: GcpSectionConfig = bin_util::try_deserialize(config_path)?;
     let num_cpus = num_cpus::get();
 
     let task_queue_publisher = gcp::connectors::connect_peekable_publisher(
-        &queue_config.gcp.tasks_topic,
-        queue_config.gcp.redis_connection,
+        &infra_config.gcp.tasks_topic,
+        infra_config.gcp.redis_connection.clone(),
         TASK_KEY.to_owned(),
         num_cpus
             .checked_mul(WORKERS_SCALE_FACTOR)
@@ -91,6 +87,7 @@ pub(crate) async fn new_amplifier_subscriber(
     .await
     .wrap_err("task queue publisher connect err")?;
 
+    let amplifier_client = amplifier_client(&config, infra_config).await?;
     Ok(amplifier_subscriber::Subscriber::new(
         amplifier_client,
         task_queue_publisher,
@@ -98,10 +95,25 @@ pub(crate) async fn new_amplifier_subscriber(
     ))
 }
 
-fn amplifier_client(config: &Config) -> eyre::Result<AmplifierApiClient> {
+async fn amplifier_client(
+    config: &Config,
+    infra_config: GcpSectionConfig,
+) -> eyre::Result<AmplifierApiClient> {
+    let client_config = gcp::connectors::kms_tls_client_config(
+        config
+            .amplifier_component
+            .tls_public_certificate
+            .clone()
+            .ok_or_else(|| eyre::Report::msg("tls_public_certificate should be set"))?
+            .into_bytes(),
+        infra_config.kms,
+    )
+    .await
+    .wrap_err("kms connection failed")?;
+
     AmplifierApiClient::new(
         config.amplifier_component.url.clone(),
-        amplifier_api::TlsType::Certificate(Box::new(config.amplifier_component.identity.clone())),
+        amplifier_api::TlsType::CustomProvider(client_config),
     )
     .wrap_err("amplifier api client failed to create")
 }

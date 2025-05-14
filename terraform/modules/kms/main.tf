@@ -3,8 +3,8 @@ resource "google_kms_key_ring" "amplifier_api" {
   location = "global"
 }
 
-resource "google_kms_crypto_key" "amplifier_api_sign_key" {
-  name     = "amplifier_api_sign_key"
+resource "google_kms_crypto_key" "amplifier_api_signing_key" {
+  name     = "amplifier_api_signing_key"
   key_ring = google_kms_key_ring.amplifier_api.id
   purpose  = "ASYMMETRIC_SIGN"
 
@@ -14,8 +14,19 @@ resource "google_kms_crypto_key" "amplifier_api_sign_key" {
   }
 }
 
-resource "google_kms_crypto_key_iam_member" "key_signer" {
-  crypto_key_id = google_kms_crypto_key.amplifier_api_sign_key.id
-  role          = "roles/cloudkms.signer"
-  member        = "serviceAccount:${var.events_publisher_service_account_email}"
+data "google_iam_policy" "amplifier_sign_policy" {
+  binding {
+    role = "roles/cloudkms.signer"
+
+    members = [
+      "serviceAccount:${var.events_publisher_service_account_email}",
+      "serviceAccount:${var.tasks_subscriber_service_account_email}"
+    ]
+  }
 }
+
+resource "google_kms_crypto_key_iam_policy" "amplifier_sign_policy" {
+  crypto_key_id = google_kms_crypto_key.amplifier_api_signing_key.id
+  policy_data   = data.google_iam_policy.amplifier_sign_policy.policy_data
+}
+

@@ -10,6 +10,9 @@ use core::time::Duration;
 
 pub use builder::Builder;
 
+pub(crate) const MAX_ATTEMPTS: usize = 20;
+pub(crate) const RATE_LIMIT_WAIT_SECS: u64 = 10;
+
 /// Retry error
 #[derive(Debug, thiserror::Error)]
 pub enum RetryError<Err: Abortable> {
@@ -32,7 +35,13 @@ pub(crate) struct BackoffParrams {
 /// Is error abortable i.e. non-recoverable?
 pub trait Abortable {
     /// Is error abortable i.e. non-recoverable?
-    fn abortable(&self) -> bool;
+    fn abortable(&self) -> bool {
+        false
+    }
+    /// Is error rate limit i.e. we need to wait more?
+    fn rate_limit(&self) -> bool {
+        false
+    }
 }
 
 #[cfg(test)]
@@ -53,6 +62,10 @@ mod tests {
     impl Abortable for TestError {
         fn abortable(&self) -> bool {
             self.0
+        }
+
+        fn rate_limit(&self) -> bool {
+            false
         }
     }
 

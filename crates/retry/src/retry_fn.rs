@@ -1,8 +1,10 @@
 use core::fmt::Display;
+use core::time::Duration;
 
 use tokio_retry::strategy::ExponentialBackoff;
 
 use super::{Abortable, RetryError};
+use crate::{MAX_ATTEMPTS, RATE_LIMIT_WAIT_SECS};
 
 pub struct RetryFn<Fn, T, Err>
 where
@@ -12,6 +14,7 @@ where
     backoff: ExponentialBackoff,
     function: Fn,
     max_attempts: usize,
+    rate_limit_wait: Duration,
 }
 
 impl<Fn, T, Err> RetryFn<Fn, T, Err>
@@ -24,7 +27,8 @@ where
             backoff,
             function,
             // TODO: config
-            max_attempts: 20,
+            max_attempts: MAX_ATTEMPTS,
+            rate_limit_wait: Duration::from_secs(RATE_LIMIT_WAIT_SECS),
         }
     }
 
@@ -36,12 +40,15 @@ where
             tokio::time::sleep(duration).await;
             match (self.function)().await {
                 Ok(res) => return Ok(res),
+                Err(err) if err.abortable() => {
+                    tracing::error!(%err, "aborted");
+                    return Err(RetryError::Aborted(err));
+                }
+                Err(err) if err.rate_limit() => {
+                    tracing::error!(%err, "rate limit reached, extend wait");
+                    tokio::time::sleep(self.rate_limit_wait).await;
+                }
                 Err(err) => {
-                    if err.abortable() {
-                        tracing::error!(%err, "aborted");
-                        return Err(RetryError::Aborted(err));
-                    }
-
                     tracing::error!(%err, retry_attempt, "retryable lambda err");
                 }
             }
@@ -72,6 +79,10 @@ mod tests {
     impl Abortable for TestError {
         fn abortable(&self) -> bool {
             self.abort
+        }
+
+        fn rate_limit(&self) -> bool {
+            false
         }
     }
 

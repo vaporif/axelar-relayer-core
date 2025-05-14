@@ -1,8 +1,13 @@
 use core::fmt::Debug;
+use std::sync::Arc;
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use google_cloud_pubsub::client::{Client, ClientConfig};
+use rustls::RootCertStore;
+use rustls::pki_types::pem::PemObject as _;
+pub use rustls_gcp_kms::KmsConfig;
+use rustls_gcp_kms::dummy_key;
 use tokio_util::sync::CancellationToken;
+use tonic::transport::CertificateDer;
 
 use super::GcpError;
 use super::consumer::GcpConsumer;
@@ -118,7 +123,7 @@ pub async fn connect_consumer<T>(
 where
     T: BorshDeserialize + Send + Sync + Debug + 'static,
 {
-    let client = connect_client().await?;
+    let client = connect_pubsub_client().await?;
     let consumer = GcpConsumer::new(&client, subscription, config, cancel_token).await?;
 
     Ok(consumer)
@@ -194,7 +199,7 @@ pub async fn connect_publisher<T>(
     worker_count: usize,
     max_bundle_size: usize,
 ) -> Result<GcpPublisher<T>, GcpError> {
-    let client = connect_client().await?;
+    let client = connect_pubsub_client().await?;
     let publisher = GcpPublisher::new(&client, topic, worker_count, max_bundle_size).await?;
     Ok(publisher)
 }
@@ -311,14 +316,95 @@ where
     T::MessageId: BorshSerialize + BorshDeserialize + core::fmt::Display,
 {
     let kv_store = RedisClient::connect(redis_key, redis_connection).await?;
-    let client = connect_client().await?;
+    let client = connect_pubsub_client().await?;
     let publisher =
         PeekableGcpPublisher::new(&client, topic, kv_store, worker_count, max_bundle_size).await?;
     Ok(publisher)
 }
 
-async fn connect_client() -> Result<Client, GcpError> {
-    let config = ClientConfig::default().with_auth().await?;
-    let client = Client::new(config).await?;
+/// Creates a TLS client configuration that uses Google Cloud KMS for client authentication.
+///
+/// This function sets up a TLS client configuration with client certificate authentication
+/// where the private key operations are performed by Google Cloud KMS. The private key
+/// material never leaves the secure KMS environment.
+///
+/// # Arguments
+///
+/// * `public_certificate` - Public client certificate bytes in PEM or DER format
+/// * `kms_config` - Configuration for connecting to Google Cloud KMS and identifying the key
+///
+/// # Returns
+///
+/// * `Result<Box<rustls::ClientConfig>, GcpError>` - A boxed rustls ClientConfig configured for TLS
+///   client authentication using KMS, or an error if setup fails
+///
+/// # Errors
+///
+/// This function can return errors in the following cases:
+///
+/// * `GcpError::Authentication` - Failed to authenticate with Google Cloud
+/// * `GcpError::KmsClient` - Failed to create the KMS client
+/// * `GcpError::CertificateRead` - Failed to read the certificate file
+/// * `GcpError::TlsConfig` - Failed to create the TLS configuration
+///
+/// # Example
+///
+/// ```no_run
+/// use infrastructure::gcp::connectors::{kms_tls_client_config, KmsConfig};
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let kms_config = KmsConfig::new(
+///         "my-project-id",
+///         "global",
+///         "my-keyring",
+///         "my-key",
+///         "1"
+///     );
+///
+///     let cert = vec![0_u8; 32];
+///
+///     let client_config = kms_tls_client_config(cert, kms_config).await?;
+///
+///     // Use the client_config with a TLS client
+///     // ...
+///
+///     Ok(())
+/// }
+/// ```
+#[tracing::instrument]
+pub async fn kms_tls_client_config(
+    public_certificate: Vec<u8>,
+    kms_config: KmsConfig,
+) -> Result<Box<rustls::ClientConfig>, GcpError> {
+    let config = google_cloud_kms::client::ClientConfig::default()
+        .with_auth()
+        .await?;
+    let client = google_cloud_kms::client::Client::new(config)
+        .await
+        .map_err(GcpError::KmsClient)?;
+    tracing::debug!("client connected");
+    let provider = rustls_gcp_kms::provider(client, kms_config).await?;
+
+    let cert = CertificateDer::from_pem_slice(public_certificate.iter().as_slice())?;
+
+    let root_store = RootCertStore {
+        roots: webpki_roots::TLS_SERVER_ROOTS.into(),
+    };
+
+    let client_config = rustls::ClientConfig::builder_with_provider(Arc::new(provider))
+        .with_safe_default_protocol_versions()?
+        .with_root_certificates(root_store)
+        .with_client_auth_cert(vec![cert], dummy_key())?;
+
+    tracing::debug!("tls client config created");
+    Ok(Box::new(client_config))
+}
+
+async fn connect_pubsub_client() -> Result<google_cloud_pubsub::client::Client, GcpError> {
+    let config = google_cloud_pubsub::client::ClientConfig::default()
+        .with_auth()
+        .await?;
+    let client = google_cloud_pubsub::client::Client::new(config).await?;
     Ok(client)
 }
