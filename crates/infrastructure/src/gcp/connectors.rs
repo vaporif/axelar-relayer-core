@@ -54,7 +54,7 @@ use crate::interfaces::publisher::QueueMsgId;
 ///
 /// ```
 /// use std::time::Duration;
-/// use borsh::BorshDeserialize;
+/// use borsh::{BorshDeserialize, BorshSerialize};
 /// use tokio_util::sync::CancellationToken;
 /// use infrastructure::gcp::connectors::connect_consumer;
 /// use infrastructure::gcp::GcpError;
@@ -64,7 +64,7 @@ use crate::interfaces::publisher::QueueMsgId;
 /// use infrastructure::interfaces::consumer::AckKind;
 /// use crate::infrastructure::interfaces::consumer::QueueMessage;
 ///
-/// #[derive(Debug, BorshDeserialize)]
+/// #[derive(Debug, BorshDeserialize, BorshSerialize)]
 /// struct EventMessage {
 ///     id: String,
 ///     timestamp: u64,
@@ -79,7 +79,6 @@ use crate::interfaces::publisher::QueueMsgId;
 ///         redis_connection: "redis://redis-server:6379".to_owned(),
 ///         ack_deadline_secs: 10,
 ///         channel_capacity: Some(50),
-///         message_buffer_size: 50,
 ///         worker_count: 5,
 ///     };
 ///
@@ -121,7 +120,7 @@ pub async fn connect_consumer<T>(
     cancel_token: CancellationToken,
 ) -> Result<GcpConsumer<T>, GcpError>
 where
-    T: BorshDeserialize + Send + Sync + Debug + 'static,
+    T: BorshDeserialize + BorshSerialize + Send + Sync + Debug + 'static,
 {
     let client = connect_pubsub_client().await?;
     let consumer = GcpConsumer::new(&client, subscription, config, cancel_token).await?;
@@ -165,7 +164,7 @@ where
 /// use crate::infrastructure::interfaces::publisher::{Publisher, PublishMessage};
 ///
 ///
-/// #[derive(Debug, borsh::BorshSerialize)]
+/// #[derive(Debug, borsh::BorshDeserialize, borsh::BorshSerialize)]
 /// struct EventMessage {
 ///     id: String,
 ///     timestamp: u64,
@@ -256,7 +255,7 @@ pub async fn connect_publisher<T>(
 /// use crate::infrastructure::interfaces::publisher::PeekMessage;
 ///
 ///
-/// #[derive(Clone, Debug, borsh::BorshSerialize)]
+/// #[derive(Clone, Debug, borsh::BorshDeserialize, borsh::BorshSerialize)]
 /// struct EventMessage {
 ///     id: String,
 ///     timestamp: u64,
@@ -355,11 +354,11 @@ where
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let kms_config = KmsConfig::new(
-///         "my-project-id",
-///         "global",
-///         "my-keyring",
-///         "my-key",
-///         "1"
+///         "my-project-id".to_owned(),
+///         "global".to_owned(),
+///         "my-keyring".to_owned(),
+///         "my-key".to_owned(),
+///         "1".to_owned()
 ///     );
 ///
 ///     let cert = vec![0_u8; 32];
@@ -383,7 +382,7 @@ pub async fn kms_tls_client_config(
     let client = google_cloud_kms::client::Client::new(config)
         .await
         .map_err(GcpError::KmsClient)?;
-    tracing::debug!("client connected");
+    tracing::trace!("client connected");
     let provider = rustls_gcp_kms::provider(client, kms_config).await?;
 
     let cert = CertificateDer::from_pem_slice(public_certificate.iter().as_slice())?;
@@ -397,7 +396,7 @@ pub async fn kms_tls_client_config(
         .with_root_certificates(root_store)
         .with_client_auth_cert(vec![cert], dummy_key())?;
 
-    tracing::debug!("tls client config created");
+    tracing::trace!("tls client config created");
     Ok(Box::new(client_config))
 }
 

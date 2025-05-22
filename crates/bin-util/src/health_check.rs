@@ -44,6 +44,7 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Json};
 use axum::routing::get;
 use eyre::Result;
+use serde::Deserialize;
 use serde_json::json;
 use tokio_util::sync::CancellationToken;
 
@@ -53,6 +54,13 @@ use tokio_util::sync::CancellationToken;
 /// where `Ok(())` indicates a successful health check and `Err(_)` indicates a failure.
 pub type HealthCheck =
     Box<dyn Fn() -> Pin<Box<dyn Future<Output = Result<()>> + Send>> + Send + Sync>;
+
+/// Healthcheck config
+#[derive(Debug, Deserialize)]
+pub struct Config {
+    /// Port for the health check server
+    pub port: u16,
+}
 
 /// A server that handles health check and readiness probe requests.
 ///
@@ -204,10 +212,10 @@ async fn check_and_respond(
 
     let has_error = results.iter().any(core::result::Result::is_err);
     if has_error {
-        tracing::debug!("Health check failed");
+        tracing::trace!("Health check failed");
         (err_status, Json(json!({ "status": err_str })))
     } else {
-        tracing::debug!("Health check succeeded");
+        tracing::trace!("Health check succeeded");
         (ok_status, Json(json!({ "status": ok_str })))
     }
 }
@@ -273,16 +281,16 @@ mod tests {
     async fn test_multiple_health_checks() {
         let port = get_free_port();
         let flag = Arc::new(AtomicBool::new(false));
-        let flag2 = flag.clone();
         let cancel_token = CancellationToken::new();
         let token_clone = cancel_token.clone();
 
+        let is_healthy_flag = Arc::clone(&flag);
         let server = Server::new(port)
             .add_health_check(|| async { Ok(()) })
             .add_health_check(move || {
-                let ok = !flag2.load(Ordering::SeqCst);
+                let is_ok = !is_healthy_flag.load(Ordering::Relaxed);
                 async move {
-                    if ok {
+                    if is_ok {
                         Ok(())
                     } else {
                         Err(eyre::eyre!("Intentional failure"))

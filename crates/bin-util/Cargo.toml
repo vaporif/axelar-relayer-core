@@ -8,17 +8,42 @@ license.workspace = true
 edition.workspace = true
 
 [dependencies]
-ctrlc.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
-axum.workspace = true
 eyre.workspace = true
-reqwest.workspace = true
 serde_json.workspace = true
-serde.workspace = true
+serde = { workspace = true, features = ["derive"] }
 futures.workspace = true
-config.workspace = true
+opentelemetry.workspace = true
+tracing-opentelemetry.workspace = true
+color-eyre.workspace = true
+uuid.workspace = true
+
+axum = "0.8"
+ctrlc = "3"
+config = "0.15"
+opentelemetry-otlp = { version = "0.29", features = ["metrics", "grpc-tonic"] }
+opentelemetry_sdk = "0.29"
+# TODO: update when compatible release is made
+opentelemetry-system-metrics = { git = "https://github.com/haixuanTao/opentelemetry-system-metrics" }
+opentelemetry-semantic-conventions = { version = "0.29", features = [
+  "semconv_experimental",
+] }
+opentelemetry-resource-detectors = "0.8"
+tracing-subscriber = { version = "0.3", features = [
+  "env-filter",
+  "fmt",
+  "json",
+  "registry",
+] }
+tracing-appender = "0.2.3"
+tracing-error = "0.2"
+
+[dev-dependencies]
+reqwest.workspace = true
 
 [lints]
 workspace = true
+
+[features]

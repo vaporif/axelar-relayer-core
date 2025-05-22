@@ -3,14 +3,20 @@ use core::panic::AssertUnwindSafe;
 use core::pin::Pin;
 use core::time::Duration;
 use std::collections::BTreeMap;
+use std::fs::OpenOptions;
+use std::io::Write as _;
 use std::{panic, thread};
 
 use eyre::Context as _;
+use nix::sys::stat::Mode;
 use tokio_util::sync::CancellationToken;
 
 const SHUTDOWN_SIGNAL_CHECK_INTERVAL_MS: u64 = 500;
 const WORKER_GRACEFUL_SHUTDOWN_MS: u64 = 2000;
 const WORKER_CRASH_CHECK_MS: u64 = 2000;
+
+/// ENV var to set pipe path triggered when supervisor starts everything
+pub const READY_PIPE_PATH_ENV: &str = "READY_PIPE_PATH";
 
 type WorkerName = String;
 
@@ -31,6 +37,15 @@ pub fn run(
     cancel_token: &CancellationToken,
     tickrate: Duration,
 ) -> eyre::Result<()> {
+    if cfg!(debug_assertions) {
+        if let Ok(pipe_path) = std::env::var(READY_PIPE_PATH_ENV) {
+            tracing::warn!("[Test mode] deleting pipe file: {pipe_path}");
+            if std::fs::exists(&pipe_path).expect("pipe existance checked") {
+                std::fs::remove_file(pipe_path).expect("pipe file deleted");
+            }
+        }
+    }
+
     _ = std::thread::scope(|scope| {
         let (worker_crashed_tx, worker_crashed_rx) = std::sync::mpsc::channel();
         let mut active_workers = BTreeMap::new();
@@ -64,14 +79,34 @@ pub fn run(
                     active_workers.insert(worker_name.clone(), Some(worker_handle));
                 }
 
-                tracing::info!("started");
+                if cfg!(debug_assertions) {
+                    if let Ok(pipe_path) = std::env::var(READY_PIPE_PATH_ENV) {
+                        tracing::warn!("[Test mode] signaling readiness");
+                        // Owner: read(S_IRUSR) + write(S_IWUSR)
+                        // Group: read(S_IRGRP)
+                        // Others: read(S_IROTH)
+                        let mode = Mode::S_IRUSR | Mode::S_IWUSR | Mode::S_IRGRP | Mode::S_IROTH;
+                        nix::unistd::mkfifo(pipe_path.as_str(), mode).expect("named fife created");
+
+                        OpenOptions::new()
+                            .write(true)
+                            .open(pipe_path)
+                            .expect("open ready pipe")
+                            .write_all(b"READY")
+                            .expect("write READY to ready pipe");
+
+                        tracing::warn!("Readiness signal sent");
+                    }
+                }
+
+                tracing::info!("all workers are running");
 
                 let mut interval = tokio::time::interval(Duration::from_millis(SHUTDOWN_SIGNAL_CHECK_INTERVAL_MS));
                 loop {
                     tokio::select! {
                         _ = interval.tick() => {
                             if cancel_token.is_cancelled() {
-                                tracing::debug!("supervisor detected shutdown signal");
+                                tracing::trace!("supervisor detected shutdown signal");
                                 tokio::time::sleep(Duration::from_millis(WORKER_GRACEFUL_SHUTDOWN_MS)).await;
                                 break;
                             }
@@ -84,14 +119,14 @@ pub fn run(
                                     None
                                 }
                                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                                    tracing::debug!("worker channel disconnected");
+                                    tracing::trace!("worker channel disconnected");
                                     None
                                 }
                             }
                         } => {
                             if let Some(worker_name) = worker_result {
                                 if cancel_token.is_cancelled() {
-                                    tracing::debug!("worker crashed during shutdown, no restarting");
+                                    tracing::trace!("worker crashed during shutdown, no restarting");
                                     continue;
                                 }
                                 tracing::info!(worker_name, "Restarting worker");
@@ -117,7 +152,7 @@ pub fn run(
 
                                 if let Some(Some(old_handle)) = active_workers.remove(&worker_name) {
                                     _ = old_handle.join();
-                                    tracing::debug!(worker_name, "Replaced existing worker handle");
+                                    tracing::trace!(worker_name, "Replaced existing worker handle");
                                 }
                                 active_workers.insert(worker_name.clone(), Some(worker_handle));
                             }
@@ -134,6 +169,14 @@ pub fn run(
             .map_err(|err| eyre::eyre!(format!("Supervisor thread panicked: {err:?}")))?;
 
         tracing::info!("Supervisor shutting down");
+
+        if cfg!(debug_assertions) {
+            if let Ok(pipe_path) = std::env::var(READY_PIPE_PATH_ENV) {
+                tracing::warn!("[Test mode] deleting ready pipe");
+                std::fs::remove_file(pipe_path).expect("pipe file deleted");
+            }
+        }
+
         eyre::Ok(())
     });
 
@@ -149,7 +192,7 @@ fn spawn_worker<'scope>(
     scope: &'scope std::thread::Scope<'scope, '_>,
     tickrate: Duration,
 ) -> std::thread::ScopedJoinHandle<'scope, ()> {
-    tracing::debug!(worker_name, "starting worker");
+    tracing::trace!(worker_name, "starting worker");
     let worker_name = worker_name.clone();
 
     scope.spawn(move || {
@@ -207,9 +250,9 @@ fn spawn_worker<'scope>(
         if cancel_token.is_cancelled() {
             thread::sleep(Duration::from_secs(1));
             _ = worker_crashed_tx.send(worker_name.clone());
-            tracing::debug!(worker_name, "Reported worker crash for restart");
+            tracing::trace!(worker_name, "Reported worker crash for restart");
         }
 
-        tracing::debug!("worker exit post crash report");
+        tracing::trace!("worker exit post crash report");
     })
 }

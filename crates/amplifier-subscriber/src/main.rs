@@ -29,50 +29,57 @@ mod config;
 use core::time::Duration;
 
 use bin_util::health_check;
-use clap::Parser;
+use clap::{Parser, crate_name, crate_version};
 use config::Config;
 use tokio_util::sync::CancellationToken;
 
-// TODO: Move this to config
-const MAX_ERRORS: i32 = 20;
-
 #[derive(Parser, Debug)]
-#[command(author = "Eiger", name = "Axelar<>Blockchain Relayer")]
+#[command(author = "Eiger", name = "Axelar Relayer(amplifier-subscriber)")]
 pub(crate) struct Cli {
-    #[arg(
-        long,
-        short,
-        default_value = "relayer-config.toml",
-        help = "Config path"
-    )]
+    #[arg(long, short, default_value = "relayer-config", help = "Config path")]
     pub config_path: String,
 }
 
 #[tokio::main]
 async fn main() {
     bin_util::ensure_backtrace_set();
-
     let cli = Cli::parse();
 
-    let config: Config =
-        bin_util::try_deserialize(&cli.config_path).expect("common config correct");
-    let cancel_token = bin_util::register_cancel();
+    let config: Config = bin_util::try_deserialize(&cli.config_path).expect("config is correct");
+    let (telemetry_tracer, _observer_handle) = if let Some(ref telemetry_cfg) = config.telemetry {
+        let (tracer, observer_handle) =
+            bin_util::telemetry::init(crate_name!(), crate_version!(), telemetry_cfg)
+                .expect("telemetry wired up");
+        (Some(tracer), Some(observer_handle))
+    } else {
+        (None, None)
+    };
 
+    let _stderr_logging_guard =
+        bin_util::init_logging(config.env_filters, telemetry_tracer).expect("logging wired up");
+
+    let cancel_token = bin_util::register_cancel();
     tokio::try_join!(
-        spawn_subscriber_worker(config.tickrate, cli.config_path.clone(), &cancel_token),
+        spawn_subscriber_worker(
+            config.tickrate,
+            config.max_errors,
+            cli.config_path.clone(),
+            &cancel_token
+        ),
         spawn_health_check_server(
             config.health_check.port,
             cli.config_path.clone(),
             cancel_token.clone()
         )
     )
-    .expect("Failed to join tasks");
+    .expect("Failed to join main loop and health server tasks");
 
     tracing::info!("Amplifier subscriber has been shut down");
 }
 
 fn spawn_subscriber_worker(
     tickrate: Duration,
+    max_errors: u32,
     config_path: String,
     cancel_token: &CancellationToken,
 ) -> tokio::task::JoinHandle<()> {
@@ -90,9 +97,9 @@ fn spawn_subscriber_worker(
                 .await
                 .expect("subscriber is created");
 
-            tracing::debug!("Starting amplifier subscriber...");
+            tracing::trace!("Starting amplifier subscriber...");
 
-            let mut error_count: i32 = 0;
+            let mut error_count: u32 = 0;
 
             cancel_token
                 .run_until_cancelled(async move {
@@ -102,12 +109,12 @@ fn spawn_subscriber_worker(
                         if let Err(err) = subscriber.subscribe().await {
                             tracing::error!(?err, "error during ingest, skipping...");
                             error_count = error_count.saturating_add(1);
-                            if error_count >= MAX_ERRORS {
+                            if error_count >= max_errors {
                                 tracing::error!("Max error threshold reached. Exiting loop.");
                                 break;
                             }
                         } else {
-                            error_count = 0_i32;
+                            error_count = 0_u32;
                         }
                     }
                 })
@@ -124,7 +131,7 @@ fn spawn_health_check_server(
     cancel_token: CancellationToken,
 ) -> tokio::task::JoinHandle<()> {
     tokio::task::spawn(async move {
-        tracing::debug!("Starting health check server...");
+        tracing::trace!("Starting health check server...");
 
         health_check::new(port)
             .add_health_check(move || {
