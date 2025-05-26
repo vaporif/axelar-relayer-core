@@ -9,7 +9,7 @@ const fn default_max_errors() -> u32 {
     MAX_ERRORS
 }
 
-const LIMIT_ITEMS: u8 = 4;
+const LIMIT_ITEMS: u8 = 100;
 const fn default_limit_per_request() -> u8 {
     LIMIT_ITEMS
 }
