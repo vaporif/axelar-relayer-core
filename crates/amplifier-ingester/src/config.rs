@@ -9,7 +9,7 @@ const fn default_max_errors() -> u32 {
     MAX_ERRORS
 }
 
-const CONCURRENCY_SCALE_FACTOR: usize = 4;
+const CONCURRENCY_SCALE_FACTOR: usize = 10;
 const fn default_concurrency_scale_factor() -> usize {
     CONCURRENCY_SCALE_FACTOR
 }
