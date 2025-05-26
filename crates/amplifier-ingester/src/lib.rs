@@ -11,9 +11,6 @@ use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEven
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use tracing::Instrument as _;
 
-// TODO: adjust based on metrics
-const CONCURRENCY_SCALE_FACTOR: usize = 4;
-
 /// Consumes events queue and sends it to include to amplifier api
 pub struct Ingester<EventQueueConsumer> {
     ampf_client: AmplifierApiClient,
@@ -31,13 +28,16 @@ where
     pub fn new(
         amplifier_client: AmplifierApiClient,
         event_queue_consumer: EventQueueConsumer,
+        concurrency_scale_factor: usize,
         chain: String,
     ) -> Self {
         let event_queue_consumer = Arc::new(event_queue_consumer);
         let num_cpus = num_cpus::get();
         let concurrent_queue_items = num_cpus
-            .checked_mul(CONCURRENCY_SCALE_FACTOR)
+            .checked_mul(concurrency_scale_factor)
             .unwrap_or(num_cpus);
+
+        tracing::trace!(%concurrent_queue_items, "concurrency");
 
         let metrics = SimpleMetrics::new("amplifier-ingester", vec![]);
         Self {
@@ -114,7 +114,7 @@ where
     /// consume queue messages and ingest to amplifier api
     #[tracing::instrument(skip_all, name = "amplifier-ingest-refresh")]
     pub async fn ingest(&self) -> eyre::Result<()> {
-        tracing::trace!("refresh");
+        tracing::trace!("refresh start");
 
         self.event_queue_consumer
             .messages()
@@ -135,6 +135,7 @@ where
             .instrument(tracing::info_span!("processing messages"))
             .await;
 
+        tracing::trace!("refresh end");
         Ok(())
     }
 

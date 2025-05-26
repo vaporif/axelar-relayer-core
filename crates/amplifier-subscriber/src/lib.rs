@@ -10,6 +10,7 @@ pub struct Subscriber<TaskQueuePublisher> {
     amplifier_client: AmplifierApiClient,
     task_queue_publisher: TaskQueuePublisher,
     chain: String,
+    limit_items: u8,
     metrics: SimpleMetrics,
 }
 
@@ -22,6 +23,7 @@ where
     pub fn new(
         amplifier_client: AmplifierApiClient,
         task_queue_publisher: TaskQueuePublisher,
+        limit_items: u8,
         chain: String,
     ) -> Self {
         let metrics = SimpleMetrics::new("amplifier-subscriber", vec![]);
@@ -29,6 +31,7 @@ where
             amplifier_client,
             task_queue_publisher,
             chain,
+            limit_items,
             metrics,
         }
     }
@@ -36,7 +39,7 @@ where
     /// subscribe and process
     #[tracing::instrument(skip_all, name = "amplifier-subscribe-refresh")]
     pub async fn subscribe(&mut self) -> eyre::Result<()> {
-        tracing::trace!("refresh");
+        tracing::trace!("refresh start");
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
         let res: eyre::Result<()> = {
@@ -50,7 +53,7 @@ where
 
             let request = requests::GetChains::builder()
                 .chain(&chain_with_trailing_slash)
-                .limit(100_u8)
+                .limit(self.limit_items)
                 .after(last_task_id)
                 .build();
 
@@ -102,6 +105,8 @@ where
         if res.is_err() {
             self.metrics.record_error();
         }
+
+        tracing::trace!("refresh end");
 
         res
     }

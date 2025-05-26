@@ -9,6 +9,11 @@ const fn default_max_errors() -> u32 {
     MAX_ERRORS
 }
 
+const CONCURRENCY_SCALE_FACTOR: usize = 4;
+const fn default_concurrency_scale_factor() -> usize {
+    CONCURRENCY_SCALE_FACTOR
+}
+
 /// Top-level configuration for the relayer.
 #[derive(Debug, Deserialize)]
 pub(crate) struct Config {
@@ -27,6 +32,10 @@ pub(crate) struct Config {
     /// Maximum consecutive errors allowed before application termination.
     #[serde(default = "default_max_errors")]
     pub max_errors: u32,
+    /// Concurrency scale factor, multiplies num of cpus to calculate simultaneous items in
+    /// processing
+    #[serde(default = "default_concurrency_scale_factor")]
+    pub concurrency_scale_factor: usize,
 }
 
 impl ValidateConfig for Config {

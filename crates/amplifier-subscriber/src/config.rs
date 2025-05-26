@@ -9,6 +9,11 @@ const fn default_max_errors() -> u32 {
     MAX_ERRORS
 }
 
+const LIMIT_ITEMS: u8 = 4;
+const fn default_limit_per_request() -> u8 {
+    LIMIT_ITEMS
+}
+
 /// Top-level configuration for the relayer.
 #[derive(Debug, Deserialize)]
 pub(crate) struct Config {
@@ -27,6 +32,9 @@ pub(crate) struct Config {
     /// Maximum consecutive errors allowed before application termination.
     #[serde(default = "default_max_errors")]
     pub max_errors: u32,
+    /// Limit of items per request to amplifier api
+    #[serde(default = "default_limit_per_request")]
+    pub limit_per_request: u8,
 }
 
 impl ValidateConfig for Config {
