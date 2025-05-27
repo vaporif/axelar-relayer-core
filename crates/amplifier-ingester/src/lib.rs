@@ -28,17 +28,10 @@ where
     pub fn new(
         amplifier_client: AmplifierApiClient,
         event_queue_consumer: EventQueueConsumer,
-        concurrency_scale_factor: usize,
+        concurrent_queue_items: usize,
         chain: String,
     ) -> Self {
         let event_queue_consumer = Arc::new(event_queue_consumer);
-        let num_cpus = num_cpus::get();
-        let concurrent_queue_items = num_cpus
-            .checked_mul(concurrency_scale_factor)
-            .unwrap_or(num_cpus);
-
-        tracing::trace!(%concurrent_queue_items, "concurrency");
-
         let metrics = SimpleMetrics::new("amplifier-ingester", vec![]);
         Self {
             ampf_client: amplifier_client,
