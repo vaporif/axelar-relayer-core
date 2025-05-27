@@ -2210,8 +2210,9 @@ checksum = "84b29a9f89f1a954936d5aa92f19b2feec3c8f3971d3e96206640db7f9706ae3"
 
 [[package]]
 name = "opentelemetry-system-metrics"
-version = "0.4.0"
-source = "git+https://github.com/haixuanTao/opentelemetry-system-metrics#4db5246b477f92499b9fdbc20c83464e005c71ce"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a54d9d46d8a7380cd3e84840aa56681b55cf9f5c8fd65fe5f9c4b1e0d87a5d68"
 dependencies = [
  "eyre",
  "nvml-wrapper",
