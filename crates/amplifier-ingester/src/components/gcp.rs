@@ -9,10 +9,6 @@ use tokio_util::sync::CancellationToken;
 
 use crate::config::Config;
 
-// TODO: Adsjust based on metrics
-const WORKERS_SCALE_FACTOR: usize = 4;
-const CHANNEL_CAPACITY_SCALE_FACTOR: usize = 4;
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct GcpSectionConfig {
     gcp: GcpConfig,
@@ -27,6 +23,8 @@ pub(crate) struct GcpConfig {
     pub events_topic: String,
     pub events_subscription: String,
     pub ack_deadline_secs: i32,
+    pub channel_capacity: Option<usize>,
+    pub worker_count: usize,
 }
 
 impl ValidateConfig for GcpSectionConfig {
@@ -67,15 +65,11 @@ pub(crate) async fn new_amplifier_ingester(
     let config: Config = bin_util::try_deserialize(config_path)?;
     let infra_config: GcpSectionConfig = bin_util::try_deserialize(config_path)?;
 
-    let num_cpus = num_cpus::get();
-
     let consumer_cfg = GcpConsumerConfig {
         redis_connection: infra_config.gcp.redis_connection.clone(),
         ack_deadline_secs: infra_config.gcp.ack_deadline_secs,
-        channel_capacity: num_cpus.checked_mul(CHANNEL_CAPACITY_SCALE_FACTOR),
-        worker_count: num_cpus
-            .checked_mul(WORKERS_SCALE_FACTOR)
-            .unwrap_or(num_cpus),
+        channel_capacity: infra_config.gcp.channel_capacity,
+        worker_count: infra_config.gcp.worker_count,
     };
 
     let event_queue_consumer = gcp::connectors::connect_consumer(
@@ -91,6 +85,7 @@ pub(crate) async fn new_amplifier_ingester(
     Ok(amplifier_ingester::Ingester::new(
         amplifier_client,
         event_queue_consumer,
+        config.concurrent_queue_items,
         config.amplifier_component.chain.clone(),
     ))
 }

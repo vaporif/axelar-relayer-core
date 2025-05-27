@@ -1,4 +1,5 @@
 use bin_util::ValidateConfig;
+use bin_util::config_defaults::{default_max_bundle_size, default_worker_count};
 use eyre::{Context as _, ensure, eyre};
 use infrastructure::gcp;
 use infrastructure::gcp::connectors::KmsConfig;
@@ -9,8 +10,6 @@ use serde::Deserialize;
 use crate::config::Config;
 
 const TASK_KEY: &str = "last-task";
-const WORKERS_SCALE_FACTOR: usize = 4;
-const BUNDLE_SIZE_SCALE_FACTOR: usize = 4;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct GcpSectionConfig {
@@ -26,6 +25,10 @@ pub(crate) struct GcpConfig {
     events_topic: String,
     events_subscription: String,
     nak_deadline_secs: i32,
+    #[serde(default = "default_worker_count")]
+    worker_count: usize,
+    #[serde(default = "default_max_bundle_size")]
+    max_bundle_size: usize,
 }
 
 impl ValidateConfig for GcpSectionConfig {
@@ -66,18 +69,13 @@ pub(crate) async fn new_amplifier_subscriber(
 > {
     let config: Config = bin_util::try_deserialize(config_path)?;
     let infra_config: GcpSectionConfig = bin_util::try_deserialize(config_path)?;
-    let num_cpus = num_cpus::get();
 
     let task_queue_publisher = gcp::connectors::connect_peekable_publisher(
         &infra_config.gcp.tasks_topic,
         infra_config.gcp.redis_connection.clone(),
         TASK_KEY.to_owned(),
-        num_cpus
-            .checked_mul(WORKERS_SCALE_FACTOR)
-            .unwrap_or(num_cpus),
-        num_cpus
-            .checked_mul(BUNDLE_SIZE_SCALE_FACTOR)
-            .unwrap_or(num_cpus),
+        infra_config.gcp.worker_count,
+        infra_config.gcp.max_bundle_size,
     )
     .await
     .wrap_err("task queue publisher connect err")?;
@@ -86,6 +84,7 @@ pub(crate) async fn new_amplifier_subscriber(
     Ok(amplifier_subscriber::Subscriber::new(
         amplifier_client,
         task_queue_publisher,
+        config.limit_per_request,
         config.amplifier_component.chain.clone(),
     ))
 }

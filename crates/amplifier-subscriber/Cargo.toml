@@ -22,7 +22,6 @@ tracing.workspace = true
 eyre.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
-num_cpus.workspace = true
 serde.workspace = true
 clap.workspace = true
 url.workspace = true

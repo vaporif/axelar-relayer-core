@@ -190,7 +190,7 @@ pub struct GcpConsumerConfig {
     pub redis_connection: String,
     /// Deadline to ack message
     pub ack_deadline_secs: i32,
-    /// Capacity of underlyng flume channel holding messages to consume
+    /// Capacity of gcp channel holding messages to consume
     pub channel_capacity: Option<usize>,
     /// Underlying count of workers reading from GCP pubsub provider subscription
     pub worker_count: usize,

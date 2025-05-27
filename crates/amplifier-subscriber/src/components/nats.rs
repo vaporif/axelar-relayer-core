@@ -57,6 +57,7 @@ pub(crate) async fn new_amplifier_subscriber(
     Ok(amplifier_subscriber::Subscriber::new(
         amplifier_client,
         task_queue_publisher,
+        config.limit_per_request,
         config.amplifier_component.chain.clone(),
     ))
 }
