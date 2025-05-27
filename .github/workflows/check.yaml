@@ -24,4 +24,4 @@ jobs:
         uses: ./.github/actions/setup-repo
 
       - name: cargo xtask check
-        run: cargo +nightly xtask check
+        run: cargo  xtask check
