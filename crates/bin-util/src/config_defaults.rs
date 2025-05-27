@@ -33,3 +33,11 @@ const MAX_ERRORS: u32 = 20;
 pub const fn default_max_errors() -> u32 {
     MAX_ERRORS
 }
+
+const LIMIT_ITEMS: u8 = 100;
+
+/// Default limit per request
+#[must_use]
+pub const fn default_limit_per_request() -> u8 {
+    LIMIT_ITEMS
+}

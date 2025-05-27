@@ -1,18 +1,9 @@
 use core::time::Duration;
 
+use bin_util::config_defaults::{default_limit_per_request, default_max_errors};
 use bin_util::{ValidateConfig, deserialize_duration_from_secs};
 use eyre::ensure;
 use serde::Deserialize;
-
-const MAX_ERRORS: u32 = 20;
-const fn default_max_errors() -> u32 {
-    MAX_ERRORS
-}
-
-const LIMIT_ITEMS: u8 = 100;
-const fn default_limit_per_request() -> u8 {
-    LIMIT_ITEMS
-}
 
 /// Top-level configuration for the relayer.
 #[derive(Debug, Deserialize)]
