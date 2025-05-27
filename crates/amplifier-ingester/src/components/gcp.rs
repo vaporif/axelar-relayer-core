@@ -1,5 +1,4 @@
 use bin_util::ValidateConfig;
-use bin_util::config_defaults::default_concurrent_queue_items;
 use eyre::{Context as _, ensure, eyre};
 use infrastructure::gcp;
 use infrastructure::gcp::connectors::KmsConfig;
@@ -26,8 +25,6 @@ pub(crate) struct GcpConfig {
     pub ack_deadline_secs: i32,
     pub channel_capacity: Option<usize>,
     pub worker_count: usize,
-    #[serde(default = "default_concurrent_queue_items")]
-    pub concurrent_queue_items: usize,
 }
 
 impl ValidateConfig for GcpSectionConfig {
@@ -83,19 +80,19 @@ pub(crate) async fn new_amplifier_ingester(
     .await
     .wrap_err("event consumer connect err")?;
 
-    let amplifier_client = amplifier_client(&config, &infra_config).await?;
+    let amplifier_client = amplifier_client(&config, infra_config).await?;
 
     Ok(amplifier_ingester::Ingester::new(
         amplifier_client,
         event_queue_consumer,
-        infra_config.gcp.concurrent_queue_items,
+        config.concurrent_queue_items,
         config.amplifier_component.chain.clone(),
     ))
 }
 
 async fn amplifier_client(
     config: &Config,
-    infra_config: &GcpSectionConfig,
+    infra_config: GcpSectionConfig,
 ) -> eyre::Result<AmplifierApiClient> {
     let client_config = gcp::connectors::kms_tls_client_config(
         config
@@ -104,7 +101,7 @@ async fn amplifier_client(
             .clone()
             .ok_or_else(|| eyre::Report::msg("tls_public_certificate should be set"))?
             .into_bytes(),
-        infra_config.gcp.kms.clone(),
+        infra_config.gcp.kms,
     )
     .await
     .wrap_err("kms connection failed")?;

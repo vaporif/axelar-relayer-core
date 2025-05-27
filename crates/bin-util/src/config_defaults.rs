@@ -25,3 +25,11 @@ const WORKER_COUNT: usize = 50;
 pub const fn default_worker_count() -> usize {
     WORKER_COUNT
 }
+
+const MAX_ERRORS: u32 = 20;
+
+/// Default max errors
+#[must_use]
+pub const fn default_max_errors() -> u32 {
+    MAX_ERRORS
+}

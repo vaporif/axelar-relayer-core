@@ -62,7 +62,7 @@ pub(crate) async fn new_amplifier_ingester(
     Ok(amplifier_ingester::Ingester::new(
         amplifier_client,
         event_queue_consumer,
-        config.concurrency_scale_factor,
+        config.concurrent_queue_items,
         config.amplifier_component.chain.clone(),
     ))
 }

@@ -1,13 +1,9 @@
 use core::time::Duration;
 
+use bin_util::config_defaults::{default_concurrent_queue_items, default_max_errors};
 use bin_util::{ValidateConfig, deserialize_duration_from_secs};
 use eyre::ensure;
 use serde::Deserialize;
-
-const MAX_ERRORS: u32 = 20;
-const fn default_max_errors() -> u32 {
-    MAX_ERRORS
-}
 
 /// Top-level configuration for the relayer.
 #[derive(Debug, Deserialize)]
@@ -27,6 +23,8 @@ pub(crate) struct Config {
     /// Maximum consecutive errors allowed before application termination.
     #[serde(default = "default_max_errors")]
     pub max_errors: u32,
+    #[serde(default = "default_concurrent_queue_items")]
+    pub concurrent_queue_items: usize,
 }
 
 impl ValidateConfig for Config {
