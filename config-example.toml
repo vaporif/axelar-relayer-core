@@ -1,7 +1,7 @@
 tickrate_secs = 5
 max_errors = 20
 limit_per_request = 100
-concurrency_scale_factor = 20
+concurrent_queue_items = 50
 
 env_filters = [
   "storage_bus=info",
@@ -24,6 +24,7 @@ tasks_subscription = "amplifier-tasks-sub"
 events_topic = "amplifier-events"
 events_subscription = "amplifier-events-sub"
 ack_deadline_secs = 10
+worker_count = 50
 
 # tls key for amplifier api secured by gcp kms
 [gcp.kms]
