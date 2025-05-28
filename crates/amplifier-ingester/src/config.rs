@@ -10,10 +10,11 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub(crate) struct Config {
     /// Per-crate log levels (e.g. `my_crate` = "debug")
+    #[serde(default)]
     pub env_filters: Option<Vec<String>>,
     /// Configures how synthesized events are emitted at points in the [span
     /// lifecycle][lifecycle].
-    #[serde(deserialize_with = "deserialize_fmt_span_option")]
+    #[serde(deserialize_with = "deserialize_fmt_span_option", default)]
     pub span_events: Option<FmtSpan>,
     /// Configuration for the Amplifier API processor
     pub amplifier_component: relayer_amplifier_api_integration::Config,
@@ -22,6 +23,7 @@ pub(crate) struct Config {
     #[serde(rename = "tickrate_secs")]
     #[serde(deserialize_with = "deserialize_duration_from_secs")]
     pub tickrate: Duration,
+    #[serde(default)]
     pub telemetry: Option<bin_util::telemetry::Config>,
     #[serde(rename = "health_check_server")]
     pub health_check: bin_util::health_check::Config,
