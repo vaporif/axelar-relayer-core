@@ -11,7 +11,45 @@ use opentelemetry_sdk::trace::{RandomIdGenerator, SdkTracerProvider};
 use opentelemetry_semantic_conventions::resource;
 use opentelemetry_system_metrics::init_process_observer;
 use serde::Deserialize;
+pub use tracing_subscriber::fmt::format::FmtSpan;
 
+/// Parses a string into a `FmtSpan` enum variant for tracing configuration.
+///
+/// # Arguments
+///
+/// * `s` - A string slice representing the span event type. Case-insensitive.
+///
+/// # Returns
+///
+/// Returns `Ok(FmtSpan)` with the corresponding enum variant, or an `Err` if the
+/// input string doesn't match any valid span event type.
+///
+/// # Valid Input Values
+///
+/// * `"none"` - Maps to `FmtSpan::NONE` - No span events are formatted
+/// * `"new"` - Maps to `FmtSpan::NEW` - Format when spans are created
+/// * `"enter"` - Maps to `FmtSpan::ENTER` - Format when spans are entered
+/// * `"exit"` - Maps to `FmtSpan::EXIT` - Format when spans are exited
+/// * `"close"` - Maps to `FmtSpan::CLOSE` - Format when spans are closed/dropped
+/// * `"active"` - Maps to `FmtSpan::ACTIVE` - Format for active span events
+/// * `"full"` - Maps to `FmtSpan::FULL` - Format all span events
+///
+/// # Errors
+///
+/// Returns an `eyre::Error` if the input string doesn't match any of the valid
+/// span event types listed above.
+pub fn parse_fmt_span(s: &str) -> eyre::Result<FmtSpan> {
+    match s.to_lowercase().as_str() {
+        "none" => Ok(FmtSpan::NONE),
+        "new" => Ok(FmtSpan::NEW),
+        "enter" => Ok(FmtSpan::ENTER),
+        "exit" => Ok(FmtSpan::EXIT),
+        "close" => Ok(FmtSpan::CLOSE),
+        "active" => Ok(FmtSpan::ACTIVE),
+        "full" => Ok(FmtSpan::FULL),
+        _ => eyre::bail!(format!("Invalid span event type: {}", s)),
+    }
+}
 /// Configuration for telemetry
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {

@@ -1,6 +1,7 @@
 use core::time::Duration;
 
-use bin_util::{ValidateConfig, deserialize_duration_from_secs};
+use bin_util::telemetry::FmtSpan;
+use bin_util::{ValidateConfig, deserialize_duration_from_secs, deserialize_fmt_span_option};
 use eyre::ensure;
 use serde::Deserialize;
 
@@ -19,6 +20,10 @@ const fn default_limit_per_request() -> u8 {
 pub(crate) struct Config {
     /// Per-crate log levels (e.g. `my_crate` = "debug")
     pub env_filters: Option<Vec<String>>,
+    /// Configures how synthesized events are emitted at points in the [span
+    /// lifecycle][lifecycle].
+    #[serde(deserialize_with = "deserialize_fmt_span_option")]
+    pub span_events: Option<FmtSpan>,
     /// Configuration for the Amplifier API processor
     pub amplifier_component: relayer_amplifier_api_integration::Config,
     /// Duration (in seconds) to wait between consecutive polling

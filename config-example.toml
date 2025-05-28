@@ -9,6 +9,7 @@ env_filters = [
   "amplifier_ingester=info",
   "amplifier_subscriber=info",
 ]
+span_events = "close"
 
 [telemetry]
 otlp_endpoint = "http://localhost:4317"
