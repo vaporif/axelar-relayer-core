@@ -43,11 +43,16 @@ where
     }
 
     /// process queue message
+    #[tracing::instrument(skip_all)]
     pub async fn process_queue_msg<Msg: QueueMessage<Event>>(&self, mut queue_msg: Msg) {
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
         let event = queue_msg.decoded().clone();
-        tracing::info!(%event, "processing");
+        let span = tracing::Span::current();
+        if tracing::event_enabled!(tracing::Level::TRACE) {
+            span.record("event", format!("{event:?}"));
+        }
+
         let payload = PublishEventsRequest {
             events: vec![event.clone()],
         };
@@ -63,14 +68,10 @@ where
                 .build_request(&request)
                 .wrap_err("could not build amplifier request")?;
 
-            tracing::trace!(?request, "request sending");
-
             let response = request
                 .execute()
                 .await
                 .wrap_err("could not send amplifier request")?;
-
-            tracing::trace!("reading response");
 
             let response = response
                 .json()

@@ -11,6 +11,7 @@ use interfaces::kv_store::KvStore as _;
 use opentelemetry::metrics::{Counter, Histogram};
 use opentelemetry::propagation::Injector as _;
 use opentelemetry::{KeyValue, global};
+use tracing::event_enabled;
 
 use super::GcpError;
 use super::kv_store::RedisClient;
@@ -44,7 +45,6 @@ impl<T> GcpPublisher<T> {
         worker_count: usize,
         max_bundle_size: usize,
     ) -> Result<Self, GcpError> {
-        tracing::info!("initializing GCP PubSub publisher for topic");
         let topic = get_topic(client, topic).await?;
 
         let config = PublisherConfig {
@@ -55,7 +55,6 @@ impl<T> GcpPublisher<T> {
         };
 
         let publisher = topic.new_publisher(Some(config));
-        tracing::info!("GCP PubSub publisher successfully initialized");
         let metrics = Metrics::new(topic.fully_qualified_name());
 
         Ok(Self {
@@ -81,14 +80,13 @@ where
     tracing::trace!("serializing message to PubSub format");
     let encoded = borsh::to_vec(&message).map_err(GcpError::Serialize)?;
     let mut attributes = HashMap::new();
-    attributes.insert(MSG_ID.to_owned(), deduplication_id.clone());
+    attributes.insert(MSG_ID.to_owned(), deduplication_id);
     let message = PubsubMessage {
         data: encoded,
         attributes,
         ..Default::default()
     };
     tracing::trace!(
-        deduplication_id = %deduplication_id,
         message_size = message.data.len(),
         "message prepared for publishing"
     );
@@ -109,7 +107,6 @@ where
         )
     )]
     async fn publish(&self, msg: PublishMessage<T>) -> Result<Self::Return, GcpError> {
-        tracing::trace!(?msg.deduplication_id, ?msg.data, "preparing to publish message to PubSub");
         let res = {
             let msg = to_pubsub_message(msg)?;
             tracing::trace!("publishing message to PubSub queue");
@@ -147,14 +144,12 @@ where
             return Ok(Vec::new());
         }
 
-        tracing::info!("publishing");
         let res = {
             let bulk = batch
                 .into_iter()
                 .map(to_pubsub_message)
                 .collect::<Result<Vec<PubsubMessage>, GcpError>>()?;
 
-            tracing::trace!("submitting batch to publish queue");
             let start_time = std::time::Instant::now();
             let publish_handles = self.publisher.publish_bulk(bulk).await;
             tracing::trace!("waiting for batch publish confirmations");
@@ -214,9 +209,7 @@ where
         worker_count: usize,
         max_bundle_size: usize,
     ) -> Result<Self, GcpError> {
-        tracing::info!("initializing peekable GCP PubSub publisher");
         let publisher = GcpPublisher::new(client, topic, worker_count, max_bundle_size).await?;
-        tracing::info!("peekable GCP PubSub publisher successfully initialized");
 
         Ok(Self {
             publisher,
@@ -235,27 +228,23 @@ where
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(
         skip_all,
+        name = "peekable_publish",
         fields(
             deduplication_id = %msg.deduplication_id,
         )
     )]
     async fn publish(&self, msg: PublishMessage<T>) -> Result<Self::Return, GcpError> {
-        let last_msg_id = msg.data.id();
-        tracing::trace!(
-            last_message_id = %last_msg_id,
-            "publishing message with peekable publisher"
-        );
+        let msg_id = msg.data.id();
+        let span = tracing::Span::current();
+        if event_enabled!(tracing::Level::TRACE) {
+            span.record("msg_id", format!("{msg_id}"));
+        }
+
         let res = {
             let published = self.publisher.publish(msg).await?;
-            tracing::trace!(
-                last_message_id = %last_msg_id,
-                "updating last message ID in Redis"
-            );
-            self.last_message_id_store.upsert(&last_msg_id).await?;
-            tracing::info!(
-                last_message_id = %last_msg_id,
-                "message published and ID stored in Redis"
-            );
+            tracing::trace!("published, upading redis");
+            self.last_message_id_store.upsert(&msg_id).await?;
+            tracing::info!("message published and ID stored in Redis");
             Ok(published)
         };
 
@@ -272,6 +261,7 @@ where
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(
         skip_all,
+        name = "peekable_publish_batch"
         fields(
             batch_size = batch.len()
         )
@@ -286,13 +276,14 @@ where
             };
 
             let last_msg_id = last_msg.data.id();
-            tracing::info!(
-                last_message_id = %last_msg_id,
-                "publishing batch with peekable publisher"
-            );
+
+            let span = tracing::Span::current();
+            if event_enabled!(tracing::Level::TRACE) {
+                span.record("last_msg_id", format!("{last_msg_id}"));
+            }
 
             let published = self.publisher.publish_batch(batch).await?;
-            tracing::trace!("updating last message ID in Redis after batch publish");
+            tracing::trace!("all published, updating last message ID in Redis");
             self.last_message_id_store.upsert(&last_msg_id).await?;
 
             tracing::info!("batch successfully published and last ID stored");
@@ -309,8 +300,6 @@ where
 
     #[allow(refining_impl_trait, reason = "simplification")]
     async fn check_health(&self) -> Result<(), GcpError> {
-        tracing::trace!("checking health for PeekableGcpPublisher");
-
         let res = {
             self.publisher.check_health().await?;
 
@@ -336,7 +325,6 @@ where
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]
     async fn peek_last(&mut self) -> Result<Option<T::MessageId>, GcpError> {
-        tracing::trace!("retrieving last message ID from Redis");
         self.last_message_id_store
             .get()
             .await
