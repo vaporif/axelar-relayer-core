@@ -406,6 +406,7 @@ impl Display for GatewayV2Message {
         writeln!(f, "  sourceChain: {}", self.source_chain)?;
         writeln!(f, "  sourceAddress: {}", self.source_address)?;
         writeln!(f, "  destinationAddress: {}", self.destination_address)?;
+        writeln!(f, "  payloadHash: 0x{}", hex::encode(&self.payload_hash))?;
         Ok(())
     }
 }
