@@ -23,6 +23,7 @@ pub(crate) struct GcpConfig {
     pub events_topic: String,
     pub events_subscription: String,
     pub ack_deadline_secs: i32,
+    #[serde(default)]
     pub channel_capacity: Option<usize>,
     pub worker_count: usize,
 }

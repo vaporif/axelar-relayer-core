@@ -39,7 +39,6 @@ where
     /// subscribe and process
     #[tracing::instrument(skip_all, name = "amplifier-subscribe-refresh")]
     pub async fn subscribe(&mut self) -> eyre::Result<()> {
-        tracing::trace!("refresh start");
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
         let res: eyre::Result<()> = {
@@ -70,8 +69,6 @@ where
                 .execute()
                 .await
                 .wrap_err("could not sent amplifier api request")?;
-
-            tracing::trace!("sent");
 
             let response = response
                 .json()
@@ -106,8 +103,6 @@ where
             self.metrics.record_error();
         }
 
-        tracing::trace!("refresh end");
-
         res
     }
 
@@ -119,36 +114,23 @@ where
     ///
     /// This function will return an error if any of the health checks fail.
     pub async fn check_health(&self) -> eyre::Result<()> {
-        tracing::trace!("checking health");
-
         // Check if the task queue publisher is healthy
-        match self.task_queue_publisher.check_health().await {
-            Ok(()) => {
-                tracing::trace!("task queue publisher is healthy");
-            }
-            Err(err) => {
-                tracing::warn!(%err, "task queue publisher health check failed");
-                self.metrics.record_error();
-                return Err(err.into());
-            }
+        if let Err(err) = self.task_queue_publisher.check_health().await {
+            tracing::warn!(%err, "task queue publisher health check failed");
+            self.metrics.record_error();
+            return Err(err.into());
         }
 
-        // Check if the amplifier client is healthy
-        match self
+        if let Err(err) = self
             .amplifier_client
             .build_request(&requests::HealthCheck)
             .wrap_err("could not build health check request")?
             .execute()
             .await
         {
-            Ok(_) => {
-                tracing::trace!("amplifier client is healthy");
-            }
-            Err(err) => {
-                self.metrics.record_error();
-                tracing::warn!(%err, "amplifier client health check failed");
-                return Err(err.into());
-            }
+            self.metrics.record_error();
+            tracing::warn!(%err, "amplifier client health check failed");
+            return Err(err.into());
         }
 
         Ok(())

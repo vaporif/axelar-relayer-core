@@ -13,6 +13,7 @@ use opentelemetry::{KeyValue, global};
 use redis::AsyncCommands as _;
 use redis::aio::MultiplexedConnection;
 use tokio_util::sync::CancellationToken;
+use tracing::info_span;
 use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
 use super::GcpError;
@@ -65,7 +66,6 @@ impl<T: BorshDeserialize + BorshSerialize + Sync + Debug> GcpMessage<T> {
     ) -> Result<Self, GcpError> {
         let received_instant = Instant::now();
         let timestamp = Utc::now();
-        tracing::trace!(?msg, "decoding msg");
         let id = msg
             .message
             .attributes
@@ -96,11 +96,11 @@ impl<T: BorshDeserialize + BorshSerialize + Sync + Debug> GcpMessage<T> {
         })
     }
 
+    #[tracing::instrument(skip(self), fields(msg_id = %self.id))]
     async fn is_processed(&mut self) -> Result<bool, GcpError> {
-        tracing::trace!(message_id = %self.id, "checking if message was already processed");
         let exists: bool = self.redis_connection.exists(self.redis_id_key()).await?;
         if exists {
-            tracing::info!(message_id = %self.id, "message already processed - will be skipped");
+            tracing::info!("message already processed - will be skipped");
         }
         Ok(exists)
     }
@@ -112,10 +112,8 @@ impl<T: Debug + Send + Sync> interfaces::consumer::QueueMessage<T> for GcpMessag
     }
 
     #[allow(refining_impl_trait, reason = "simplification")]
-    #[tracing::instrument(skip_all, fields(message_id = %self.id, subscription = %self.subscription_name))]
+    #[tracing::instrument(skip_all, fields(message_id = %self.id, subscription = %self.subscription_name, ack_kind = ?ack_kind))]
     async fn ack(&mut self, ack_kind: interfaces::consumer::AckKind) -> Result<(), GcpError> {
-        tracing::trace!(?ack_kind, "processing acknowledgment");
-
         match ack_kind {
             interfaces::consumer::AckKind::Ack => {
                 tracing::trace!("sending positive acknowledgment to PubSub");
@@ -213,7 +211,6 @@ where
         config: GcpConsumerConfig,
         cancel_token: CancellationToken,
     ) -> Result<Self, GcpError> {
-        tracing::info!("initializing GCP PubSub consumer for subscription");
         let subscription = get_subscription(client, subscription).await?;
 
         let (sender, receiver) = flume::unbounded();
@@ -221,7 +218,6 @@ where
         // NOTE: clone for supervised monolithic binary
         let cancel_token = cancel_token.child_token();
 
-        tracing::trace!("connecting to Redis");
         let redis_connection = redis::Client::open(config.redis_connection)
             .map_err(GcpError::Connection)?
             .get_multiplexed_async_connection()
@@ -281,8 +277,6 @@ where
 
     #[allow(refining_impl_trait, reason = "simplification")]
     async fn check_health(&self) -> Result<(), GcpError> {
-        tracing::trace!("checking health for GCP consumer");
-
         // Check if the read_messages_handle is still running
         if self.read_messages_handle.is_finished() {
             // The task has completed, which means the consumer is not healthy
@@ -293,7 +287,6 @@ where
         }
 
         // If the join handle is still running, the consumer is healthy
-        tracing::trace!("GCP consumer health check successful");
         Ok(())
     }
 }
@@ -348,17 +341,18 @@ where
         tracing::info!("starting PubSub receiver loop");
         subscription
             .receive(
-                move |message, cancel| {
+                move |received, cancel| {
+                    let span = info_span!("message", received.message.message_id);
+                    let _span_guard = span.enter();
                     metrics.record_received();
                     let sender = sender.clone();
                     let subscription_name = subscription_name.clone();
                     let redis_connection = redis_connection.clone();
                     let metrics = Arc::clone(&metrics);
                     async move {
-                        tracing::trace!(?message, "received message from PubSub");
                         match GcpMessage::decode(
                             subscription_name,
-                            message,
+                            received,
                             redis_connection,
                             Arc::clone(&metrics),
                             ack_deadline_secs,
