@@ -50,7 +50,7 @@ where
         let event = queue_msg.decoded().clone();
         let span = tracing::Span::current();
         if tracing::event_enabled!(tracing::Level::INFO) {
-            span.record("event", format!("{event:?}"));
+            span.record("event", format!("{event}"));
         }
 
         let payload = PublishEventsRequest {
