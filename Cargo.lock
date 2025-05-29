@@ -40,6 +40,7 @@ dependencies = [
  "bnum",
  "borsh",
  "chrono",
+ "hex",
  "infrastructure",
  "pretty_assertions",
  "redact",
