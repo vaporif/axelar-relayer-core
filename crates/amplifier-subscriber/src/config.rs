@@ -9,9 +9,6 @@ use serde::Deserialize;
 /// Top-level configuration for the relayer.
 #[derive(Debug, Deserialize)]
 pub(crate) struct Config {
-    /// Per-crate log levels (e.g. `my_crate` = "debug")
-    #[serde(default)]
-    pub env_filters: Option<Vec<String>>,
     /// Configures how synthesized events are emitted at points in the [span
     /// lifecycle][lifecycle].
     #[serde(deserialize_with = "deserialize_fmt_span_option", default)]

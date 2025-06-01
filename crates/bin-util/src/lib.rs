@@ -70,18 +70,12 @@ pub mod telemetry_components {
 /// * Any of the provided filter directives fail to parse
 /// * The tracing subscriber cannot be initialized
 pub fn init_logging(
-    env_filters: Option<Vec<String>>,
     span_event: Option<FmtSpan>,
     telemetry_tracer: Option<opentelemetry_sdk::trace::Tracer>,
 ) -> eyre::Result<WorkerGuard> {
     color_eyre::install().wrap_err("color eyre could not be installed")?;
 
-    let mut env_filter = EnvFilter::new("");
-    if let Some(filters) = env_filters {
-        for directive in filters {
-            env_filter = env_filter.add_directive(directive.parse()?);
-        }
-    }
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     let (non_blocking, worker_guard) = tracing_appender::non_blocking(std::io::stderr());
 
