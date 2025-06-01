@@ -223,18 +223,18 @@ pub struct EventMetadata<T> {
 
 impl<T> Display for EventMetadata<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "EventMetadata:")?;
+        writeln!(f, "EventMetadata")?;
         if let Some(tx_id) = &self.tx_id {
-            writeln!(f, "  txID: {}", tx_id.0)?;
+            writeln!(f, "txID: {}", tx_id.0)?;
         }
         if let Some(timestamp) = &self.timestamp {
-            writeln!(f, "  timestamp: {timestamp}")?;
+            writeln!(f, "timestamp: {timestamp}")?;
         }
         if let Some(from_address) = &self.from_address {
-            writeln!(f, "  fromAddress: {from_address}")?;
+            writeln!(f, "fromAddress: {from_address}")?;
         }
         if let Some(finalized) = &self.finalized {
-            writeln!(f, "  finalized: {finalized}")?;
+            writeln!(f, "finalized: {finalized}")?;
         }
         Ok(())
     }
@@ -401,12 +401,12 @@ pub struct GatewayV2Message {
 
 impl Display for GatewayV2Message {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "GatewayV2Message:")?;
-        writeln!(f, "  messageID: {}", self.message_id.0)?;
-        writeln!(f, "  sourceChain: {}", self.source_chain)?;
-        writeln!(f, "  sourceAddress: {}", self.source_address)?;
-        writeln!(f, "  destinationAddress: {}", self.destination_address)?;
-        writeln!(f, "  payloadHash: 0x{}", hex::encode(&self.payload_hash))?;
+        writeln!(f, "GatewayV2Message")?;
+        writeln!(f, "messageID: {}", self.message_id.0)?;
+        writeln!(f, "sourceChain: {}", self.source_chain)?;
+        writeln!(f, "sourceAddress: {}", self.source_address)?;
+        writeln!(f, "destinationAddress: {}", self.destination_address)?;
+        writeln!(f, "payloadHash: 0x{}", hex::encode(&self.payload_hash))?;
         Ok(())
     }
 }
@@ -482,14 +482,13 @@ pub struct GasCreditEvent {
 
 impl Display for GasCreditEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "GasCreditEvent:")?;
-        writeln!(f, "  base:")?;
+        writeln!(f, "GasCreditEvent")?;
         for line in self.base.to_string().lines() {
-            writeln!(f, "    {line}")?;
+            writeln!(f, "{line}")?;
         }
-        writeln!(f, "  messageID: {}", self.message_id.0)?;
-        writeln!(f, "  refundAddress: {}", self.refund_address)?;
-        writeln!(f, "  payment: {}", self.payment)?;
+        writeln!(f, "messageID: {}", self.message_id.0)?;
+        writeln!(f, "refundAddress: {}", self.refund_address)?;
+        writeln!(f, "payment: {}", self.payment)?;
         Ok(())
     }
 }
@@ -525,15 +524,14 @@ pub struct GasRefundedEvent {
 
 impl Display for GasRefundedEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "GasRefundedEvent:")?;
-        writeln!(f, "  base:")?;
+        writeln!(f, "GasRefundedEvent")?;
         for line in self.base.to_string().lines() {
-            writeln!(f, "    {line}")?;
+            writeln!(f, "{line}")?;
         }
-        writeln!(f, "  messageID: {}", self.message_id.0)?;
-        writeln!(f, "  recipientAddress: {}", self.recipient_address)?;
-        writeln!(f, "  refundedAmount: {}", self.refunded_amount)?;
-        writeln!(f, "  cost: {}", self.cost)?;
+        writeln!(f, "messageID: {}", self.message_id.0)?;
+        writeln!(f, "recipientAddress: {}", self.recipient_address)?;
+        writeln!(f, "refundedAmount: {}", self.refunded_amount)?;
+        writeln!(f, "cost: {}", self.cost)?;
         Ok(())
     }
 }
@@ -569,16 +567,14 @@ pub struct CallEvent {
 
 impl Display for CallEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "CallEvent:")?;
-        writeln!(f, "  base:")?;
+        writeln!(f, "CallEvent")?;
         for line in self.base.to_string().lines() {
-            writeln!(f, "    {line}")?;
+            writeln!(f, "{line}")?;
         }
-        writeln!(f, "  message:")?;
         for line in self.message.to_string().lines() {
-            writeln!(f, "    {line}")?;
+            writeln!(f, "{line}")?;
         }
-        writeln!(f, "  destinationChain: {}", self.destination_chain)?;
+        writeln!(f, "destinationChain: {}", self.destination_chain)?;
         Ok(())
     }
 }
@@ -606,13 +602,13 @@ pub struct MessageApprovedEvent {
 
 impl Display for MessageApprovedEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "MessageApprovedEvent:")?;
-        writeln!(f, "  base: {}", self.base)?;
-        writeln!(f, "  message:")?;
+        writeln!(f, "MessageApprovedEvent")?;
+        writeln!(f, "base: {}", self.base)?;
+        writeln!(f, "message:")?;
         for line in self.message.to_string().lines() {
-            writeln!(f, "    {line}")?;
+            writeln!(f, "{line}")?;
         }
-        writeln!(f, "  cost: {}", self.cost)?;
+        writeln!(f, "cost: {}", self.cost)?;
         Ok(())
     }
 }
@@ -638,9 +634,9 @@ pub struct SignersRotatedEvent {
 
 impl Display for SignersRotatedEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "SignersRotatedEvent:")?;
-        writeln!(f, "  base: {}", self.base)?;
-        writeln!(f, "  cost: {}", self.cost)?;
+        writeln!(f, "SignersRotatedEvent")?;
+        writeln!(f, "base: {}", self.base)?;
+        writeln!(f, "cost: {}", self.cost)?;
         Ok(())
     }
 }
@@ -698,12 +694,12 @@ pub struct MessageExecutedEvent {
 
 impl Display for MessageExecutedEvent {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "MessageExecutedEvent:")?;
-        writeln!(f, "  base: {}", self.base)?;
-        writeln!(f, "  messageID: {}", self.message_id.0)?;
-        writeln!(f, "  sourceChain: {}", self.source_chain)?;
-        writeln!(f, "  status: {}", self.status)?;
-        writeln!(f, "  cost: {}", self.cost)?;
+        writeln!(f, "MessageExecutedEvent")?;
+        writeln!(f, "base: {}", self.base)?;
+        writeln!(f, "messageID: {}", self.message_id.0)?;
+        writeln!(f, "sourceChain: {}", self.source_chain)?;
+        writeln!(f, "status: {}", self.status)?;
+        writeln!(f, "cost: {}", self.cost)?;
         Ok(())
     }
 }
@@ -737,12 +733,12 @@ pub struct CannotExecuteMessageEventV2 {
 
 impl Display for CannotExecuteMessageEventV2 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "CannotExecuteMessageEventV2:")?;
-        writeln!(f, "  base: {}", self.base)?;
-        writeln!(f, "  messageID: {}", self.message_id.0)?;
-        writeln!(f, "  sourceChain: {}", self.source_chain)?;
-        writeln!(f, "  reason: {}", self.reason)?;
-        writeln!(f, "  details: {}", self.details)?;
+        writeln!(f, "CannotExecuteMessageEventV2")?;
+        writeln!(f, "base: {}", self.base)?;
+        writeln!(f, "messageID: {}", self.message_id.0)?;
+        writeln!(f, "sourceChain: {}", self.source_chain)?;
+        writeln!(f, "reason: {}", self.reason)?;
+        writeln!(f, "details: {}", self.details)?;
         Ok(())
     }
 }
@@ -845,12 +841,12 @@ pub struct PublishEventsRequest {
 
 impl Display for PublishEventsRequest {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "PublishEventsRequest:")?;
-        writeln!(f, "  events:")?;
+        writeln!(f, "PublishEventsRequest")?;
+        writeln!(f, "events:")?;
         for (index, event) in self.events.iter().enumerate() {
-            writeln!(f, "    [{index}]:")?;
+            writeln!(f, "[{index}]:")?;
             for line in event.to_string().lines() {
-                writeln!(f, "      {line}")?;
+                writeln!(f, "{line}")?;
             }
         }
         Ok(())
