@@ -11,7 +11,6 @@ use interfaces::kv_store::KvStore as _;
 use opentelemetry::metrics::{Counter, Histogram};
 use opentelemetry::propagation::Injector as _;
 use opentelemetry::{KeyValue, global};
-use tracing::event_enabled;
 
 use super::GcpError;
 use super::kv_store::RedisClient;
