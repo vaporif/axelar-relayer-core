@@ -69,7 +69,7 @@ pub fn init_logging(
 
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-    println!("env_filter: {env_filter:?}");
+    println!("env_filter: {env_filter}");
 
     let (non_blocking, worker_guard) = tracing_appender::non_blocking(std::io::stderr());
 
