@@ -79,9 +79,6 @@ pub fn init_logging(
         .with_writer(non_blocking)
         .with_ansi(cfg!(debug_assertions));
 
-    #[cfg(debug_assertions)]
-    let output_layer = output_layer.with_span_events(FmtSpan::NEW | FmtSpan::CLOSE);
-
     let subscriber = tracing_subscriber::registry()
         .with(env_filter)
         .with(ErrorLayer::default());
