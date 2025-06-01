@@ -20,7 +20,6 @@ use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::EnvFilter;
-use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
 
