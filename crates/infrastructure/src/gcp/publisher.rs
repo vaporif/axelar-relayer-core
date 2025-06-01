@@ -56,8 +56,9 @@ impl<T> GcpPublisher<T> {
         })
     }
 }
-
-#[tracing::instrument(skip_all, level = "debug")]
+#[tracing::instrument(skip_all, level = "debug", fields(
+    message_id = tracing::field::Empty,
+))]
 fn to_pubsub_message<T>(msg: PublishMessage<T>) -> Result<PubsubMessage, GcpError>
 where
     T: BorshSerialize + BorshDeserialize + Debug,
@@ -251,7 +252,8 @@ where
         skip_all,
         name = "peekable_publish_batch"
         fields(
-            batch_size = batch.len()
+            batch_size = batch.len(),
+            last_msg_id = tracing::field::Empty
         )
     )]
     async fn publish_batch(

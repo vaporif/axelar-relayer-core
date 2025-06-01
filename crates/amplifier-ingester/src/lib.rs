@@ -42,7 +42,9 @@ where
     }
 
     /// process queue message
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, fields(
+        event = tracing::field::Empty,
+    ))]
     pub async fn process_queue_msg<Msg: QueueMessage<Event>>(&self, mut queue_msg: Msg) {
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
