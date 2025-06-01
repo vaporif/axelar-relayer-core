@@ -105,8 +105,6 @@ where
     /// consume queue messages and ingest to amplifier api
     #[tracing::instrument(skip_all)]
     pub async fn ingest(&self) -> eyre::Result<()> {
-        tracing::trace!("refresh start");
-
         self.event_queue_consumer
             .messages()
             .await
@@ -127,7 +125,6 @@ where
             .instrument(tracing::info_span!("processing messages"))
             .await;
 
-        tracing::trace!("refresh end");
         Ok(())
     }
 
