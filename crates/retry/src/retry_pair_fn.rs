@@ -39,7 +39,6 @@ where
 
     // you can use a macro to reduce copy-paste
     // but this will reduce readability
-    #[tracing::instrument(skip_all, name = "retry if fails (alternating)")]
     pub async fn retry(self) -> Result<T, RetryError<Err>> {
         let mut primary_fn_aborted = false;
         let mut primary_fn_rate_limitted = false;
@@ -120,7 +119,7 @@ where
                 }
             }
         }
-        return Err(RetryError::MaxAttempts);
+        Err(RetryError::MaxAttempts)
     }
 }
 
