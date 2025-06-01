@@ -67,7 +67,10 @@ pub fn init_logging(
 ) -> eyre::Result<WorkerGuard> {
     color_eyre::install().wrap_err("color eyre could not be installed")?;
 
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        println!("incorrect format of RUST_LOG, fallbacking to error filter");
+        EnvFilter::new("error")
+    });
 
     println!("env_filter: {env_filter}");
 
