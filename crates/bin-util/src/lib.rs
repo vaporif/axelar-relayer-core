@@ -61,12 +61,15 @@ pub mod telemetry_components {
 /// * `color_eyre` cannot be installed
 /// * Any of the provided filter directives fail to parse
 /// * The tracing subscriber cannot be initialized
+#[allow(clippy::print_stdout, reason = "logging not yet started")]
 pub fn init_logging(
     telemetry_tracer: Option<opentelemetry_sdk::trace::Tracer>,
 ) -> eyre::Result<WorkerGuard> {
     color_eyre::install().wrap_err("color eyre could not be installed")?;
 
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    println!("env_filter: {env_filter:?}");
 
     let (non_blocking, worker_guard) = tracing_appender::non_blocking(std::io::stderr());
 
