@@ -31,13 +31,6 @@ pub struct GcpPublisher<T> {
 }
 
 impl<T> GcpPublisher<T> {
-    #[tracing::instrument(
-        name = "create_gcp_publisher",
-        skip(client),
-        fields(
-            topic = %topic,
-        )
-    )]
     pub(crate) async fn new(
         client: &Client,
         topic: &str,
@@ -200,7 +193,6 @@ where
     T: QueueMsgId,
     T::MessageId: BorshSerialize + BorshDeserialize + Display,
 {
-    #[tracing::instrument(name = "create_peekable_publisher", skip_all)]
     pub(crate) async fn new(
         client: &Client,
         topic: &str,

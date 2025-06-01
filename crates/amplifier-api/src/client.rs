@@ -86,8 +86,8 @@ impl<T, E> AmplifierRequest<T, E> {
 
         // Capture the current span
         let span = tracing::Span::current();
-        span.record("method", request.method().as_str());
-        span.record("url", request.url().as_str());
+        span.record("method", tracing::field::display(request.method().as_str()));
+        span.record("url", tracing::field::display(request.url().as_str()));
 
         // execute the request
         let response = client.execute(request).await?;
