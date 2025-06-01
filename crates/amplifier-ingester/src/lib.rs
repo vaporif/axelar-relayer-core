@@ -5,7 +5,6 @@ use bin_util::SimpleMetrics;
 use eyre::Context as _;
 use futures::StreamExt as _;
 use infrastructure::interfaces::consumer::{AckKind, Consumer, QueueMessage};
-use infrastructure::interfaces::publisher::QueueMsgId as _;
 use relayer_amplifier_api_integration::amplifier_api::requests::{self, WithTrailingSlash};
 use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEventsRequest};
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
@@ -48,7 +47,7 @@ where
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
         let event = queue_msg.decoded().clone();
-        tracing::Span::current().record("event", format!("{event}"));
+        tracing::Span::current().record("event", tracing::field::display(&event));
 
         let payload = PublishEventsRequest {
             events: vec![event.clone()],

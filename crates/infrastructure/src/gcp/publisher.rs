@@ -71,7 +71,7 @@ where
     T: BorshSerialize + BorshDeserialize + Debug,
 {
     let deduplication_id = msg.deduplication_id.clone();
-    tracing::span::Span::current().record("message_id", deduplication_id.clone());
+    tracing::span::Span::current().record("message_id", tracing::field::display(&deduplication_id));
 
     let mut message = MessageContent::new(msg.data);
     message.inject_context();
@@ -235,10 +235,7 @@ where
     )]
     async fn publish(&self, msg: PublishMessage<T>) -> Result<Self::Return, GcpError> {
         let msg_id = msg.data.id();
-        let span = tracing::Span::current();
-        if event_enabled!(tracing::Level::TRACE) {
-            span.record("msg_id", format!("{msg_id}"));
-        }
+        tracing::Span::current().record("msg_id", tracing::field::display(&msg_id));
 
         let res = {
             let published = self.publisher.publish(msg).await?;
@@ -277,10 +274,7 @@ where
 
             let last_msg_id = last_msg.data.id();
 
-            let span = tracing::Span::current();
-            if event_enabled!(tracing::Level::TRACE) {
-                span.record("last_msg_id", format!("{last_msg_id}"));
-            }
+            tracing::Span::current().record("last_msg_id", tracing::field::display(&last_msg_id));
 
             let published = self.publisher.publish_batch(batch).await?;
             tracing::trace!("all published, updating last message ID in Redis");
