@@ -5,7 +5,6 @@ use bin_util::SimpleMetrics;
 use eyre::Context as _;
 use futures::StreamExt as _;
 use infrastructure::interfaces::consumer::{AckKind, Consumer, QueueMessage};
-use infrastructure::interfaces::publisher::QueueMsgId as _;
 use relayer_amplifier_api_integration::amplifier_api::requests::{self, WithTrailingSlash};
 use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEventsRequest};
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
@@ -43,21 +42,21 @@ where
     }
 
     /// process queue message
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, fields(
+        event = tracing::field::Empty,
+    ))]
     pub async fn process_queue_msg<Msg: QueueMessage<Event>>(&self, mut queue_msg: Msg) {
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
         let event = queue_msg.decoded().clone();
-        let span = tracing::Span::current();
-        if tracing::event_enabled!(tracing::Level::INFO) {
-            span.record("event", format!("{event}"));
-        }
+        tracing::Span::current().record("event", tracing::field::display(&event));
 
         let payload = PublishEventsRequest {
             events: vec![event.clone()],
         };
 
         let result: eyre::Result<()> = async {
+            tracing::trace!("processing");
             let request = requests::PostEvents::builder()
                 .payload(&payload)
                 .chain(&chain_with_trailing_slash)
@@ -89,27 +88,25 @@ where
             Ok(()) => {
                 if let Err(err) = queue_msg.ack(AckKind::Ack).await {
                     self.metrics.record_error();
-                    tracing::error!(%event, ?err, "could not ack message, skipping...");
+                    tracing::error!(?err, "could not ack message, skipping...");
                 }
 
-                tracing::info!(event_id = %event.id(), "event ack'ed");
+                tracing::info!("event ack'ed");
             }
             Err(err) => {
                 self.metrics.record_error();
-                tracing::error!(%event, ?err, "error during task processing");
+                tracing::error!(?err, "error during task processing");
                 if let Err(err) = queue_msg.ack(AckKind::Nak).await {
                     self.metrics.record_error();
-                    tracing::error!(%event, ?err, "could not nak message, skipping...");
+                    tracing::error!(?err, "could not nak message, skipping...");
                 }
             }
         }
     }
 
     /// consume queue messages and ingest to amplifier api
-    #[tracing::instrument(skip_all, name = "amplifier-ingest-refresh")]
+    #[tracing::instrument(skip_all)]
     pub async fn ingest(&self) -> eyre::Result<()> {
-        tracing::trace!("refresh start");
-
         self.event_queue_consumer
             .messages()
             .await
@@ -122,6 +119,7 @@ where
                     Ok(msg) => self.process_queue_msg(msg).await,
                     Err(err) => {
                         self.metrics.record_error();
+
                         tracing::error!(?err, "could not receive queue msg...");
                     }
                 }
@@ -129,7 +127,6 @@ where
             .instrument(tracing::info_span!("processing messages"))
             .await;
 
-        tracing::trace!("refresh end");
         Ok(())
     }
 
@@ -143,32 +140,20 @@ where
     pub async fn check_health(&self) -> eyre::Result<()> {
         tracing::trace!("checking health");
 
-        // Check if the event queue consumer is healthy
-        match self.event_queue_consumer.check_health().await {
-            Ok(()) => {
-                tracing::trace!("event queue consumer is healthy");
-            }
-            Err(err) => {
-                tracing::warn!(%err, "event queue consumer health check failed");
-                return Err(err.into());
-            }
+        if let Err(err) = self.event_queue_consumer.check_health().await {
+            tracing::warn!(%err, "event queue consumer health check failed");
+            return Err(err.into());
         }
 
-        // Check if the amplifier client is healthy
-        match self
+        if let Err(err) = self
             .ampf_client
             .build_request(&requests::HealthCheck)
             .wrap_err("could not build health check request")?
             .execute()
             .await
         {
-            Ok(_) => {
-                tracing::trace!("amplifier client is healthy");
-            }
-            Err(err) => {
-                tracing::warn!(%err, "amplifier client health check failed");
-                return Err(err.into());
-            }
+            tracing::warn!(%err, "amplifier client health check failed");
+            return Err(err.into());
         }
 
         Ok(())

@@ -55,9 +55,7 @@ async fn main() {
         (None, None)
     };
 
-    let _stderr_logging_guard =
-        bin_util::init_logging(config.env_filters, config.span_events, telemetry_tracer)
-            .expect("logging wired up");
+    let _stderr_logging_guard = bin_util::init_logging(telemetry_tracer).expect("logging wired up");
 
     let cancel_token = bin_util::register_cancel();
     tokio::try_join!(

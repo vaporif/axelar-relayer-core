@@ -20,7 +20,6 @@ use tracing_appender::non_blocking::WorkerGuard;
 use tracing_error::ErrorLayer;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::EnvFilter;
-use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
 
@@ -46,13 +45,6 @@ pub mod telemetry_components {
 ///
 /// # Arguments
 ///
-/// * `env_filters` - Optional vector of filter directives to control log verbosity. Each directive
-///   should follow the tracing filter syntax (e.g., "info", "`starknet_relayer=debug`",
-///   "`warn,my_module=trace`"). If `None` is provided, a default empty filter will be created.
-///
-/// * `span_event` - Optional configurution for how synthesized events are emitted at points in the
-///   [span lifecycle][lifecycle].
-///
 /// * `telemetry_tracer` - Optional OpenTelemetry SDK tracer for distributed tracing integration.
 ///   When provided, spans and events will be exported to the configured OpenTelemetry backend.
 ///
@@ -69,33 +61,28 @@ pub mod telemetry_components {
 /// * `color_eyre` cannot be installed
 /// * Any of the provided filter directives fail to parse
 /// * The tracing subscriber cannot be initialized
+#[allow(clippy::print_stdout, reason = "logging not yet started")]
 pub fn init_logging(
-    env_filters: Option<Vec<String>>,
-    span_event: Option<FmtSpan>,
     telemetry_tracer: Option<opentelemetry_sdk::trace::Tracer>,
 ) -> eyre::Result<WorkerGuard> {
     color_eyre::install().wrap_err("color eyre could not be installed")?;
 
-    let mut env_filter = EnvFilter::new("");
-    if let Some(filters) = env_filters {
-        for directive in filters {
-            env_filter = env_filter.add_directive(directive.parse()?);
-        }
-    }
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        println!("incorrect format of RUST_LOG, fallbacking to error filter");
+        EnvFilter::new("error")
+    });
+
+    println!("env_filter: {env_filter}");
 
     let (non_blocking, worker_guard) = tracing_appender::non_blocking(std::io::stderr());
 
-    let mut output_layer = tracing_subscriber::fmt::layer()
+    let output_layer = tracing_subscriber::fmt::layer()
         .with_target(true)
         .log_internal_errors(true)
         .with_file(true)
         .with_line_number(true)
         .with_writer(non_blocking)
         .with_ansi(cfg!(debug_assertions));
-
-    if let Some(span_event) = span_event {
-        output_layer = output_layer.with_span_events(span_event);
-    }
 
     let subscriber = tracing_subscriber::registry()
         .with(env_filter)
@@ -113,7 +100,7 @@ pub fn init_logging(
                 .try_init()?;
         }
     } else if cfg!(debug_assertions) {
-        subscriber.with(output_layer).try_init()?;
+        subscriber.with(output_layer.pretty()).try_init()?;
     } else {
         subscriber.with(output_layer.json()).try_init()?;
     }
@@ -521,59 +508,4 @@ where
 {
     let seconds = u64::deserialize(deserializer)?;
     Ok(Duration::from_secs(seconds))
-}
-
-/// Custom serde deserializer for `Option<FmtSpan>` from optional string values.
-///
-/// # Type Parameters
-///
-/// * `'de` - The lifetime of the data being deserialized
-/// * `D` - The deserializer type implementing `serde::Deserializer`
-///
-/// # Arguments
-///
-/// * `deserializer` - The serde deserializer instance
-///
-/// # Returns
-///
-/// Returns `Ok(Option<FmtSpan>)` where:
-/// - `Some(FmtSpan)` if a valid string was provided and successfully parsed
-/// - `None` if the field was missing or explicitly set to null
-///
-/// # Errors
-///
-/// This function will return a serde error if:
-/// - A string value is provided but doesn't match any valid `FmtSpan` variant
-/// - The deserializer encounters any other deserialization issues
-///
-/// # Supported Input Values
-///
-/// When a string is provided, it accepts the same case-insensitive values:
-/// - `"none"`    → `FmtSpan::NONE`
-/// - `"new"`     → `FmtSpan::NEW`
-/// - `"enter"`   → `FmtSpan::ENTER`
-/// - `"exit"`    → `FmtSpan::EXIT`
-/// - `"close"`   → `FmtSpan::CLOSE`
-/// - `"active"`  → `FmtSpan::ACTIVE`
-/// - `"full"`    → `FmtSpan::FULL`
-pub fn deserialize_fmt_span_option<'de, D>(deserializer: D) -> Result<Option<FmtSpan>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let opt: Option<String> = Option::deserialize(deserializer)?;
-    match opt {
-        Some(s) => match s.to_lowercase().as_str() {
-            "none" => Ok(Some(FmtSpan::NONE)),
-            "new" => Ok(Some(FmtSpan::NEW)),
-            "enter" => Ok(Some(FmtSpan::ENTER)),
-            "exit" => Ok(Some(FmtSpan::EXIT)),
-            "close" => Ok(Some(FmtSpan::CLOSE)),
-            "active" => Ok(Some(FmtSpan::ACTIVE)),
-            "full" => Ok(Some(FmtSpan::FULL)),
-            _ => Err(serde::de::Error::custom(format!(
-                "Invalid span event type: {s}"
-            ))),
-        },
-        None => Ok(None),
-    }
 }

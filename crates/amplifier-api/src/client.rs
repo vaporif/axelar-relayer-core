@@ -33,7 +33,6 @@ impl AmplifierApiClient {
     /// # Errors
     ///
     /// This function will return an error if the underlying reqwest client cannot be constructed
-    #[tracing::instrument(skip(tls_type), name = "creating amplifier api client")]
     pub fn new(url: url::Url, tls_type: TlsType) -> Result<Self, AmplifierApiError> {
         let authenticated_client = authenticated_client(tls_type)?;
         Ok(Self {
@@ -86,8 +85,8 @@ impl<T, E> AmplifierRequest<T, E> {
 
         // Capture the current span
         let span = tracing::Span::current();
-        span.record("method", request.method().as_str());
-        span.record("url", request.url().as_str());
+        span.record("method", tracing::field::display(request.method().as_str()));
+        span.record("url", tracing::field::display(request.url().as_str()));
 
         // execute the request
         let response = client.execute(request).await?;

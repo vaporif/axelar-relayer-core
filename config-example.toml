@@ -3,14 +3,6 @@ max_errors = 20
 limit_per_request = 100
 concurrent_queue_items = 50
 
-env_filters = [
-  "storage_bus=info",
-  "supervisor=info",
-  "amplifier_ingester=info",
-  "amplifier_subscriber=info",
-]
-span_events = "close"
-
 [telemetry]
 otlp_endpoint = "http://localhost:4317"
 otlp_transport = "grpc"

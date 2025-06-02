@@ -37,7 +37,7 @@ where
     }
 
     /// subscribe and process
-    #[tracing::instrument(skip_all, name = "amplifier-subscribe-refresh")]
+    #[tracing::instrument(skip_all)]
     pub async fn subscribe(&mut self) -> eyre::Result<()> {
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 

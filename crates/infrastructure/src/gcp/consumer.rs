@@ -79,8 +79,8 @@ impl<T: BorshDeserialize + BorshSerialize + Sync + Debug> GcpMessage<T> {
         let span = tracing::Span::current();
         let context = message_content.extract_context();
         span.set_parent(context);
-        span.record("received_at", timestamp.to_rfc3339());
-        span.record("message_id", id.clone());
+        span.record("received_at", tracing::field::display(&timestamp));
+        span.record("message_id", tracing::field::display(&id));
 
         tracing::trace!(?message_content, "successfully decoded message payload");
 
@@ -198,13 +198,6 @@ impl<T> GcpConsumer<T>
 where
     T: BorshDeserialize + BorshSerialize + Send + Sync + Debug + 'static,
 {
-    #[tracing::instrument(
-        name = "create_gcp_consumer",
-        skip(client, cancel_token),
-        fields(
-            subscription = %subscription,
-        )
-    )]
     pub(crate) async fn new(
         client: &Client,
         subscription: &str,
@@ -224,11 +217,6 @@ where
             .await
             .map_err(GcpError::Connection)?;
 
-        tracing::info!(
-            worker_count = config.worker_count,
-            "starting message processing task"
-        );
-
         let metrics = Arc::new(Metrics::new(subscription.fully_qualified_name()));
 
         let read_messages_handle = start_read_messages_task(ReadMessagesConfig {
@@ -241,8 +229,6 @@ where
             sender,
             cancel_token: cancel_token.clone(),
         });
-
-        tracing::info!("GCP PubSub consumer successfully initialized");
 
         Ok(Self {
             receiver,
