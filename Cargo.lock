@@ -389,7 +389,6 @@ dependencies = [
  "config",
  "ctrlc",
  "eyre",
- "futures",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry-resource-detectors",
