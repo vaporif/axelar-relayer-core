@@ -38,6 +38,17 @@ mod id {
     )]
     pub struct TokenId(pub String);
 
+    /// Error raised while parsing tx event for tx hash + log index
+    #[derive(thiserror::Error, Clone, Debug, PartialEq, Eq)]
+    pub enum TxEventParseError {
+        /// Dash separator not found
+        #[error("Invalid TxEvent format: missing dash separator")]
+        SeparatorNotFound,
+        /// Log index is not a number
+        #[error("Invalid log index: failed to parse as number, err: `{0}`")]
+        LogIndexNotNumber(core::num::ParseIntError),
+    }
+
     /// Indicates a type in format of `TxHash-LogIndex`
     ///
     /// TxHash-LogIndex. for in-depth docs reference [this document](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
@@ -50,6 +61,34 @@ mod id {
         #[must_use]
         pub fn new(tx_hash: &str, log_index: usize) -> Self {
             Self(format!("{tx_hash}-{log_index}"))
+        }
+
+        /// Parses the `TxEvent` to extract the transaction hash and log index components.
+        ///
+        /// The `TxEvent` is expected to be in the format `"{tx_hash}-{log_index}"` where:
+        /// - `tx_hash` is the transaction hash (may contain dashes)
+        /// - `log_index` is a numeric index
+        ///
+        /// # Returns
+        ///
+        /// Returns a tuple of `(tx_hash, log_index)` on success.
+        ///
+        /// # Errors
+        ///
+        /// Returns `TxEventParseError::SeparatorNotFound` if no dash separator is found.
+        /// Returns `TxEventParseError::LogIndexNotNumber` if the log index portion cannot be parsed
+        /// as a number.
+        pub fn hash_and_index(&self) -> Result<(String, usize), TxEventParseError> {
+            let (tx_hash, log_index_str) = self
+                .0
+                .rsplit_once('-')
+                .ok_or(TxEventParseError::SeparatorNotFound)?;
+
+            let log_index = log_index_str
+                .parse()
+                .map_err(TxEventParseError::LogIndexNotNumber)?;
+
+            Ok((tx_hash.to_owned(), log_index))
         }
 
         /// Construct a new event id for a [`CannotExecuteMessageEvent`]
@@ -1655,5 +1694,16 @@ mod tests {
         .into_bytes();
 
         let _deserialized: GetTasksResult = from_slice(json_data.as_mut_slice()).unwrap();
+    }
+
+    #[test]
+    fn test_hash_and_index_on_tx_event() {
+        let tx_hash =
+            "0x1b3dd6b6962fa79d571f60128b0f492274883543c4d4089a7c36fb474af45deb".to_owned();
+        let log_index = 12;
+        let event = TxEvent::new(&tx_hash, log_index);
+        let (hash, index) = event.hash_and_index().unwrap();
+        assert_eq!(hash, tx_hash);
+        assert_eq!(index, log_index);
     }
 }
