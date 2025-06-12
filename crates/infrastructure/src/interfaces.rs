@@ -168,6 +168,8 @@ pub mod kv_store {
         /// Get value from kvstore
         fn get(
             &self,
-        ) -> impl Future<Output = Result<Option<WithRevision<T>>, impl Error + Send + Sync + 'static>> + Send;
+        ) -> impl Future<
+            Output = Result<Option<WithRevision<T>>, impl Error + Send + Sync + 'static>,
+        > + Send;
     }
 }
