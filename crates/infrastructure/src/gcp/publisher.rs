@@ -306,8 +306,8 @@ where
 
 impl<T> interfaces::publisher::PeekMessage<T> for PeekableGcpPublisher<T>
 where
-    T: QueueMsgId,
-    T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display,
+    T: QueueMsgId + Send,
+    T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display + Send + Sync,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]

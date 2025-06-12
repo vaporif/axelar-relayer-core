@@ -27,6 +27,7 @@ mod components;
 mod config;
 
 use core::time::Duration;
+use std::sync::Arc;
 
 use bin_util::health_check;
 use clap::{Parser, crate_name, crate_version};
@@ -58,44 +59,53 @@ async fn main() {
     let _stderr_logging_guard = bin_util::init_logging(telemetry_tracer).expect("logging wired up");
 
     let cancel_token = bin_util::register_cancel();
+
+    // Create the subscriber once and wrap in Arc
+    #[cfg(feature = "nats")]
+    let subscriber = Arc::new(
+        components::nats::new_amplifier_subscriber(&cli.config_path)
+            .await
+            .expect("subscriber is created"),
+    );
+
+    #[cfg(feature = "gcp")]
+    let subscriber = Arc::new(
+        components::gcp::new_amplifier_subscriber(&cli.config_path)
+            .await
+            .expect("subscriber is created"),
+    );
+
     tokio::try_join!(
         spawn_subscriber_worker(
             config.tickrate,
             config.max_errors,
-            cli.config_path.clone(),
+            subscriber.clone(),
             &cancel_token
         ),
-        spawn_health_check_server(
-            config.health_check.port,
-            cli.config_path.clone(),
-            cancel_token.clone()
-        )
+        spawn_health_check_server(config.health_check.port, subscriber, cancel_token.clone())
     )
     .expect("Failed to join main loop and health server tasks");
 
     tracing::info!("Amplifier subscriber has been shut down");
 }
 
-fn spawn_subscriber_worker(
+fn spawn_subscriber_worker<TaskQueuePublisher>(
     tickrate: Duration,
     max_errors: u32,
-    config_path: String,
+    subscriber: Arc<amplifier_subscriber::Subscriber<TaskQueuePublisher>>,
     cancel_token: &CancellationToken,
-) -> tokio::task::JoinHandle<()> {
+) -> tokio::task::JoinHandle<()>
+where
+    TaskQueuePublisher: infrastructure::interfaces::publisher::Publisher<amplifier_api::types::TaskItem>
+        + infrastructure::interfaces::publisher::PeekMessage<amplifier_api::types::TaskItem>
+        + Send
+        + Sync
+        + 'static,
+{
     tokio::task::spawn({
         let cancel_token = cancel_token.clone();
 
         async move {
-            #[cfg(feature = "nats")]
-            let mut subscriber = components::nats::new_amplifier_subscriber(&config_path)
-                .await
-                .expect("subscriber is created");
-
-            #[cfg(feature = "gcp")]
-            let mut subscriber = components::gcp::new_amplifier_subscriber(&config_path)
-                .await
-                .expect("subscriber is created");
-
             tracing::trace!("Starting amplifier subscriber...");
 
             let mut error_count: u32 = 0;
@@ -124,23 +134,20 @@ fn spawn_subscriber_worker(
     })
 }
 
-fn spawn_health_check_server(
+fn spawn_health_check_server<TaskQueuePublisher>(
     port: u16,
-    config_path: String,
+    subscriber: Arc<amplifier_subscriber::Subscriber<TaskQueuePublisher>>,
     cancel_token: CancellationToken,
-) -> tokio::task::JoinHandle<()> {
+) -> tokio::task::JoinHandle<()>
+where
+    TaskQueuePublisher: infrastructure::interfaces::publisher::Publisher<amplifier_api::types::TaskItem>
+        + infrastructure::interfaces::publisher::PeekMessage<amplifier_api::types::TaskItem>
+        + Send
+        + Sync
+        + 'static,
+{
     tokio::task::spawn(async move {
         tracing::trace!("Starting health check server...");
-
-        #[cfg(feature = "nats")]
-        let subscriber = components::nats::new_amplifier_subscriber(&config_path)
-            .await
-            .expect("subscriber is created");
-
-        #[cfg(feature = "gcp")]
-        let subscriber = components::gcp::new_amplifier_subscriber(&config_path)
-            .await
-            .expect("subscriber is created");
 
         health_check::Server::new(port, subscriber)
             .run(cancel_token)

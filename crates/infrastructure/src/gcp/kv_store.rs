@@ -81,7 +81,7 @@ where
 // TODO: remove it from interfaces?
 impl<T> interfaces::kv_store::KvStore<T> for RedisClient<T>
 where
-    T: BorshSerialize + BorshDeserialize + Display + Debug,
+    T: BorshSerialize + BorshDeserialize + Display + Debug + Sync,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip(self))]

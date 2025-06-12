@@ -5,11 +5,12 @@ use bin_util::SimpleMetrics;
 use bin_util::health_check::CheckHealth;
 use eyre::Context as _;
 use infrastructure::interfaces::publisher::{PeekMessage, PublishMessage, Publisher};
+use tokio::sync::Mutex;
 
 /// subscribes to tasks from amplifier and sends them to queue
 pub struct Subscriber<TaskQueuePublisher> {
     amplifier_client: AmplifierApiClient,
-    task_queue_publisher: TaskQueuePublisher,
+    task_queue_publisher: Mutex<TaskQueuePublisher>,
     chain: String,
     limit_items: u8,
     metrics: SimpleMetrics,
@@ -30,7 +31,7 @@ where
         let metrics = SimpleMetrics::new("amplifier-subscriber", vec![]);
         Self {
             amplifier_client,
-            task_queue_publisher,
+            task_queue_publisher: Mutex::new(task_queue_publisher),
             chain,
             limit_items,
             metrics,
@@ -39,15 +40,16 @@ where
 
     /// subscribe and process
     #[tracing::instrument(skip_all)]
-    pub async fn subscribe(&mut self) -> eyre::Result<()> {
+    pub async fn subscribe(&self) -> eyre::Result<()> {
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
         let res: eyre::Result<()> = {
-            let last_task_id = self
-                .task_queue_publisher
+            let mut publisher = self.task_queue_publisher.lock().await;
+            let last_task_id = publisher
                 .peek_last()
                 .await
                 .wrap_err("could not get last retrieved task id")?;
+            drop(publisher);
 
             tracing::trace!(?last_task_id, "last retrieved task");
 
@@ -93,6 +95,8 @@ where
 
             tracing::trace!("sending to queue");
             self.task_queue_publisher
+                .lock()
+                .await
                 .publish_batch(batch)
                 .await
                 .wrap_err("could not publish tasks to queue")?;
@@ -118,7 +122,8 @@ where
 {
     async fn check_health(&self) -> eyre::Result<()> {
         // Check if the task queue publisher is healthy
-        if let Err(err) = self.task_queue_publisher.check_health().await {
+        let publisher_health = self.task_queue_publisher.lock().await.check_health().await;
+        if let Err(err) = publisher_health {
             tracing::warn!(%err, "task queue publisher health check failed");
             self.metrics.record_error();
             return Err(err.into());

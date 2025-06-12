@@ -89,14 +89,13 @@ impl<Checker: CheckHealth> Server<Checker> {
     /// # Arguments
     ///
     /// * `port` - The TCP port on which the server will listen for HTTP requests
-    /// * `checker` - The health checker implementation
+    /// * `checker` - The health checker implementation wrapped in Arc
     ///
     /// # Returns
     ///
     /// A new `Server` instance with the provided health checker.
     #[must_use]
-    pub fn new(port: u16, checker: Checker) -> Self {
-        let checker = Arc::new(checker);
+    pub const fn new(port: u16, checker: Arc<Checker>) -> Self {
         Self { port, checker }
     }
     /// Starts the HTTP server and runs until the cancellation token is triggered.
@@ -200,9 +199,9 @@ mod tests {
         let cancel_token = CancellationToken::new();
         let token_clone = cancel_token.clone();
 
-        let checker = TestChecker {
+        let checker = Arc::new(TestChecker {
             check_fn: health_check,
-        };
+        });
         let server = Server::new(port, checker);
         tokio::spawn(async move {
             server.run(token_clone).await;
@@ -252,7 +251,7 @@ mod tests {
         let token_clone = cancel_token.clone();
 
         let is_healthy_flag = Arc::clone(&flag);
-        let checker = TestChecker {
+        let checker = Arc::new(TestChecker {
             check_fn: move || {
                 let is_ok = !is_healthy_flag.load(Ordering::Relaxed);
                 async move {
@@ -263,7 +262,7 @@ mod tests {
                     }
                 }
             },
-        };
+        });
         let server = Server::new(port, checker);
 
         tokio::spawn(async move {

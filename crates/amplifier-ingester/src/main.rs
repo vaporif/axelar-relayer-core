@@ -27,10 +27,12 @@ mod components;
 mod config;
 
 use core::time::Duration;
+use std::sync::Arc;
 
 use bin_util::health_check;
 use clap::{Parser, crate_name, crate_version};
 use config::Config;
+use relayer_amplifier_api_integration::amplifier_api;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Parser, Debug)]
@@ -58,44 +60,50 @@ async fn main() {
     let _stderr_logging_guard = bin_util::init_logging(telemetry_tracer).expect("logging wired up");
 
     let cancel_token = bin_util::register_cancel();
+
+    #[cfg(feature = "nats")]
+    let ingester = Arc::new(
+        components::nats::new_amplifier_ingester(&cli.config_path)
+            .await
+            .expect("ingester is created"),
+    );
+
+    #[cfg(feature = "gcp")]
+    let ingester = Arc::new(
+        components::gcp::new_amplifier_ingester(&cli.config_path, cancel_token.clone())
+            .await
+            .expect("ingester is created"),
+    );
+
     tokio::try_join!(
         spawn_subscriber_worker(
             config.tickrate,
             config.max_errors,
-            cli.config_path.clone(),
+            ingester.clone(),
             &cancel_token
         ),
-        spawn_health_check_server(
-            config.health_check.port,
-            cli.config_path.clone(),
-            cancel_token.clone()
-        )
+        spawn_health_check_server(config.health_check.port, ingester, cancel_token.clone())
     )
     .expect("Failed to join main loop and health server tasks");
 
     tracing::info!("Amplifier ingester has been shut down");
 }
 
-fn spawn_subscriber_worker(
+fn spawn_subscriber_worker<EventQueueConsumer>(
     tickrate: Duration,
     max_errors: u32,
-    config_path: String,
+    ingester: Arc<amplifier_ingester::Ingester<EventQueueConsumer>>,
     cancel_token: &CancellationToken,
-) -> tokio::task::JoinHandle<()> {
+) -> tokio::task::JoinHandle<()>
+where
+    EventQueueConsumer: infrastructure::interfaces::consumer::Consumer<amplifier_api::types::Event>
+        + Send
+        + Sync
+        + 'static,
+{
     tokio::task::spawn({
         let cancel_token = cancel_token.clone();
         async move {
-            #[cfg(feature = "nats")]
-            let ingester = components::nats::new_amplifier_ingester(&config_path)
-                .await
-                .expect("ingester is created");
-
-            #[cfg(feature = "gcp")]
-            let ingester =
-                components::gcp::new_amplifier_ingester(&config_path, cancel_token.clone())
-                    .await
-                    .expect("ingester is created");
-
             tracing::trace!("Starting amplifier ingester...");
 
             cancel_token
@@ -124,31 +132,22 @@ fn spawn_subscriber_worker(
     })
 }
 
-fn spawn_health_check_server(
+fn spawn_health_check_server<EventQueueConsumer>(
     port: u16,
-    config_path: String,
+    ingester: Arc<amplifier_ingester::Ingester<EventQueueConsumer>>,
     cancel_token: CancellationToken,
-) -> tokio::task::JoinHandle<()> {
+) -> tokio::task::JoinHandle<()>
+where
+    EventQueueConsumer: infrastructure::interfaces::consumer::Consumer<amplifier_api::types::Event>
+        + Send
+        + Sync
+        + 'static,
+{
     tokio::task::spawn(async move {
         tracing::trace!("Starting health check server...");
 
-        let run_token = cancel_token.clone();
-        #[allow(unused_variables, reason = "weird bug as cancel token IS USED")]
-        let cancel_token_for_ingester = cancel_token.clone();
-        
-        #[cfg(feature = "nats")]
-        let ingester = components::nats::new_amplifier_ingester(&config_path)
-            .await
-            .expect("ingester is created");
-
-        #[cfg(feature = "gcp")]
-        let ingester =
-            components::gcp::new_amplifier_ingester(&config_path, cancel_token_for_ingester)
-                .await
-                .expect("ingester is created");
-                
         health_check::Server::new(port, ingester)
-            .run(run_token)
+            .run(cancel_token)
             .await;
 
         tracing::warn!("Shutting down health check server...");
