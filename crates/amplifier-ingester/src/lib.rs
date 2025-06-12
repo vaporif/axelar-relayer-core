@@ -2,6 +2,7 @@
 use std::sync::Arc;
 
 use bin_util::SimpleMetrics;
+use bin_util::health_check::CheckHealth;
 use eyre::Context as _;
 use futures::StreamExt as _;
 use infrastructure::interfaces::consumer::{AckKind, Consumer, QueueMessage};
@@ -129,15 +130,13 @@ where
 
         Ok(())
     }
+}
 
-    /// Checks the health of the ingester.
-    ///
-    /// This function performs various health checks to ensure the ingester is operational.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if any of the health checks fail.
-    pub async fn check_health(&self) -> eyre::Result<()> {
+impl<EventQueueConsumer> CheckHealth for Ingester<EventQueueConsumer>
+where
+    EventQueueConsumer: Consumer<amplifier_api::types::Event> + Send + Sync + 'static,
+{
+    async fn check_health(&self) -> eyre::Result<()> {
         tracing::trace!("checking health");
 
         if let Err(err) = self.event_queue_consumer.check_health().await {

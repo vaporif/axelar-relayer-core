@@ -2,6 +2,7 @@
 use amplifier_api::requests::WithTrailingSlash;
 use amplifier_api::{AmplifierApiClient, requests};
 use bin_util::SimpleMetrics;
+use bin_util::health_check::CheckHealth;
 use eyre::Context as _;
 use infrastructure::interfaces::publisher::{PeekMessage, PublishMessage, Publisher};
 
@@ -105,15 +106,17 @@ where
 
         res
     }
+}
 
-    /// Checks the health of the subscriber.
-    ///
-    /// This function performs various health checks to ensure the subscriber is operational.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if any of the health checks fail.
-    pub async fn check_health(&self) -> eyre::Result<()> {
+impl<TaskQueuePublisher> CheckHealth for Subscriber<TaskQueuePublisher>
+where
+    TaskQueuePublisher: Publisher<amplifier_api::types::TaskItem>
+        + PeekMessage<amplifier_api::types::TaskItem>
+        + Send
+        + Sync
+        + 'static,
+{
+    async fn check_health(&self) -> eyre::Result<()> {
         // Check if the task queue publisher is healthy
         if let Err(err) = self.task_queue_publisher.check_health().await {
             tracing::warn!(%err, "task queue publisher health check failed");

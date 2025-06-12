@@ -132,22 +132,17 @@ fn spawn_health_check_server(
     tokio::task::spawn(async move {
         tracing::trace!("Starting health check server...");
 
-        health_check::new(port)
-            .add_health_check(move || {
-                let config_path = config_path.clone();
-                async move {
-                    #[cfg(feature = "nats")]
-                    let subscriber = components::nats::new_amplifier_subscriber(&config_path)
-                        .await
-                        .expect("subscriber is created");
+        #[cfg(feature = "nats")]
+        let subscriber = components::nats::new_amplifier_subscriber(&config_path)
+            .await
+            .expect("subscriber is created");
 
-                    #[cfg(feature = "gcp")]
-                    let subscriber = components::gcp::new_amplifier_subscriber(&config_path)
-                        .await
-                        .expect("subscriber is created");
-                    subscriber.check_health().await
-                }
-            })
+        #[cfg(feature = "gcp")]
+        let subscriber = components::gcp::new_amplifier_subscriber(&config_path)
+            .await
+            .expect("subscriber is created");
+
+        health_check::Server::new(port, subscriber)
             .run(cancel_token)
             .await;
 

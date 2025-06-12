@@ -133,25 +133,21 @@ fn spawn_health_check_server(
         tracing::trace!("Starting health check server...");
 
         let run_token = cancel_token.clone();
-        health_check::new(port)
-            .add_health_check(move || {
-                let config_path = config_path.clone();
-                #[allow(unused_variables, reason = "weird bug as cancel token IS USED")]
-                let cancel_token = cancel_token.clone();
-                async move {
-                    #[cfg(feature = "nats")]
-                    let ingester = components::nats::new_amplifier_ingester(&config_path)
-                        .await
-                        .expect("ingester is created");
+        #[allow(unused_variables, reason = "weird bug as cancel token IS USED")]
+        let cancel_token_for_ingester = cancel_token.clone();
+        
+        #[cfg(feature = "nats")]
+        let ingester = components::nats::new_amplifier_ingester(&config_path)
+            .await
+            .expect("ingester is created");
 
-                    #[cfg(feature = "gcp")]
-                    let ingester =
-                        components::gcp::new_amplifier_ingester(&config_path, cancel_token)
-                            .await
-                            .expect("ingester is created");
-                    ingester.check_health().await
-                }
-            })
+        #[cfg(feature = "gcp")]
+        let ingester =
+            components::gcp::new_amplifier_ingester(&config_path, cancel_token_for_ingester)
+                .await
+                .expect("ingester is created");
+                
+        health_check::Server::new(port, ingester)
             .run(run_token)
             .await;
 
