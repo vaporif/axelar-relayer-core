@@ -33,6 +33,40 @@ impl ValidateConfig for NatsSectionConfig {
     }
 }
 
+/// Creates a new Amplifier subscriber configured for NATS messaging.
+///
+/// This function initializes a subscriber that fetches tasks from the Amplifier API
+/// and publishes them to a NATS stream for processing by downstream consumers.
+/// It establishes a NATS publisher connection and configures the Amplifier API
+/// client with TLS authentication.
+///
+/// # Arguments
+///
+/// * `config_path` - Path to the configuration file containing both general subscriber
+///   settings and NATS-specific configuration
+///
+/// # Returns
+///
+/// Returns a `Subscriber` instance configured with a NATS publisher for distributing
+/// Amplifier API task items, or an error if initialization fails.
+///
+/// # Configuration
+///
+/// The configuration file must contain:
+/// - General subscriber configuration (limit_per_request, amplifier_component)
+/// - NATS configuration section with:
+///   - `urls`: List of NATS server URLs
+///   - `stream_name`: Name of the NATS stream to publish to
+///   - `stream_subject`: Subject pattern for publishing messages
+///   - `stream_description`: Description of the stream
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - Configuration file cannot be read or parsed
+/// - NATS connection cannot be established
+/// - Amplifier API client fails to initialize
+/// - Required configuration fields are missing
 pub async fn new_amplifier_subscriber(
     config_path: &str,
 ) -> eyre::Result<Subscriber<NatsPublisher<amplifier_api::types::TaskItem>>> {
