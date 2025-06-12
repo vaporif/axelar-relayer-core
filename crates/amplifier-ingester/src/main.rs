@@ -86,7 +86,7 @@ async fn main() {
         spawn_subscriber_worker(
             config.tickrate,
             config.max_errors,
-            ingester.clone(),
+            Arc::clone(&ingester),
             &cancel_token
         ),
         spawn_health_check_server(config.health_check.port, ingester, cancel_token.clone())
