@@ -33,7 +33,6 @@ compile_error!(
 #[cfg(not(any(feature = "nats", feature = "gcp")))]
 compile_error!("Either 'nats' or 'gcp' feature must be enabled. Please choose one backend.");
 
-use core::time::Duration;
 use std::sync::Arc;
 
 use amplifier_subscriber::config::Config;
@@ -67,50 +66,32 @@ async fn main() {
 
     let cancel_token = bin_util::register_cancel();
 
+    run_subscriber(&cli.config_path, config, cancel_token).await;
+
+    tracing::info!("Amplifier subscriber has been shut down");
+}
+
+async fn run_subscriber(config_path: &str, config: Config, cancel_token: CancellationToken) {
     // Create the subscriber once and wrap in Arc
     #[cfg(feature = "nats")]
     let subscriber = Arc::new(
-        amplifier_subscriber::nats::new_amplifier_subscriber(&cli.config_path)
+        amplifier_subscriber::nats::new_amplifier_subscriber(config_path)
             .await
             .expect("subscriber is created"),
     );
 
     #[cfg(feature = "gcp")]
     let subscriber = Arc::new(
-        amplifier_subscriber::gcp::new_amplifier_subscriber(&cli.config_path)
+        amplifier_subscriber::gcp::new_amplifier_subscriber(config_path)
             .await
             .expect("subscriber is created"),
     );
 
-    tokio::try_join!(
-        spawn_subscriber_worker(
-            config.tickrate,
-            config.max_errors,
-            Arc::clone(&subscriber),
-            &cancel_token
-        ),
-        spawn_health_check_server(config.health_check.port, subscriber, cancel_token.clone())
-    )
-    .expect("Failed to join main loop and health server tasks");
-
-    tracing::info!("Amplifier subscriber has been shut down");
-}
-
-fn spawn_subscriber_worker<TaskQueuePublisher>(
-    tickrate: Duration,
-    max_errors: u32,
-    subscriber: Arc<amplifier_subscriber::Subscriber<TaskQueuePublisher>>,
-    cancel_token: &CancellationToken,
-) -> tokio::task::JoinHandle<()>
-where
-    TaskQueuePublisher: infrastructure::interfaces::publisher::Publisher<amplifier_api::types::TaskItem>
-        + infrastructure::interfaces::publisher::PeekMessage<amplifier_api::types::TaskItem>
-        + Send
-        + Sync
-        + 'static,
-{
-    tokio::task::spawn({
+    let worker_handle = tokio::task::spawn({
         let cancel_token = cancel_token.clone();
+        let tickrate = config.tickrate;
+        let max_errors = config.max_errors;
+        let subscriber = Arc::clone(&subscriber);
 
         async move {
             tracing::trace!("Starting amplifier subscriber...");
@@ -138,28 +119,22 @@ where
 
             tracing::warn!("Shutting down amplifier subscriber...");
         }
-    })
-}
+    });
 
-fn spawn_health_check_server<TaskQueuePublisher>(
-    port: u16,
-    subscriber: Arc<amplifier_subscriber::Subscriber<TaskQueuePublisher>>,
-    cancel_token: CancellationToken,
-) -> tokio::task::JoinHandle<()>
-where
-    TaskQueuePublisher: infrastructure::interfaces::publisher::Publisher<amplifier_api::types::TaskItem>
-        + infrastructure::interfaces::publisher::PeekMessage<amplifier_api::types::TaskItem>
-        + Send
-        + Sync
-        + 'static,
-{
-    tokio::task::spawn(async move {
-        tracing::trace!("Starting health check server...");
+    let health_check_handle = tokio::task::spawn({
+        let port = config.health_check.port;
 
-        health_check::Server::new(port, subscriber)
-            .run(cancel_token)
-            .await;
+        async move {
+            tracing::trace!("Starting health check server...");
 
-        tracing::warn!("Shutting down health check server...");
-    })
+            health_check::Server::new(port, subscriber)
+                .run(cancel_token)
+                .await;
+
+            tracing::warn!("Shutting down health check server...");
+        }
+    });
+
+    tokio::try_join!(worker_handle, health_check_handle)
+        .expect("Failed to join main loop and health server tasks");
 }

@@ -33,13 +33,11 @@ compile_error!(
 #[cfg(not(any(feature = "nats", feature = "gcp")))]
 compile_error!("Either 'nats' or 'gcp' feature must be enabled. Please choose one backend.");
 
-use core::time::Duration;
 use std::sync::Arc;
 
 use amplifier_ingester::config::Config;
 use bin_util::health_check;
 use clap::{Parser, crate_name, crate_version};
-use relayer_amplifier_api_integration::amplifier_api;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Parser, Debug)]
@@ -68,48 +66,32 @@ async fn main() {
 
     let cancel_token = bin_util::register_cancel();
 
+    run_ingester(&cli.config_path, config, cancel_token).await;
+
+    tracing::info!("Amplifier ingester has been shut down");
+}
+
+async fn run_ingester(config_path: &str, config: Config, cancel_token: CancellationToken) {
     #[cfg(feature = "nats")]
     let ingester = Arc::new(
-        amplifier_ingester::nats::new_amplifier_ingester(&cli.config_path)
+        amplifier_ingester::nats::new_amplifier_ingester(config_path)
             .await
             .expect("ingester is created"),
     );
 
     #[cfg(feature = "gcp")]
     let ingester = Arc::new(
-        amplifier_ingester::gcp::new_amplifier_ingester(&cli.config_path, cancel_token.clone())
+        amplifier_ingester::gcp::new_amplifier_ingester(config_path, cancel_token.clone())
             .await
             .expect("ingester is created"),
     );
 
-    tokio::try_join!(
-        spawn_subscriber_worker(
-            config.tickrate,
-            config.max_errors,
-            Arc::clone(&ingester),
-            &cancel_token
-        ),
-        spawn_health_check_server(config.health_check.port, ingester, cancel_token.clone())
-    )
-    .expect("Failed to join main loop and health server tasks");
-
-    tracing::info!("Amplifier ingester has been shut down");
-}
-
-fn spawn_subscriber_worker<EventQueueConsumer>(
-    tickrate: Duration,
-    max_errors: u32,
-    ingester: Arc<amplifier_ingester::Ingester<EventQueueConsumer>>,
-    cancel_token: &CancellationToken,
-) -> tokio::task::JoinHandle<()>
-where
-    EventQueueConsumer: infrastructure::interfaces::consumer::Consumer<amplifier_api::types::Event>
-        + Send
-        + Sync
-        + 'static,
-{
-    tokio::task::spawn({
+    let worker_handle = tokio::task::spawn({
         let cancel_token = cancel_token.clone();
+        let tickrate = config.tickrate;
+        let max_errors = config.max_errors;
+        let ingester = Arc::clone(&ingester);
+
         async move {
             tracing::trace!("Starting amplifier ingester...");
 
@@ -136,27 +118,22 @@ where
 
             tracing::warn!("Shutting down amplifier ingester...");
         }
-    })
-}
+    });
 
-fn spawn_health_check_server<EventQueueConsumer>(
-    port: u16,
-    ingester: Arc<amplifier_ingester::Ingester<EventQueueConsumer>>,
-    cancel_token: CancellationToken,
-) -> tokio::task::JoinHandle<()>
-where
-    EventQueueConsumer: infrastructure::interfaces::consumer::Consumer<amplifier_api::types::Event>
-        + Send
-        + Sync
-        + 'static,
-{
-    tokio::task::spawn(async move {
-        tracing::trace!("Starting health check server...");
+    let health_check_handle = tokio::task::spawn({
+        let port = config.health_check.port;
 
-        health_check::Server::new(port, ingester)
-            .run(cancel_token)
-            .await;
+        async move {
+            tracing::trace!("Starting health check server...");
 
-        tracing::warn!("Shutting down health check server...");
-    })
+            health_check::Server::new(port, ingester)
+                .run(cancel_token)
+                .await;
+
+            tracing::warn!("Shutting down health check server...");
+        }
+    });
+
+    tokio::try_join!(worker_handle, health_check_handle)
+        .expect("Failed to join main loop and health server tasks");
 }
