@@ -50,12 +50,13 @@ where
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
         let res: eyre::Result<()> = {
-            let mut publisher = self.task_queue_publisher.lock().await;
-            let last_task_id = publisher
+            let last_task_id = self
+                .task_queue_publisher
+                .lock()
+                .await
                 .peek_last()
                 .await
                 .wrap_err("could not get last retrieved task id")?;
-            drop(publisher);
 
             tracing::trace!(?last_task_id, "last retrieved task");
 
