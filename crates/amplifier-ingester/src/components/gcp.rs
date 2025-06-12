@@ -52,11 +52,12 @@ impl ValidateConfig for GcpSectionConfig {
 /// - Processes and forwards events to the Amplifier API
 /// - Uses Redis for distributed locking and coordination
 /// - Supports graceful shutdown via cancellation token
+/// - Uses KMS for TLS
 ///
 /// # Arguments
 ///
-/// * `config_path` - Path to the TOML configuration file containing both general
-///   ingester settings and GCP-specific infrastructure configuration
+/// * `config_path` - Path to the TOML configuration file containing both general ingester settings
+///   and GCP-specific infrastructure configuration
 /// * `cancellation_token` - Token used to signal graceful shutdown to the consumer
 ///
 /// # Configuration
@@ -66,7 +67,7 @@ impl ValidateConfig for GcpSectionConfig {
 ///   - `concurrent_queue_items`: Number of events to process concurrently
 ///   - `amplifier_component.chain`: The blockchain chain identifier
 ///   - `amplifier_component.url`: The Amplifier API URL
-///   - `amplifier_component.tls_public_certificate`: Public certificate for TLS (optional)
+///   - `amplifier_component.tls_public_certificate`: Public certificate for TLS
 /// - GCP-specific config (`GcpSectionConfig`):
 ///   - `gcp.events_subscription`: GCP Pub/Sub subscription name for consuming events
 ///   - `gcp.redis_connection`: Redis connection string for distributed coordination
