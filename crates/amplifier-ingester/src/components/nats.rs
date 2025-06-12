@@ -6,7 +6,8 @@ use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient}
 use serde::Deserialize;
 use url::Url;
 
-use crate::{Config, Ingester};
+use crate::Ingester;
+use crate::config::Config;
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) struct NatsSectionConfig {
@@ -59,7 +60,7 @@ pub async fn new_amplifier_ingester(
     .await
     .wrap_err("event consumer connect err")?;
 
-    Ok(amplifier_ingester::Ingester::new(
+    Ok(Ingester::new(
         amplifier_client,
         event_queue_consumer,
         config.concurrent_queue_items,

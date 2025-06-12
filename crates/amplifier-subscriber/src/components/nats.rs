@@ -6,15 +6,16 @@ use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient}
 use serde::Deserialize;
 use url::Url;
 
-use crate::Config;
+use crate::Subscriber;
+use crate::config::Config;
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct NatsSectionConfig {
+pub(crate) struct NatsSectionConfig {
     pub nats: NatsConfig,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct NatsConfig {
+pub(crate) struct NatsConfig {
     pub urls: Vec<Url>,
     pub stream_name: String,
     pub stream_subject: String,
