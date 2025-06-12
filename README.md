@@ -77,6 +77,8 @@ The relayer establishes bidirectional communication between an Amplifier API and
 
 The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for each chain (Axelar/amplifier API and the connecting chain)
 
+**Important for Blockchain Integration**: The [amplifier-ingester](./crates/amplifier-ingester/README.md) and [amplifier-subscriber](./crates/amplifier-subscriber/README.md) components are generic and don't need modification. To integrate a new blockchain, implement only the blockchain-specific ingester and subscriber that interact with your blockchain and the message queues.
+
 1. **Supervisor**(optional):
 
    - Runs on its own dedicated thread with a Tokio runtime
