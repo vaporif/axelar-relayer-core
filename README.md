@@ -79,6 +79,13 @@ The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for eac
 
 **Important for Blockchain Integration**: The [amplifier-ingester](./crates/amplifier-ingester/README.md) and [amplifier-subscriber](./crates/amplifier-subscriber/README.md) components are generic and don't need modification. To integrate a new blockchain, implement only the blockchain-specific ingester and subscriber that interact with your blockchain and the message queues.
 
+**Implementation Reference**: When implementing blockchain-specific ingester and subscriber components, refer to the [amplifier-ingester](./crates/amplifier-ingester/) and [amplifier-subscriber](./crates/amplifier-subscriber/) implementations as examples of how to structure your components, handle message queues, implement health checks, and integrate with the infrastructure layer.
+
+### Core Libraries
+
+- **[bin-util](./crates/bin-util/README.md)**: Common binary utilities for all relayer components including configuration management, health checks, telemetry, logging, and metrics
+- **[infrastructure](./crates/infrastructure/README.md)**: Storage bus implementations providing abstraction for message queuing (GCP Pub/Sub, NATS) and key-value storage
+
 1. **Supervisor**(optional):
 
    - Runs on its own dedicated thread with a Tokio runtime
