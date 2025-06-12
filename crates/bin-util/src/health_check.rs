@@ -13,6 +13,7 @@
 //! use bin_util::health_check::{Server, CheckHealth};
 //! use tokio_util::sync::CancellationToken;
 //! use eyre::Result;
+//! use std::sync::Arc;
 //!
 //! struct MyChecker;
 //!
@@ -27,7 +28,7 @@
 //!     let cancel_token = CancellationToken::new();
 //!     let token_clone = cancel_token.clone();
 //!
-//!     let checker = MyChecker;
+//!     let checker = Arc::new(MyChecker);
 //!     let server = Server::new(8080, checker);
 //!
 //!     // Run the server in a separate tokio task
@@ -71,7 +72,7 @@ pub trait CheckHealth: Send + Sync + 'static {
     fn check_health(&self) -> impl Future<Output = Result<()>> + Send;
 }
 
-/// Implement `CheckHealth` for Arc<T> where T implements `CheckHealth`
+/// Implement `CheckHealth` for `Arc<T>` where T implements `CheckHealth`
 impl<T: CheckHealth> CheckHealth for Arc<T> {
     async fn check_health(&self) -> Result<()> {
         T::check_health(self).await

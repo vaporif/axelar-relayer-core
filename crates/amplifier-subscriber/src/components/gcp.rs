@@ -96,6 +96,7 @@ impl ValidateConfig for GcpSectionConfig {
 /// # Example
 ///
 /// ```no_run
+/// # use amplifier_subscriber::gcp::new_amplifier_subscriber;
 /// # async fn example() -> eyre::Result<()> {
 /// let subscriber = new_amplifier_subscriber("config.toml").await?;
 /// // subscriber is now ready to poll for tasks and publish to GCP

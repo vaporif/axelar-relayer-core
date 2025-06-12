@@ -96,6 +96,7 @@ impl ValidateConfig for GcpSectionConfig {
 ///
 /// ```no_run
 /// # use tokio_util::sync::CancellationToken;
+/// # use amplifier_ingester::gcp::new_amplifier_ingester;
 /// # async fn example() -> eyre::Result<()> {
 /// let cancel_token = CancellationToken::new();
 /// let ingester = new_amplifier_ingester("config.toml", cancel_token).await?;

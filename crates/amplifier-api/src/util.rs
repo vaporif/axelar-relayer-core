@@ -72,7 +72,7 @@ pub fn deserialize_option_utc<R: Read>(reader: &mut R) -> Result<Option<DateTime
     }
 }
 
-/// Serialize [`&BinInt`]
+/// Serialize `BigInt`
 ///
 /// # Errors
 /// Infallible
@@ -80,7 +80,7 @@ pub fn serialize_bigint<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> 
     value.0.to_string().serialize(writer)
 }
 
-/// Deserialize [`&BinInt`]
+/// Deserialize `BigInt`
 ///
 /// # Errors
 /// wrong input
