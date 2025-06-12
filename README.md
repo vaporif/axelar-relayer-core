@@ -159,10 +159,17 @@ cargo build --bin amplifier-ingester
 # Build the subscriber
 cargo build --bin amplifier-subscriber
 
-# Run with default config path (looks for relayer-config.toml in current directory)
+# Option 1: Run with environment variables only (no config file needed)
+export RELAYER_HEALTH_CHECK_PORT=8080
+export RELAYER_CHAIN="ethereum"
+export RELAYER_TICKRATE="5s"
+# ... set other required variables
 ./target/debug/amplifier-subscriber
 
-# Or specify a custom config path
+# Option 2: Run with default config path (looks for relayer-config.toml in current directory)
+./target/debug/amplifier-subscriber
+
+# Option 3: Specify a custom config path
 ./target/debug/amplifier-subscriber --config /path/to/your/config.toml
 ```
 
@@ -221,7 +228,26 @@ docker build -t axelar-amplifier-subscriber-nats \
 
 ### Running Docker Containers
 
-To run the containers, you'll need to provide your configuration file:
+**Option 1: Using environment variables only (recommended for containers)**
+
+```bash
+# Run the ingester with environment variables only
+docker run -p 8080:8080 \
+  -e RELAYER_HEALTH_CHECK_PORT=8080 \
+  -e RELAYER_TICKRATE="5s" \
+  -e RELAYER_CHAIN="ethereum" \
+  -e RELAYER_AMPLIFIER_URL="https://api.amplifier.axelar.network" \
+  axelar-amplifier-ingester
+
+# Run the subscriber with environment variables only
+docker run -p 8081:8080 \
+  -e RELAYER_HEALTH_CHECK_PORT=8080 \
+  -e RELAYER_CHAIN="ethereum" \
+  -e RELAYER_TICKRATE="5s" \
+  axelar-amplifier-subscriber
+```
+
+**Option 2: Using a configuration file**
 
 ```bash
 # Run the ingester
@@ -236,15 +262,15 @@ By default, the health check endpoints will be available at:
 - http://localhost:8080/healthz and http://localhost:8080/readyz for the ingester
 - http://localhost:8081/healthz and http://localhost:8081/readyz for the subscriber (mapped to a different host port to avoid conflicts)
 
-### Environment Variables
+### Environment Variables Override
 
-You can override configuration options using environment variables when running Docker containers:
+When using a config file, you can still override specific configuration options using environment variables:
 
 ```bash
 docker run -p 8080:8080 \
   -v /path/to/your/relayer-config.toml:/app/relayer-config.toml \
-  -e "TICKRATE_SECS=10" \
-  -e "NATS_URLS=nats://nats-server:4222" \
+  -e "RELAYER_TICKRATE=10s" \
+  -e "RELAYER_NATS_CONNECTION_URL=nats://nats-server:4222" \
   axelar-amplifier-ingester
 ```
 

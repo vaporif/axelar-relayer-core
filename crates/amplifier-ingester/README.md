@@ -76,7 +76,7 @@ cargo run --bin amplifier-ingester --features gcp -- --config config.toml
 
 ## Features
 
-- **Concurrent Processing**: Configurable number of concurrent event processors
+- **Concurrent Processing**: Configurable number of concurrent amplifier api clients pushing data
 - **Multiple Queue Support**: NATS and GCP Pub/Sub implementations
 - **TLS Authentication**: Secure communication with Amplifier API
 - **Error Handling**: Automatic retries with exponential backoff
