@@ -86,6 +86,8 @@ The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for eac
 - **[bin-util](./crates/bin-util/README.md)**: Common binary utilities for all relayer components including configuration management, health checks, telemetry, logging, and metrics
 - **[infrastructure](./crates/infrastructure/README.md)**: Storage bus implementations providing abstraction for message queuing (GCP Pub/Sub, NATS) and key-value storage
 
+#### Components
+
 1. **Supervisor**(optional):
 
    - Runs on its own dedicated thread with a Tokio runtime
