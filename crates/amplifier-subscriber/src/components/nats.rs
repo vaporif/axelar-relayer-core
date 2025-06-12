@@ -42,8 +42,8 @@ impl ValidateConfig for NatsSectionConfig {
 ///
 /// # Arguments
 ///
-/// * `config_path` - Path to the configuration file containing both general subscriber
-///   settings and NATS-specific configuration
+/// * `config_path` - Path to the configuration file containing both general subscriber settings and
+///   NATS-specific configuration
 ///
 /// # Returns
 ///
@@ -53,7 +53,7 @@ impl ValidateConfig for NatsSectionConfig {
 /// # Configuration
 ///
 /// The configuration file must contain:
-/// - General subscriber configuration (limit_per_request, amplifier_component)
+/// - General subscriber configuration (`limit_per_request`, `amplifier_component`)
 /// - NATS configuration section with:
 ///   - `urls`: List of NATS server URLs
 ///   - `stream_name`: Name of the NATS stream to publish to

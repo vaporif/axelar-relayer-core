@@ -45,8 +45,8 @@ impl ValidateConfig for NatsSectionConfig {
 ///
 /// # Arguments
 ///
-/// * `config_path` - Path to the configuration file containing both general ingester
-///   settings and NATS-specific configuration
+/// * `config_path` - Path to the configuration file containing both general ingester settings and
+///   NATS-specific configuration
 ///
 /// # Returns
 ///
@@ -56,7 +56,7 @@ impl ValidateConfig for NatsSectionConfig {
 /// # Configuration
 ///
 /// The configuration file must contain:
-/// - General ingester configuration (concurrent_queue_items, amplifier_component)
+/// - General ingester configuration (`concurrent_queue_items`, `amplifier_component`)
 /// - NATS configuration section with:
 ///   - `urls`: List of NATS server URLs
 ///   - `stream_name`: Name of the NATS stream
