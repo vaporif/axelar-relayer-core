@@ -10,17 +10,25 @@
 //! ## Example
 //!
 //! ```rust
-//! use bin_util::health_check::Server;
+//! use bin_util::health_check::{Server, CheckHealth};
 //! use tokio_util::sync::CancellationToken;
 //! use eyre::Result;
+//!
+//! struct MyChecker;
+//!
+//! impl CheckHealth for MyChecker {
+//!     async fn check_health(&self) -> Result<()> {
+//!         Ok(())
+//!     }
+//! }
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
 //!     let cancel_token = CancellationToken::new();
 //!     let token_clone = cancel_token.clone();
 //!
-//!     let server = Server::new(8080)
-//!         .add_health_check(|| async { Ok(()) });
+//!     let checker = MyChecker;
+//!     let server = Server::new(8080, checker);
 //!
 //!     // Run the server in a separate tokio task
 //!     tokio::spawn(async move {
@@ -61,6 +69,13 @@ pub trait CheckHealth: Send + Sync + 'static {
     /// * `Ok(())` - If the service is healthy
     /// * `Err(...)` - If there are any issues with the service's health
     fn check_health(&self) -> impl Future<Output = Result<()>> + Send;
+}
+
+/// Implement `CheckHealth` for Arc<T> where T implements `CheckHealth`
+impl<T: CheckHealth> CheckHealth for Arc<T> {
+    async fn check_health(&self) -> Result<()> {
+        T::check_health(self).await
+    }
 }
 
 /// Healthcheck config

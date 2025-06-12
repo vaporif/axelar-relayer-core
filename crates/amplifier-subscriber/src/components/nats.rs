@@ -9,12 +9,12 @@ use url::Url;
 use crate::Config;
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub(crate) struct NatsSectionConfig {
+pub struct NatsSectionConfig {
     pub nats: NatsConfig,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub(crate) struct NatsConfig {
+pub struct NatsConfig {
     pub urls: Vec<Url>,
     pub stream_name: String,
     pub stream_subject: String,
@@ -32,9 +32,9 @@ impl ValidateConfig for NatsSectionConfig {
     }
 }
 
-pub(crate) async fn new_amplifier_subscriber(
+pub async fn new_amplifier_subscriber(
     config_path: &str,
-) -> eyre::Result<amplifier_subscriber::Subscriber<NatsPublisher<amplifier_api::types::TaskItem>>> {
+) -> eyre::Result<Subscriber<NatsPublisher<amplifier_api::types::TaskItem>>> {
     let config: Config = bin_util::try_deserialize(config_path)?;
     let nats_config: NatsSectionConfig = bin_util::try_deserialize(config_path)?;
 
@@ -54,7 +54,7 @@ pub(crate) async fn new_amplifier_subscriber(
     .await
     .wrap_err("task queue publisher connect err")?;
 
-    Ok(amplifier_subscriber::Subscriber::new(
+    Ok(Subscriber::new(
         amplifier_client,
         task_queue_publisher,
         config.limit_per_request,

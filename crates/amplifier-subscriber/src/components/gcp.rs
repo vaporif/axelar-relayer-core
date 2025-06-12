@@ -7,6 +7,7 @@ use infrastructure::gcp::publisher::PeekableGcpPublisher;
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use serde::Deserialize;
 
+use crate::Subscriber;
 use crate::config::Config;
 
 const TASK_KEY: &str = "last-task";
@@ -47,11 +48,63 @@ impl ValidateConfig for GcpSectionConfig {
     }
 }
 
-pub(crate) async fn new_amplifier_subscriber(
+/// Creates a new Amplifier Subscriber instance configured for GCP infrastructure.
+///
+/// This function initializes a subscriber that:
+/// - Polls the Amplifier API for new tasks to relay
+/// - Publishes tasks to a GCP Pub/Sub topic for processing
+/// - Uses Redis for tracking the last processed task ID
+/// - Supports TLS authentication via GCP KMS
+///
+/// # Arguments
+///
+/// * `config_path` - Path to the TOML configuration file containing both general subscriber
+///   settings and GCP-specific infrastructure configuration
+///
+/// # Configuration
+///
+/// The configuration file must include:
+/// - General subscriber config (`Config`):
+///   - `limit_per_request`: Maximum number of tasks to fetch per API request
+///   - `amplifier_component.chain`: The blockchain chain identifier
+///   - `amplifier_component.url`: The Amplifier API URL
+///   - `amplifier_component.tls_public_certificate`: Public certificate for TLS
+/// - GCP-specific config (`GcpSectionConfig`):
+///   - `gcp.tasks_topic`: GCP Pub/Sub topic name for publishing tasks
+///   - `gcp.redis_connection`: Redis connection string for state management
+///   - `gcp.nak_deadline_secs`: Deadline for negative acknowledgments
+///   - `gcp.worker_count`: Number of concurrent workers (default from `config_defaults`)
+///   - `gcp.max_bundle_size`: Maximum messages per bundle (default from `config_defaults`)
+///   - `kms`: KMS configuration for TLS key management
+///
+/// # Returns
+///
+/// Returns a `Subscriber` instance with a `PeekableGcpPublisher` that can:
+/// - Track the last processed task ID using Redis
+/// - Publish tasks to GCP Pub/Sub in batches
+/// - Handle health checks for both the publisher and Amplifier API connection
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - Configuration file parsing fails
+/// - GCP Pub/Sub publisher connection fails
+/// - Redis connection for state tracking fails
+/// - KMS client configuration fails
+/// - Amplifier API client creation fails
+///
+/// # Example
+///
+/// ```no_run
+/// # async fn example() -> eyre::Result<()> {
+/// let subscriber = new_amplifier_subscriber("config.toml").await?;
+/// // subscriber is now ready to poll for tasks and publish to GCP
+/// # Ok(())
+/// # }
+/// ```
+pub async fn new_amplifier_subscriber(
     config_path: &str,
-) -> eyre::Result<
-    amplifier_subscriber::Subscriber<PeekableGcpPublisher<amplifier_api::types::TaskItem>>,
-> {
+) -> eyre::Result<Subscriber<PeekableGcpPublisher<amplifier_api::types::TaskItem>>> {
     let config: Config = bin_util::try_deserialize(config_path)?;
     let infra_config: GcpSectionConfig = bin_util::try_deserialize(config_path)?;
 
@@ -66,7 +119,7 @@ pub(crate) async fn new_amplifier_subscriber(
     .wrap_err("task queue publisher connect err")?;
 
     let amplifier_client = amplifier_client(&config, infra_config).await?;
-    Ok(amplifier_subscriber::Subscriber::new(
+    Ok(Subscriber::new(
         amplifier_client,
         task_queue_publisher,
         config.limit_per_request,

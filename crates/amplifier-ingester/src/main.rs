@@ -23,15 +23,22 @@
 //! - Health check server port
 //! - Event processing tickrate
 //! - Backend-specific configuration (NATS or GCP)
-mod components;
-mod config;
+
+// Ensure only one backend is enabled at a time
+#[cfg(all(feature = "nats", feature = "gcp"))]
+compile_error!(
+    "Features 'nats' and 'gcp' cannot be enabled at the same time. Please choose only one backend."
+);
+
+#[cfg(not(any(feature = "nats", feature = "gcp")))]
+compile_error!("Either 'nats' or 'gcp' feature must be enabled. Please choose one backend.");
 
 use core::time::Duration;
 use std::sync::Arc;
 
+use amplifier_ingester::config::Config;
 use bin_util::health_check;
 use clap::{Parser, crate_name, crate_version};
-use config::Config;
 use relayer_amplifier_api_integration::amplifier_api;
 use tokio_util::sync::CancellationToken;
 
@@ -63,14 +70,14 @@ async fn main() {
 
     #[cfg(feature = "nats")]
     let ingester = Arc::new(
-        components::nats::new_amplifier_ingester(&cli.config_path)
+        amplifier_ingester::nats::new_amplifier_ingester(&cli.config_path)
             .await
             .expect("ingester is created"),
     );
 
     #[cfg(feature = "gcp")]
     let ingester = Arc::new(
-        components::gcp::new_amplifier_ingester(&cli.config_path, cancel_token.clone())
+        amplifier_ingester::gcp::new_amplifier_ingester(&cli.config_path, cancel_token.clone())
             .await
             .expect("ingester is created"),
     );

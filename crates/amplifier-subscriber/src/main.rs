@@ -23,15 +23,22 @@
 //! - Health check server port
 //! - Event processing tickrate
 //! - Backend-specific configuration (NATS or GCP)
-mod components;
-mod config;
+
+// Ensure only one backend is enabled at a time
+#[cfg(all(feature = "nats", feature = "gcp"))]
+compile_error!(
+    "Features 'nats' and 'gcp' cannot be enabled at the same time. Please choose only one backend."
+);
+
+#[cfg(not(any(feature = "nats", feature = "gcp")))]
+compile_error!("Either 'nats' or 'gcp' feature must be enabled. Please choose one backend.");
 
 use core::time::Duration;
 use std::sync::Arc;
 
+use amplifier_subscriber::config::Config;
 use bin_util::health_check;
 use clap::{Parser, crate_name, crate_version};
-use config::Config;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Parser, Debug)]
@@ -63,14 +70,14 @@ async fn main() {
     // Create the subscriber once and wrap in Arc
     #[cfg(feature = "nats")]
     let subscriber = Arc::new(
-        components::nats::new_amplifier_subscriber(&cli.config_path)
+        amplifier_subscriber::nats::new_amplifier_subscriber(&cli.config_path)
             .await
             .expect("subscriber is created"),
     );
 
     #[cfg(feature = "gcp")]
     let subscriber = Arc::new(
-        components::gcp::new_amplifier_subscriber(&cli.config_path)
+        amplifier_subscriber::gcp::new_amplifier_subscriber(&cli.config_path)
             .await
             .expect("subscriber is created"),
     );

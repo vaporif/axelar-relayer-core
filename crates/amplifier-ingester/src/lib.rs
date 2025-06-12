@@ -11,6 +11,13 @@ use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEven
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use tracing::Instrument as _;
 
+mod components;
+
+/// Configs
+pub mod config;
+
+pub use components::*;
+
 /// Consumes events queue and sends it to include to amplifier api
 pub struct Ingester<EventQueueConsumer> {
     ampf_client: AmplifierApiClient,

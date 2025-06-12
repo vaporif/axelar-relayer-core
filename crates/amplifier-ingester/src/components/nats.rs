@@ -6,7 +6,7 @@ use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient}
 use serde::Deserialize;
 use url::Url;
 
-use crate::Config;
+use crate::{Config, Ingester};
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) struct NatsSectionConfig {
@@ -36,9 +36,9 @@ impl ValidateConfig for NatsSectionConfig {
     }
 }
 
-pub(crate) async fn new_amplifier_ingester(
+pub async fn new_amplifier_ingester(
     config_path: &str,
-) -> eyre::Result<amplifier_ingester::Ingester<NatsConsumer<amplifier_api::types::Event>>> {
+) -> eyre::Result<Ingester<NatsConsumer<amplifier_api::types::Event>>> {
     let config: Config = bin_util::try_deserialize(config_path)?;
     let nats_config: NatsSectionConfig = bin_util::try_deserialize(config_path)?;
 

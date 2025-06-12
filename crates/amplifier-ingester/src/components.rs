@@ -1,4 +1,6 @@
+/// Gcp connectivity
 #[cfg(feature = "gcp")]
-pub(crate) mod gcp;
+pub mod gcp;
+/// Nats connectivity
 #[cfg(feature = "nats")]
-pub(crate) mod nats;
+pub mod nats;

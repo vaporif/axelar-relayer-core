@@ -7,6 +7,12 @@ use eyre::Context as _;
 use infrastructure::interfaces::publisher::{PeekMessage, PublishMessage, Publisher};
 use tokio::sync::Mutex;
 
+mod components;
+/// Configs
+pub mod config;
+
+pub use components::*;
+
 /// subscribes to tasks from amplifier and sends them to queue
 pub struct Subscriber<TaskQueuePublisher> {
     amplifier_client: AmplifierApiClient,
