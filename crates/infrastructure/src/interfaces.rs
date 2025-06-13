@@ -78,7 +78,7 @@ pub mod publisher {
         /// Get last message from queue without consuming
         fn peek_last(
             &mut self,
-        ) -> impl Future<Output = Result<Option<T::MessageId>, impl Error + Send + Sync + 'static>> + Send;
+        ) -> impl Future<Output = Result<Option<T::MessageId>, impl Error + Send + Sync + 'static>>;
     }
 
     /// Publish Messsage
@@ -107,13 +107,13 @@ pub mod publisher {
         fn publish(
             &self,
             msg: PublishMessage<T>,
-        ) -> impl Future<Output = Result<Self::Return, impl Error + Send + Sync + 'static>> + Send;
+        ) -> impl Future<Output = Result<Self::Return, impl Error + Send + Sync + 'static>>;
 
         /// Publish batch to queue
         fn publish_batch(
             &self,
             msg: Vec<PublishMessage<T>>,
-        ) -> impl Future<Output = Result<Vec<Self::Return>, impl Error + Send + Sync + 'static>> + Send;
+        ) -> impl Future<Output = Result<Vec<Self::Return>, impl Error + Send + Sync + 'static>>;
 
         /// Checks the health status of the publisher connection.
         ///
@@ -152,24 +152,22 @@ pub mod kv_store {
     }
 
     /// ``KvStore`` interface
-    pub trait KvStore<T: Send + Sync + 'static> {
+    pub trait KvStore<T> {
         /// Update value in kvstore
         fn update(
             &self,
             data: &WithRevision<T>,
-        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>> + Send;
+        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>>;
 
         /// Create value in kvstore
         fn put(
             &self,
             value: &T,
-        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>> + Send;
+        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>>;
 
         /// Get value from kvstore
         fn get(
             &self,
-        ) -> impl Future<
-            Output = Result<Option<WithRevision<T>>, impl Error + Send + Sync + 'static>,
-        > + Send;
+        ) -> impl Future<Output = Result<Option<WithRevision<T>>, impl Error + Send + Sync + 'static>>;
     }
 }

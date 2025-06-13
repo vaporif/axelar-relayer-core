@@ -212,7 +212,7 @@ where
 
 impl<T> interfaces::publisher::Publisher<T> for PeekableGcpPublisher<T>
 where
-    T: QueueMsgId + BorshSerialize + BorshDeserialize + Debug + Clone + Send + Sync + 'static,
+    T: QueueMsgId + BorshSerialize + BorshDeserialize + Debug + Clone + Send + Sync,
     T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display + Send + Sync,
 {
     type Return = String;
@@ -306,8 +306,8 @@ where
 
 impl<T> interfaces::publisher::PeekMessage<T> for PeekableGcpPublisher<T>
 where
-    T: QueueMsgId + Send,
-    T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display + Send + Sync + 'static,
+    T: QueueMsgId,
+    T::MessageId: BorshSerialize + BorshDeserialize + Debug + Display,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip_all)]

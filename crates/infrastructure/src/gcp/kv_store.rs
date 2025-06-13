@@ -21,7 +21,7 @@ pub struct RedisClient<T> {
 
 impl<T> RedisClient<T>
 where
-    T: BorshSerialize + BorshDeserialize + Display + Send + Sync + 'static,
+    T: BorshSerialize + BorshDeserialize + Display,
 {
     /// Connect to redis
     /// # Errors
@@ -81,7 +81,7 @@ where
 // TODO: remove it from interfaces?
 impl<T> interfaces::kv_store::KvStore<T> for RedisClient<T>
 where
-    T: BorshSerialize + BorshDeserialize + Display + Debug + Send + Sync + 'static,
+    T: BorshSerialize + BorshDeserialize + Display + Debug,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip(self))]
