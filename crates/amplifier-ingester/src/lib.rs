@@ -2,6 +2,7 @@
 use std::sync::Arc;
 
 use bin_util::SimpleMetrics;
+use bin_util::health_check::CheckHealth;
 use eyre::Context as _;
 use futures::StreamExt as _;
 use infrastructure::interfaces::consumer::{AckKind, Consumer, QueueMessage};
@@ -9,6 +10,19 @@ use relayer_amplifier_api_integration::amplifier_api::requests::{self, WithTrail
 use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEventsRequest};
 use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use tracing::Instrument as _;
+
+mod components;
+
+/// Configs
+pub mod config;
+
+pub use components::*;
+
+#[cfg(not(any(feature = "gcp", feature = "nats")))]
+compile_error!("Either feature 'gcp' or feature 'nats' must be enabled");
+
+#[cfg(all(feature = "gcp", feature = "nats"))]
+compile_error!("Features 'gcp' and 'nats' are mutually exclusive");
 
 /// Consumes events queue and sends it to include to amplifier api
 pub struct Ingester<EventQueueConsumer> {
@@ -129,19 +143,15 @@ where
 
         Ok(())
     }
+}
 
-    /// Checks the health of the ingester.
-    ///
-    /// This function performs various health checks to ensure the ingester is operational.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if any of the health checks fail.
-    pub async fn check_health(&self) -> eyre::Result<()> {
-        tracing::trace!("checking health");
-
+impl<EventQueueConsumer> CheckHealth for Ingester<EventQueueConsumer>
+where
+    EventQueueConsumer: Consumer<amplifier_api::types::Event> + Send + Sync + 'static,
+{
+    async fn check_health(&self) -> eyre::Result<()> {
         if let Err(err) = self.event_queue_consumer.check_health().await {
-            tracing::warn!(%err, "event queue consumer health check failed");
+            tracing::error!(?err, "event queue consumer health check failed");
             return Err(err.into());
         }
 
@@ -152,7 +162,7 @@ where
             .execute()
             .await
         {
-            tracing::warn!(%err, "amplifier client health check failed");
+            tracing::error!(?err, "amplifier client health check failed");
             return Err(err.into());
         }
 

@@ -6,7 +6,8 @@ use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient}
 use serde::Deserialize;
 use url::Url;
 
-use crate::Config;
+use crate::Ingester;
+use crate::config::Config;
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) struct NatsSectionConfig {
@@ -36,9 +37,44 @@ impl ValidateConfig for NatsSectionConfig {
     }
 }
 
-pub(crate) async fn new_amplifier_ingester(
+/// Creates a new Amplifier ingester configured for NATS messaging.
+///
+/// This function initializes an ingester that consumes events from a NATS stream
+/// and forwards them to the Amplifier API. It sets up the necessary NATS consumer
+/// connection and configures the Amplifier API client with TLS authentication.
+///
+/// # Arguments
+///
+/// * `config_path` - Path to the configuration file containing both general ingester settings and
+///   NATS-specific configuration
+///
+/// # Returns
+///
+/// Returns an `Ingester` instance configured with a NATS consumer for processing
+/// Amplifier API events, or an error if initialization fails.
+///
+/// # Configuration
+///
+/// The configuration file must contain:
+/// - General ingester configuration (`concurrent_queue_items`, `amplifier_component`)
+/// - NATS configuration section with:
+///   - `urls`: List of NATS server URLs
+///   - `stream_name`: Name of the NATS stream
+///   - `stream_subject`: Subject pattern for the stream
+///   - `stream_description`: Description of the stream
+///   - `consumer_description`: Description for the consumer
+///   - `deliver_group`: Delivery group name for load balancing
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - Configuration file cannot be read or parsed
+/// - NATS connection cannot be established
+/// - Amplifier API client fails to initialize
+/// - Required configuration fields are missing
+pub async fn new_amplifier_ingester(
     config_path: &str,
-) -> eyre::Result<amplifier_ingester::Ingester<NatsConsumer<amplifier_api::types::Event>>> {
+) -> eyre::Result<Ingester<NatsConsumer<amplifier_api::types::Event>>> {
     let config: Config = bin_util::try_deserialize(config_path)?;
     let nats_config: NatsSectionConfig = bin_util::try_deserialize(config_path)?;
 
@@ -59,7 +95,7 @@ pub(crate) async fn new_amplifier_ingester(
     .await
     .wrap_err("event consumer connect err")?;
 
-    Ok(amplifier_ingester::Ingester::new(
+    Ok(Ingester::new(
         amplifier_client,
         event_queue_consumer,
         config.concurrent_queue_items,

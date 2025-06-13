@@ -91,7 +91,7 @@ mod id {
             Ok((tx_hash.to_owned(), log_index))
         }
 
-        /// Construct a new event id for a [`CannotExecuteMessageEvent`]
+        /// Construct a new event id for a cannot execute task event
         #[must_use]
         pub fn cannot_execute_task_event_id(task_item_id: &TaskItemId) -> Self {
             Self(format!("cannot-execute-task-v2-{}", task_item_id.0))

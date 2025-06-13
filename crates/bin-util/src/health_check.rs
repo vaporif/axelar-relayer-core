@@ -10,17 +10,26 @@
 //! ## Example
 //!
 //! ```rust
-//! use bin_util::health_check::Server;
+//! use bin_util::health_check::{Server, CheckHealth};
 //! use tokio_util::sync::CancellationToken;
 //! use eyre::Result;
+//! use std::sync::Arc;
+//!
+//! struct MyChecker;
+//!
+//! impl CheckHealth for MyChecker {
+//!     async fn check_health(&self) -> Result<()> {
+//!         Ok(())
+//!     }
+//! }
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
 //!     let cancel_token = CancellationToken::new();
 //!     let token_clone = cancel_token.clone();
 //!
-//!     let server = Server::new(8080)
-//!         .add_health_check(|| async { Ok(()) });
+//!     let checker = Arc::new(MyChecker);
+//!     let server = Server::new(8080, checker);
 //!
 //!     // Run the server in a separate tokio task
 //!     tokio::spawn(async move {
@@ -35,7 +44,6 @@
 //! }
 //! ```
 use core::future::Future;
-use core::pin::Pin;
 use std::sync::Arc;
 
 use axum::Router;
@@ -48,12 +56,28 @@ use serde::Deserialize;
 use serde_json::json;
 use tokio_util::sync::CancellationToken;
 
-/// A type alias representing a health check function.
+/// Trait for types that can perform health checks.
 ///
-/// This type encapsulates an async function that returns a `Result<()>`,
-/// where `Ok(())` indicates a successful health check and `Err(_)` indicates a failure.
-pub type HealthCheck =
-    Box<dyn Fn() -> Pin<Box<dyn Future<Output = Result<()>> + Send>> + Send + Sync>;
+/// This trait should be implemented by services that need to report their health status
+/// through the health check server endpoints.
+pub trait CheckHealth: Send + Sync + 'static {
+    /// Checks the health status of the service.
+    ///
+    /// This method verifies the service's health and returns an error if the health check fails.
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - If the service is healthy
+    /// * `Err(...)` - If there are any issues with the service's health
+    fn check_health(&self) -> impl Future<Output = Result<()>> + Send;
+}
+
+/// Implement `CheckHealth` for `Arc<T>` where T implements `CheckHealth`
+impl<T: CheckHealth> CheckHealth for Arc<T> {
+    async fn check_health(&self) -> Result<()> {
+        T::check_health(self).await
+    }
+}
 
 /// Healthcheck config
 #[derive(Debug, Deserialize)]
@@ -70,69 +94,26 @@ pub struct Config {
 ///
 /// Both endpoints return 200 OK when all registered health checks pass,
 /// or 503 Service Unavailable when any check fails.
-pub struct Server {
+pub struct Server<Checker> {
     port: u16,
-    health_checks: Vec<HealthCheck>,
+    checker: Arc<Checker>,
 }
 
-/// Creates a new `Server` bound to the specified port.
-///
-/// # Arguments
-///
-/// * `port` - The TCP port on which the server will listen for HTTP requests
-///
-/// # Returns
-///
-/// A new `Server` instance with no health checks registered.
-#[must_use]
-pub fn new(port: u16) -> Server {
-    Server {
-        port,
-        health_checks: Vec::new(),
-    }
-}
-
-impl Server {
+impl<Checker: CheckHealth> Server<Checker> {
     /// Creates a new `Server` bound to the specified port.
     ///
     /// # Arguments
     ///
     /// * `port` - The TCP port on which the server will listen for HTTP requests
+    /// * `checker` - The health checker implementation wrapped in Arc
     ///
     /// # Returns
     ///
-    /// A new `Server` instance with no health checks registered.
+    /// A new `Server` instance with the provided health checker.
     #[must_use]
-    pub fn new(port: u16) -> Self {
-        Self {
-            port,
-            health_checks: Vec::new(),
-        }
+    pub const fn new(port: u16, checker: Arc<Checker>) -> Self {
+        Self { port, checker }
     }
-
-    /// Registers a health check function with the server.
-    ///
-    /// Multiple health checks can be registered by chaining this method.
-    /// All health checks are executed in parallel when a health check request is received.
-    ///
-    /// # Arguments
-    ///
-    /// * `f` - A function that returns a future resolving to a `Result<()>`. An `Ok(())` result
-    ///   indicates the health check passed, while an `Err(_)` indicates it failed.
-    ///
-    /// # Returns
-    ///
-    /// `Self` with the health check added, allowing for method chaining.
-    #[must_use]
-    pub fn add_health_check<F, Fut>(mut self, f: F) -> Self
-    where
-        F: Fn() -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
-    {
-        self.health_checks.push(Box::new(move || Box::pin(f())));
-        self
-    }
-
     /// Starts the HTTP server and runs until the cancellation token is triggered.
     ///
     /// The server will bind to `0.0.0.0` on the configured port and respond to
@@ -149,13 +130,10 @@ impl Server {
     /// if the port is already in use or if the process doesn't have permission to bind to
     /// the requested port.
     pub async fn run(self, cancel_token: CancellationToken) {
-        let health_checks: Arc<[HealthCheck]> = Arc::from(self.health_checks.into_boxed_slice());
-        let state = Arc::clone(&health_checks);
-
         let app = Router::new()
-            .route("/healthz", get(handle_healthz))
-            .route("/readyz", get(handle_readyz))
-            .layer(Extension(state));
+            .route("/healthz", get(handle_healthz::<Checker>))
+            .route("/readyz", get(handle_readyz::<Checker>))
+            .layer(Extension(self.checker));
 
         let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", self.port))
             .await
@@ -166,59 +144,46 @@ impl Server {
                 cancel_token.cancelled().await;
             })
             .await
-            .expect("Server error");
+            .expect("Health check Server error");
     }
 }
 
-async fn handle_healthz(
-    Extension(health_checks): Extension<Arc<[HealthCheck]>>,
+async fn handle_healthz<Checker: CheckHealth>(
+    Extension(checker): Extension<Arc<Checker>>,
 ) -> impl IntoResponse {
-    check_and_respond(
-        &health_checks,
-        StatusCode::OK,
-        StatusCode::SERVICE_UNAVAILABLE,
-        "HEALTHY",
-        "UNHEALTHY",
-    )
-    .await
+    match checker.check_health().await {
+        Ok(()) => {
+            tracing::trace!("Health check succeeded");
+            (StatusCode::OK, Json(json!({ "status": "HEALTHY" })))
+        }
+        Err(err) => {
+            tracing::trace!(?err, "Health check failed");
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({ "status": "UNHEALTHY" })),
+            )
+        }
+    }
 }
 
-async fn handle_readyz(
-    Extension(health_checks): Extension<Arc<[HealthCheck]>>,
+async fn handle_readyz<Checker: CheckHealth>(
+    Extension(checker): Extension<Arc<Checker>>,
 ) -> impl IntoResponse {
-    check_and_respond(
-        &health_checks,
-        StatusCode::OK,
-        StatusCode::SERVICE_UNAVAILABLE,
-        "READY",
-        "UNREADY",
-    )
-    .await
-}
-
-async fn check_and_respond(
-    health_checks: &[HealthCheck],
-    ok_status: StatusCode,
-    err_status: StatusCode,
-    ok_str: &str,
-    err_str: &str,
-) -> (StatusCode, Json<serde_json::Value>) {
-    if health_checks.is_empty() {
-        return (ok_status, Json(json!({ "status": ok_str })));
-    }
-
-    // Run all health checks in parallel
-    let results = futures::future::join_all(health_checks.iter().map(|check| check())).await;
-
-    let has_error = results.iter().any(core::result::Result::is_err);
-    if has_error {
-        tracing::trace!("Health check failed");
-        (err_status, Json(json!({ "status": err_str })))
-    } else {
-        tracing::trace!("Health check succeeded");
-        (ok_status, Json(json!({ "status": ok_str })))
+    match checker.check_health().await {
+        Ok(()) => {
+            tracing::trace!("Readiness check succeeded");
+            (StatusCode::OK, Json(json!({ "status": "READY" })))
+        }
+        Err(err) => {
+            tracing::trace!(?err, "Readiness check failed");
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({ "status": "UNREADY" })),
+            )
+        }
     }
 }
+
 #[cfg(test)]
 mod tests {
     use core::sync::atomic::{AtomicBool, Ordering};
@@ -228,6 +193,20 @@ mod tests {
 
     use super::*;
 
+    struct TestChecker<F> {
+        check_fn: F,
+    }
+
+    impl<F, Fut> CheckHealth for TestChecker<F>
+    where
+        F: Fn() -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<()>> + Send + 'static,
+    {
+        async fn check_health(&self) -> Result<()> {
+            (self.check_fn)().await
+        }
+    }
+
     async fn run_server<F, Fut>(port: u16, health_check: F) -> CancellationToken
     where
         F: Fn() -> Fut + Send + Sync + 'static,
@@ -236,7 +215,10 @@ mod tests {
         let cancel_token = CancellationToken::new();
         let token_clone = cancel_token.clone();
 
-        let server = Server::new(port).add_health_check(health_check);
+        let checker = Arc::new(TestChecker {
+            check_fn: health_check,
+        });
+        let server = Server::new(port, checker);
         tokio::spawn(async move {
             server.run(token_clone).await;
         });
@@ -278,16 +260,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_multiple_health_checks() {
+    async fn test_dynamic_health_status() {
         let port = get_free_port();
         let flag = Arc::new(AtomicBool::new(false));
         let cancel_token = CancellationToken::new();
         let token_clone = cancel_token.clone();
 
         let is_healthy_flag = Arc::clone(&flag);
-        let server = Server::new(port)
-            .add_health_check(|| async { Ok(()) })
-            .add_health_check(move || {
+        let checker = Arc::new(TestChecker {
+            check_fn: move || {
                 let is_ok = !is_healthy_flag.load(Ordering::Relaxed);
                 async move {
                     if is_ok {
@@ -296,7 +277,9 @@ mod tests {
                         Err(eyre::eyre!("Intentional failure"))
                     }
                 }
-            });
+            },
+        });
+        let server = Server::new(port, checker);
 
         tokio::spawn(async move {
             server.run(token_clone).await;
@@ -313,6 +296,8 @@ mod tests {
         let resp = reqwest::get(&url).await.unwrap();
         assert_eq!(resp.status(), 503);
         assert_eq!(resp.text().await.unwrap(), r#"{"status":"UNHEALTHY"}"#);
+
+        cancel_token.cancel();
     }
 
     #[tokio::test]

@@ -77,6 +77,18 @@ The relayer establishes bidirectional communication between an Amplifier API and
 
 The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for each chain (Axelar/amplifier API and the connecting chain)
 
+**Important for Blockchain Integration**: The [amplifier-ingester](./crates/amplifier-ingester/README.md) and [amplifier-subscriber](./crates/amplifier-subscriber/README.md) components are generic and don't need modification. To integrate a new blockchain, implement only the blockchain-specific ingester and subscriber that interact with your blockchain and the message queues.
+
+**Implementation Reference**: When implementing blockchain-specific ingester and subscriber components, refer to the [amplifier-ingester](./crates/amplifier-ingester/) and [amplifier-subscriber](./crates/amplifier-subscriber/) implementations as examples of how to structure your components, handle message queues, implement health checks, and integrate with the infrastructure layer.
+
+### Core Libraries
+
+- **[bin-util](./crates/bin-util/README.md)**: Common binary utilities for all relayer components including configuration management, health checks, telemetry, logging, and metrics
+- **[infrastructure](./crates/infrastructure/README.md)**: Storage bus implementations providing abstraction for message queuing (GCP Pub/Sub, NATS) and key-value storage
+- **[terraform](./terraform/README.md)**: Infrastructure as Code for provisioning GCP resources (Pub/Sub, KMS, Memorystore, IAM, K8s)
+
+#### Components
+
 1. **Supervisor**(optional):
 
    - Runs on its own dedicated thread with a Tokio runtime
@@ -108,6 +120,40 @@ The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for eac
    - Supports horizontal scaling by allowing multiple instances to consume from the same queue
 
 The supervisor is optional, and each component can be started as a separate binary.
+
+## Development Environment
+
+### Using Nix
+
+This project includes a Nix flake that provides a development shell with all necessary tooling. This ensures consistent development environments across different machines.
+
+To use the Nix development environment:
+
+1. **Install Nix** (if not already installed):
+   ```bash
+   # On macOS or Linux
+   curl -L https://nixos.org/nix/install | sh
+   ```
+
+2. **Enable flakes** (if not already enabled):
+   ```bash
+   echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+   ```
+
+3. **Enter the development shell**:
+   ```bash
+   nix develop
+   ```
+
+The development shell includes:
+- **Rust toolchain**: stable Rust with cargo, clippy, rustfmt, and rust-analyzer
+- **NATS tools**: natscli and nats-server for local testing
+- **Google Cloud SDK**: for working with GCP services
+- **OpenTofu**: for managing Terraform infrastructure
+- **cargo-make**: for task automation
+- **Development tools**: nixd, pkg-config, vscode-lldb
+
+All tools are automatically available in your PATH when you enter the Nix shell.
 
 ## Running the Components
 
@@ -148,10 +194,17 @@ cargo build --bin amplifier-ingester
 # Build the subscriber
 cargo build --bin amplifier-subscriber
 
-# Run with default config path (looks for relayer-config.toml in current directory)
+# Option 1: Run with environment variables only (no config file needed)
+export RELAYER_HEALTH_CHECK_PORT=8080
+export RELAYER_CHAIN="ethereum"
+export RELAYER_TICKRATE="5s"
+# ... set other required variables
 ./target/debug/amplifier-subscriber
 
-# Or specify a custom config path
+# Option 2: Run with default config path (looks for relayer-config.toml in current directory)
+./target/debug/amplifier-subscriber
+
+# Option 3: Specify a custom config path
 ./target/debug/amplifier-subscriber --config /path/to/your/config.toml
 ```
 
@@ -210,7 +263,26 @@ docker build -t axelar-amplifier-subscriber-nats \
 
 ### Running Docker Containers
 
-To run the containers, you'll need to provide your configuration file:
+**Option 1: Using environment variables only (recommended for containers)**
+
+```bash
+# Run the ingester with environment variables only
+docker run -p 8080:8080 \
+  -e RELAYER_HEALTH_CHECK_PORT=8080 \
+  -e RELAYER_TICKRATE="5s" \
+  -e RELAYER_CHAIN="ethereum" \
+  -e RELAYER_AMPLIFIER_URL="https://api.amplifier.axelar.network" \
+  axelar-amplifier-ingester
+
+# Run the subscriber with environment variables only
+docker run -p 8081:8080 \
+  -e RELAYER_HEALTH_CHECK_PORT=8080 \
+  -e RELAYER_CHAIN="ethereum" \
+  -e RELAYER_TICKRATE="5s" \
+  axelar-amplifier-subscriber
+```
+
+**Option 2: Using a configuration file**
 
 ```bash
 # Run the ingester
@@ -225,15 +297,15 @@ By default, the health check endpoints will be available at:
 - http://localhost:8080/healthz and http://localhost:8080/readyz for the ingester
 - http://localhost:8081/healthz and http://localhost:8081/readyz for the subscriber (mapped to a different host port to avoid conflicts)
 
-### Environment Variables
+### Environment Variables Override
 
-You can override configuration options using environment variables when running Docker containers:
+When using a config file, you can still override specific configuration options using environment variables:
 
 ```bash
 docker run -p 8080:8080 \
   -v /path/to/your/relayer-config.toml:/app/relayer-config.toml \
-  -e "TICKRATE_SECS=10" \
-  -e "NATS_URLS=nats://nats-server:4222" \
+  -e "RELAYER_TICKRATE=10s" \
+  -e "RELAYER_NATS_CONNECTION_URL=nats://nats-server:4222" \
   axelar-amplifier-ingester
 ```
 

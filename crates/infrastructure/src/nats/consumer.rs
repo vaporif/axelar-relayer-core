@@ -101,11 +101,10 @@ where
 
     #[allow(refining_impl_trait, reason = "simplification")]
     async fn check_health(&self) -> Result<(), NatsError> {
-        tracing::trace!("checking health");
-
         // We have to clone the consumer because `info` mutates its state
-        self.consumer_inner.clone().info().await?;
-
+        if let Err(err) = self.consumer_inner.clone().info().await {
+            tracing::error!(?err, "check health failure");
+        }
         Ok(())
     }
 }

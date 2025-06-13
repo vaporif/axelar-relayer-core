@@ -39,8 +39,25 @@ fn main() -> eyre::Result<()> {
         }
         Commands::Test { args, coverage } => {
             println!("cargo test");
-            cmd!(sh, "cargo test --doc").run()?;
             cmd!(sh, "cargo install cargo-nextest").run()?;
+
+            cmd!(sh, "cargo test --doc -p retry").run()?;
+            cmd!(sh, "cargo test --doc -p amplifier-api").run()?;
+            cmd!(sh, "cargo test --doc -p infrastructure").run()?;
+            cmd!(sh, "cargo test --doc -p bin-util").run()?;
+            cmd!(sh, "cargo test --doc -p common-serde-utils").run()?;
+            cmd!(
+                sh,
+                "cargo test --doc -p amplifier-subscriber --features=nats"
+            )
+            .run()?;
+            cmd!(sh, "cargo test --doc -p amplifier-ingester --features=nats").run()?;
+            cmd!(
+                sh,
+                "cargo test --doc -p amplifier-subscriber --features=gcp"
+            )
+            .run()?;
+            cmd!(sh, "cargo test --doc -p amplifier-ingester --features=gcp").run()?;
 
             if coverage {
                 cmd!(sh, "cargo install grcov").run()?;
@@ -52,9 +69,21 @@ fn main() -> eyre::Result<()> {
                     sh.set_var(key, val);
                 }
             }
+
+            let args = &args;
             cmd!(
                 sh,
-                "cargo nextest run --workspace --tests --all-targets --no-fail-fast {args...}"
+                "cargo nextest run -p retry --tests --all-targets --no-fail-fast {args...}"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo nextest run -p amplifier-api --tests --all-targets --no-fail-fast {args...}"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo nextest run -p bin-util --tests --all-targets --no-fail-fast {args...}"
             )
             .run()?;
 
@@ -75,7 +104,14 @@ fn main() -> eyre::Result<()> {
 
         Commands::Check => {
             println!("cargo check");
-            cmd!(sh, "cargo clippy --workspace --locked -- -D warnings").run()?;
+            cmd!(sh, "cargo clippy -p retry --locked -- -D warnings").run()?;
+            cmd!(
+                sh,
+                "cargo clippy -p common-serde-utils --locked -- -D warnings"
+            )
+            .run()?;
+            cmd!(sh, "cargo clippy -p bin-util --locked -- -D warnings").run()?;
+            cmd!(sh, "cargo clippy -p amplifier-api --locked -- -D warnings").run()?;
             cmd!(
                 sh,
                 "cargo clippy -p infrastructure --features=gcp,nats --locked -- -D warnings"
@@ -109,14 +145,37 @@ fn main() -> eyre::Result<()> {
         }
         Commands::Doc => {
             println!("cargo doc");
-            cmd!(sh, "cargo doc --workspace --no-deps --all-features").run()?;
+            cmd!(
+                sh,
+                "cargo doc --workspace --no-deps --no-default-features --features=nats"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo doc --workspace --no-deps --no-default-features --features=gcp"
+            )
+            .run()?;
 
             if std::option_env!("CI").is_none() {
                 #[cfg(target_os = "macos")]
-                cmd!(sh, "open target/doc/relayer/index.html").run()?;
+                {
+                    cmd!(sh, "open target/doc/amplifier_api/index.html").run()?;
+                    cmd!(sh, "open target/doc/amplifier_ingester/index.html").run()?;
+                    cmd!(sh, "open target/doc/amplifier_subscriber/index.html").run()?;
+                    cmd!(sh, "open target/doc/bin_util/index.html").run()?;
+                    cmd!(sh, "open target/doc/retry/index.html").run()?;
+                    cmd!(sh, "open target/doc/infrastructure/index.html").run()?;
+                }
 
                 #[cfg(target_os = "linux")]
-                cmd!(sh, "xdg-open target/doc/relayer/index.html").run()?;
+                {
+                    cmd!(sh, "xdg-open target/doc/amplifier_api/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/amplifier_ingester/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/amplifier_subscriber/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/bin_util/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/retry/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/infrastructure/index.html").run()?;
+                }
             }
         }
         Commands::UnusedDeps => {

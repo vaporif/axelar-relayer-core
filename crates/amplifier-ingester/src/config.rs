@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 /// Top-level configuration for the relayer.
 #[derive(Debug, Deserialize)]
-pub(crate) struct Config {
+pub struct Config {
     /// Configuration for the Amplifier API processor
     pub amplifier_component: relayer_amplifier_api_integration::Config,
     /// Duration (in seconds) to wait between consecutive polling
@@ -16,12 +16,15 @@ pub(crate) struct Config {
     #[serde(deserialize_with = "deserialize_duration_from_secs")]
     pub tickrate: Duration,
     #[serde(default)]
+    /// Telemetry config
     pub telemetry: Option<bin_util::telemetry::Config>,
+    /// Health check config
     #[serde(rename = "health_check_server")]
     pub health_check: bin_util::health_check::Config,
     /// Maximum consecutive errors allowed before application termination.
     #[serde(default = "default_max_errors")]
     pub max_errors: u32,
+    /// Max concurrent amplifier api requests
     #[serde(default = "default_concurrent_queue_items")]
     pub concurrent_queue_items: usize,
 }

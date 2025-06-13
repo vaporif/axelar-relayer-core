@@ -5,7 +5,7 @@ pub mod consumer {
     use core::fmt::Debug;
 
     /// queue message trait
-    pub trait QueueMessage<T>: Debug {
+    pub trait QueueMessage<T>: Debug + Send {
         /// Decoded message
         fn decoded(&self) -> &T;
         /// Ack response
@@ -24,10 +24,10 @@ pub mod consumer {
             Output = Result<
                 impl futures::Stream<
                     Item = Result<impl QueueMessage<T>, impl Error + Send + Sync + 'static>,
-                >,
+                > + Send,
                 impl Error + Send + Sync + 'static,
             >,
-        >;
+        > + Send;
 
         /// Checks the health status of the consumer connection.
         ///
@@ -157,17 +157,19 @@ pub mod kv_store {
         fn update(
             &self,
             data: &WithRevision<T>,
-        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>>;
+        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>> + Send;
 
         /// Create value in kvstore
         fn put(
             &self,
             value: &T,
-        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>>;
+        ) -> impl Future<Output = Result<u64, impl Error + Send + Sync + 'static>> + Send;
 
         /// Get value from kvstore
         fn get(
             &self,
-        ) -> impl Future<Output = Result<Option<WithRevision<T>>, impl Error + Send + Sync + 'static>>;
+        ) -> impl Future<
+            Output = Result<Option<WithRevision<T>>, impl Error + Send + Sync + 'static>,
+        > + Send;
     }
 }

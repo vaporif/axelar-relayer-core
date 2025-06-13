@@ -2,13 +2,27 @@
 use amplifier_api::requests::WithTrailingSlash;
 use amplifier_api::{AmplifierApiClient, requests};
 use bin_util::SimpleMetrics;
+use bin_util::health_check::CheckHealth;
 use eyre::Context as _;
 use infrastructure::interfaces::publisher::{PeekMessage, PublishMessage, Publisher};
+use tokio::sync::Mutex;
+
+mod components;
+/// Configs
+pub mod config;
+
+pub use components::*;
+
+#[cfg(not(any(feature = "gcp", feature = "nats")))]
+compile_error!("Either feature 'gcp' or feature 'nats' must be enabled");
+
+#[cfg(all(feature = "gcp", feature = "nats"))]
+compile_error!("Features 'gcp' and 'nats' are mutually exclusive");
 
 /// subscribes to tasks from amplifier and sends them to queue
 pub struct Subscriber<TaskQueuePublisher> {
     amplifier_client: AmplifierApiClient,
-    task_queue_publisher: TaskQueuePublisher,
+    task_queue_publisher: Mutex<TaskQueuePublisher>,
     chain: String,
     limit_items: u8,
     metrics: SimpleMetrics,
@@ -29,7 +43,7 @@ where
         let metrics = SimpleMetrics::new("amplifier-subscriber", vec![]);
         Self {
             amplifier_client,
-            task_queue_publisher,
+            task_queue_publisher: Mutex::new(task_queue_publisher),
             chain,
             limit_items,
             metrics,
@@ -38,15 +52,17 @@ where
 
     /// subscribe and process
     #[tracing::instrument(skip_all)]
-    pub async fn subscribe(&mut self) -> eyre::Result<()> {
+    pub async fn subscribe(&self) -> eyre::Result<()> {
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());
 
         let res: eyre::Result<()> = {
-            let last_task_id = self
-                .task_queue_publisher
-                .peek_last()
-                .await
-                .wrap_err("could not get last retrieved task id")?;
+            let last_task_id = {
+                let mut publisher = self.task_queue_publisher.lock().await;
+                publisher
+                    .peek_last()
+                    .await
+                    .wrap_err("could not get last retrieved task id")?
+            };
 
             tracing::trace!(?last_task_id, "last retrieved task");
 
@@ -92,6 +108,8 @@ where
 
             tracing::trace!("sending to queue");
             self.task_queue_publisher
+                .lock()
+                .await
                 .publish_batch(batch)
                 .await
                 .wrap_err("could not publish tasks to queue")?;
@@ -105,18 +123,21 @@ where
 
         res
     }
+}
 
-    /// Checks the health of the subscriber.
-    ///
-    /// This function performs various health checks to ensure the subscriber is operational.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if any of the health checks fail.
-    pub async fn check_health(&self) -> eyre::Result<()> {
+impl<TaskQueuePublisher> CheckHealth for Subscriber<TaskQueuePublisher>
+where
+    TaskQueuePublisher: Publisher<amplifier_api::types::TaskItem>
+        + PeekMessage<amplifier_api::types::TaskItem>
+        + Send
+        + Sync
+        + 'static,
+{
+    async fn check_health(&self) -> eyre::Result<()> {
         // Check if the task queue publisher is healthy
-        if let Err(err) = self.task_queue_publisher.check_health().await {
-            tracing::warn!(%err, "task queue publisher health check failed");
+        let publisher_health = self.task_queue_publisher.lock().await.check_health().await;
+        if let Err(err) = publisher_health {
+            tracing::error!(?err, "task queue publisher health check failed");
             self.metrics.record_error();
             return Err(err.into());
         }
@@ -129,7 +150,7 @@ where
             .await
         {
             self.metrics.record_error();
-            tracing::warn!(%err, "amplifier client health check failed");
+            tracing::error!(?err, "amplifier client health check failed");
             return Err(err.into());
         }
 

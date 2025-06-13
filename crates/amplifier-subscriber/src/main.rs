@@ -23,14 +23,21 @@
 //! - Health check server port
 //! - Event processing tickrate
 //! - Backend-specific configuration (NATS or GCP)
-mod components;
-mod config;
 
-use core::time::Duration;
+// Ensure only one backend is enabled at a time
+#[cfg(all(feature = "nats", feature = "gcp"))]
+compile_error!(
+    "Features 'nats' and 'gcp' cannot be enabled at the same time. Please choose only one backend."
+);
 
+#[cfg(not(any(feature = "nats", feature = "gcp")))]
+compile_error!("Either 'nats' or 'gcp' feature must be enabled. Please choose one backend.");
+
+use std::sync::Arc;
+
+use amplifier_subscriber::config::Config;
 use bin_util::health_check;
 use clap::{Parser, crate_name, crate_version};
-use config::Config;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Parser, Debug)]
@@ -58,44 +65,35 @@ async fn main() {
     let _stderr_logging_guard = bin_util::init_logging(telemetry_tracer).expect("logging wired up");
 
     let cancel_token = bin_util::register_cancel();
-    tokio::try_join!(
-        spawn_subscriber_worker(
-            config.tickrate,
-            config.max_errors,
-            cli.config_path.clone(),
-            &cancel_token
-        ),
-        spawn_health_check_server(
-            config.health_check.port,
-            cli.config_path.clone(),
-            cancel_token.clone()
-        )
-    )
-    .expect("Failed to join main loop and health server tasks");
+
+    run_subscriber(&cli.config_path, config, cancel_token).await;
 
     tracing::info!("Amplifier subscriber has been shut down");
 }
 
-fn spawn_subscriber_worker(
-    tickrate: Duration,
-    max_errors: u32,
-    config_path: String,
-    cancel_token: &CancellationToken,
-) -> tokio::task::JoinHandle<()> {
-    tokio::task::spawn({
+async fn run_subscriber(config_path: &str, config: Config, cancel_token: CancellationToken) {
+    // Create the subscriber once and wrap in Arc
+    #[cfg(feature = "nats")]
+    let subscriber = Arc::new(
+        amplifier_subscriber::nats::new_amplifier_subscriber(config_path)
+            .await
+            .expect("subscriber is created"),
+    );
+
+    #[cfg(feature = "gcp")]
+    let subscriber = Arc::new(
+        amplifier_subscriber::gcp::new_amplifier_subscriber(config_path)
+            .await
+            .expect("subscriber is created"),
+    );
+
+    let worker_handle = tokio::task::spawn({
         let cancel_token = cancel_token.clone();
+        let tickrate = config.tickrate;
+        let max_errors = config.max_errors;
+        let subscriber = Arc::clone(&subscriber);
 
         async move {
-            #[cfg(feature = "nats")]
-            let mut subscriber = components::nats::new_amplifier_subscriber(&config_path)
-                .await
-                .expect("subscriber is created");
-
-            #[cfg(feature = "gcp")]
-            let mut subscriber = components::gcp::new_amplifier_subscriber(&config_path)
-                .await
-                .expect("subscriber is created");
-
             tracing::trace!("Starting amplifier subscriber...");
 
             let mut error_count: u32 = 0;
@@ -121,36 +119,22 @@ fn spawn_subscriber_worker(
 
             tracing::warn!("Shutting down amplifier subscriber...");
         }
-    })
-}
+    });
 
-fn spawn_health_check_server(
-    port: u16,
-    config_path: String,
-    cancel_token: CancellationToken,
-) -> tokio::task::JoinHandle<()> {
-    tokio::task::spawn(async move {
-        tracing::trace!("Starting health check server...");
+    let health_check_handle = tokio::task::spawn({
+        let port = config.health_check.port;
 
-        health_check::new(port)
-            .add_health_check(move || {
-                let config_path = config_path.clone();
-                async move {
-                    #[cfg(feature = "nats")]
-                    let subscriber = components::nats::new_amplifier_subscriber(&config_path)
-                        .await
-                        .expect("subscriber is created");
+        async move {
+            tracing::trace!("Starting health check server...");
 
-                    #[cfg(feature = "gcp")]
-                    let subscriber = components::gcp::new_amplifier_subscriber(&config_path)
-                        .await
-                        .expect("subscriber is created");
-                    subscriber.check_health().await
-                }
-            })
-            .run(cancel_token)
-            .await;
+            health_check::Server::new(port, subscriber)
+                .run(cancel_token)
+                .await;
 
-        tracing::warn!("Shutting down health check server...");
-    })
+            tracing::warn!("Shutting down health check server...");
+        }
+    });
+
+    tokio::try_join!(worker_handle, health_check_handle)
+        .expect("Failed to join main loop and health server tasks");
 }
