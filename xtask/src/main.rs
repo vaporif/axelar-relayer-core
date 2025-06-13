@@ -70,41 +70,20 @@ fn main() -> eyre::Result<()> {
                 }
             }
 
-            cmd!(sh, "cargo nextest run -p retry --no-fail-fast {args...}").run()?;
+            let args = &args;
             cmd!(
                 sh,
-                "cargo nextest run -p retry --no-fargo test -p amplifier-api"
+                "cargo nextest run -p retry --tests --all-targets --no-fail-fast {args...}"
             )
             .run()?;
             cmd!(
                 sh,
-                "cargo nextest run -p retry --no-fargo test -p infrastructure"
-            )
-            .run()?;
-            cmd!(sh, "cargo nextest run -p retry --no-fargo test -p bin-util").run()?;
-            cmd!(
-                sh,
-                "cargo nextest run -p retry --no-fargo test -p common-serde-utils"
+                "cargo nextest run -p amplifier-api --tests --all-targets --no-fail-fast {args...}"
             )
             .run()?;
             cmd!(
                 sh,
-                "cargo nextest run -p retry --no-fargo test -p amplifier-subscriber --features=nats"
-            )
-            .run()?;
-            cmd!(
-                sh,
-                "cargo nextest run -p retry --no-fargo test -p amplifier-ingester --features=nats"
-            )
-            .run()?;
-            cmd!(
-                sh,
-                "cargo nextest run -p retry --no-fargo test -p amplifier-subscriber --features=gcp"
-            )
-            .run()?;
-            cmd!(
-                sh,
-                "cargo nextest run -p retry --no-fargo test -p amplifier-ingester --features=gcp"
+                "cargo nextest run -p bin-util --tests --all-targets --no-fail-fast {args...}"
             )
             .run()?;
 
