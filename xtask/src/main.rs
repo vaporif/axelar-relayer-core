@@ -128,7 +128,7 @@ fn main() -> eyre::Result<()> {
             cmd!(sh, "cargo clippy -p retry --locked -- -D warnings").run()?;
             cmd!(
                 sh,
-                "cargo clippy -p comon-serde-utils --locked -- -D warnings"
+                "cargo clippy -p common-serde-utils --locked -- -D warnings"
             )
             .run()?;
             cmd!(sh, "cargo clippy -p bin-util --locked -- -D warnings").run()?;
