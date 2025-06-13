@@ -27,7 +27,7 @@ impl<T> NatsKvStore<T> {
 
 impl<T> interfaces::kv_store::KvStore<T> for NatsKvStore<T>
 where
-    T: BorshSerialize + BorshDeserialize + Debug + Sync,
+    T: BorshSerialize + BorshDeserialize + Debug + Send + Sync + 'static,
 {
     #[allow(refining_impl_trait, reason = "simplification")]
     #[tracing::instrument(skip(self))]

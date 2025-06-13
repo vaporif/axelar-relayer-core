@@ -152,7 +152,7 @@ pub mod kv_store {
     }
 
     /// ``KvStore`` interface
-    pub trait KvStore<T> {
+    pub trait KvStore<T: Send + Sync + 'static> {
         /// Update value in kvstore
         fn update(
             &self,
