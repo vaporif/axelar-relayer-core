@@ -85,6 +85,7 @@ The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for eac
 
 - **[bin-util](./crates/bin-util/README.md)**: Common binary utilities for all relayer components including configuration management, health checks, telemetry, logging, and metrics
 - **[infrastructure](./crates/infrastructure/README.md)**: Storage bus implementations providing abstraction for message queuing (GCP Pub/Sub, NATS) and key-value storage
+- **[terraform](./terraform/README.md)**: Infrastructure as Code for provisioning GCP resources (Pub/Sub, KMS, Memorystore, IAM, K8s)
 
 #### Components
 
@@ -119,6 +120,40 @@ The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for eac
    - Supports horizontal scaling by allowing multiple instances to consume from the same queue
 
 The supervisor is optional, and each component can be started as a separate binary.
+
+## Development Environment
+
+### Using Nix
+
+This project includes a Nix flake that provides a development shell with all necessary tooling. This ensures consistent development environments across different machines.
+
+To use the Nix development environment:
+
+1. **Install Nix** (if not already installed):
+   ```bash
+   # On macOS or Linux
+   curl -L https://nixos.org/nix/install | sh
+   ```
+
+2. **Enable flakes** (if not already enabled):
+   ```bash
+   echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+   ```
+
+3. **Enter the development shell**:
+   ```bash
+   nix develop
+   ```
+
+The development shell includes:
+- **Rust toolchain**: stable Rust with cargo, clippy, rustfmt, and rust-analyzer
+- **NATS tools**: natscli and nats-server for local testing
+- **Google Cloud SDK**: for working with GCP services
+- **OpenTofu**: for managing Terraform infrastructure
+- **cargo-make**: for task automation
+- **Development tools**: nixd, pkg-config, vscode-lldb
+
+All tools are automatically available in your PATH when you enter the Nix shell.
 
 ## Running the Components
 

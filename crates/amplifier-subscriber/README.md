@@ -36,7 +36,37 @@ Amplifier API → Subscriber → Tasks → Message Queue → Blockchain Ingester
 
 ### Configuration
 
-The subscriber requires a configuration file with the following sections:
+**Important**: Configuration files are completely optional! All settings can be configured using environment variables with the `RELAYER_` prefix.
+
+#### Environment Variables (Recommended)
+
+Every configuration option can be set via environment variables:
+
+```bash
+# Basic configuration
+export RELAYER_LIMIT_PER_REQUEST=50
+export RELAYER_HEALTH_CHECK_PORT=8080
+export RELAYER_TICKRATE="5s"
+export RELAYER_MAX_ERRORS=10
+
+# Amplifier component
+export RELAYER_AMPLIFIER_COMPONENT_URL="https://amplifier-api.example.com"
+export RELAYER_AMPLIFIER_COMPONENT_CHAIN="ethereum"
+
+# For NATS backend
+export RELAYER_NATS_URLS="nats://localhost:4222"
+export RELAYER_NATS_STREAM_NAME="amplifier_tasks"
+export RELAYER_NATS_STREAM_SUBJECT="tasks.*"
+export RELAYER_NATS_STREAM_DESCRIPTION="Amplifier task stream"
+
+# For GCP backend
+export RELAYER_GCP_PROJECT_ID="your-project-id"
+export RELAYER_GCP_TOPIC_ID="amplifier-tasks"
+```
+
+#### Configuration File (Optional)
+
+Alternatively, you can use a configuration file with the following sections:
 
 ```toml
 # General subscriber configuration
@@ -65,11 +95,24 @@ topic_id = "amplifier-tasks"
 ### Running
 
 ```bash
-# With NATS
-cargo run --bin amplifier-subscriber --features nats -- --config config.toml
+# Option 1: Using environment variables only (no config file)
+export RELAYER_HEALTH_CHECK_PORT=8080
+export RELAYER_AMPLIFIER_COMPONENT_CHAIN="ethereum"
+# ... set other required variables
 
-# With GCP Pub/Sub
+# With NATS
+cargo run --bin amplifier-subscriber --features nats
+
+# With GCP Pub/Sub  
+cargo run --bin amplifier-subscriber --features gcp
+
+# Option 2: Using a configuration file
+cargo run --bin amplifier-subscriber --features nats -- --config config.toml
 cargo run --bin amplifier-subscriber --features gcp -- --config config.toml
+
+# Option 3: Mix both (env vars override config file values)
+export RELAYER_AMPLIFIER_COMPONENT_CHAIN="polygon"  # overrides chain in config
+cargo run --bin amplifier-subscriber --features nats -- --config config.toml
 ```
 
 ## Features
