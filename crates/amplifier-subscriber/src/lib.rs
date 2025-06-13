@@ -13,6 +13,12 @@ pub mod config;
 
 pub use components::*;
 
+#[cfg(not(any(feature = "gcp", feature = "nats")))]
+compile_error!("Either feature 'gcp' or feature 'nats' must be enabled");
+
+#[cfg(all(feature = "gcp", feature = "nats"))]
+compile_error!("Features 'gcp' and 'nats' are mutually exclusive");
+
 /// subscribes to tasks from amplifier and sends them to queue
 pub struct Subscriber<TaskQueuePublisher> {
     amplifier_client: AmplifierApiClient,
