@@ -84,7 +84,7 @@ fn main() -> eyre::Result<()> {
             cmd!(sh, "cargo nextest run -p retry --no-fargo test -p bin-util").run()?;
             cmd!(
                 sh,
-                "cargo nextest run -p retry --no-fargo test -p comon-serde-utils"
+                "cargo nextest run -p retry --no-fargo test -p common-serde-utils"
             )
             .run()?;
             cmd!(
