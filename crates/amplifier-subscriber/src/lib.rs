@@ -137,7 +137,7 @@ where
         // Check if the task queue publisher is healthy
         let publisher_health = self.task_queue_publisher.lock().await.check_health().await;
         if let Err(err) = publisher_health {
-            tracing::error!(%err, "task queue publisher health check failed");
+            tracing::error!(?err, "task queue publisher health check failed");
             self.metrics.record_error();
             return Err(err.into());
         }
@@ -150,7 +150,7 @@ where
             .await
         {
             self.metrics.record_error();
-            tracing::error!(%err, "amplifier client health check failed");
+            tracing::error!(?err, "amplifier client health check failed");
             return Err(err.into());
         }
 

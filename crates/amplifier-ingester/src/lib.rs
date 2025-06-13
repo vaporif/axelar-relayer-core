@@ -151,7 +151,7 @@ where
 {
     async fn check_health(&self) -> eyre::Result<()> {
         if let Err(err) = self.event_queue_consumer.check_health().await {
-            tracing::error!(%err, "event queue consumer health check failed");
+            tracing::error!(?err, "event queue consumer health check failed");
             return Err(err.into());
         }
 
@@ -162,7 +162,7 @@ where
             .execute()
             .await
         {
-            tracing::error!(%err, "amplifier client health check failed");
+            tracing::error!(?err, "amplifier client health check failed");
             return Err(err.into());
         }
 
