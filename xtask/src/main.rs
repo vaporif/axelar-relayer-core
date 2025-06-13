@@ -39,8 +39,25 @@ fn main() -> eyre::Result<()> {
         }
         Commands::Test { args, coverage } => {
             println!("cargo test");
-            cmd!(sh, "cargo test --doc").run()?;
             cmd!(sh, "cargo install cargo-nextest").run()?;
+
+            cmd!(sh, "cargo test --doc -p retry").run()?;
+            cmd!(sh, "cargo test --doc -p amplifier-api").run()?;
+            cmd!(sh, "cargo test --doc -p infrastructure").run()?;
+            cmd!(sh, "cargo test --doc -p bin-util").run()?;
+            cmd!(sh, "cargo test --doc -p common-serde-utils").run()?;
+            cmd!(
+                sh,
+                "cargo test --doc -p amplifier-subscriber --features=nats"
+            )
+            .run()?;
+            cmd!(sh, "cargo test --doc -p amplifier-ingester --features=nats").run()?;
+            cmd!(
+                sh,
+                "cargo test --doc -p amplifier-subscriber --features=gcp"
+            )
+            .run()?;
+            cmd!(sh, "cargo test --doc -p amplifier-ingester --features=gcp").run()?;
 
             if coverage {
                 cmd!(sh, "cargo install grcov").run()?;
@@ -52,9 +69,42 @@ fn main() -> eyre::Result<()> {
                     sh.set_var(key, val);
                 }
             }
+
+            cmd!(sh, "cargo nextest run -p retry --no-fail-fast {args...}").run()?;
             cmd!(
                 sh,
-                "cargo nextest run --workspace --tests --all-targets --no-fail-fast {args...}"
+                "cargo nextest run -p retry --no-fargo test -p amplifier-api"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo nextest run -p retry --no-fargo test -p infrastructure"
+            )
+            .run()?;
+            cmd!(sh, "cargo nextest run -p retry --no-fargo test -p bin-util").run()?;
+            cmd!(
+                sh,
+                "cargo nextest run -p retry --no-fargo test -p comon-serde-utils"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo nextest run -p retry --no-fargo test -p amplifier-subscriber --features=nats"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo nextest run -p retry --no-fargo test -p amplifier-ingester --features=nats"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo nextest run -p retry --no-fargo test -p amplifier-subscriber --features=gcp"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo nextest run -p retry --no-fargo test -p amplifier-ingester --features=gcp"
             )
             .run()?;
 
@@ -75,7 +125,14 @@ fn main() -> eyre::Result<()> {
 
         Commands::Check => {
             println!("cargo check");
-            cmd!(sh, "cargo clippy --workspace --locked -- -D warnings").run()?;
+            cmd!(sh, "cargo clippy -p retry --locked -- -D warnings").run()?;
+            cmd!(
+                sh,
+                "cargo clippy -p comon-serde-utils --locked -- -D warnings"
+            )
+            .run()?;
+            cmd!(sh, "cargo clippy -p bin-util --locked -- -D warnings").run()?;
+            cmd!(sh, "cargo clippy -p amplifier-api --locked -- -D warnings").run()?;
             cmd!(
                 sh,
                 "cargo clippy -p infrastructure --features=gcp,nats --locked -- -D warnings"
