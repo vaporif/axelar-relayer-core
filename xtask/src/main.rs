@@ -109,14 +109,37 @@ fn main() -> eyre::Result<()> {
         }
         Commands::Doc => {
             println!("cargo doc");
-            cmd!(sh, "cargo doc --workspace --no-deps --all-features").run()?;
+            cmd!(
+                sh,
+                "cargo doc --workspace --no-deps --no-default-features --features=nats"
+            )
+            .run()?;
+            cmd!(
+                sh,
+                "cargo doc --workspace --no-deps --no-default-features --features=gcp"
+            )
+            .run()?;
 
             if std::option_env!("CI").is_none() {
                 #[cfg(target_os = "macos")]
-                cmd!(sh, "open target/doc/relayer/index.html").run()?;
+                {
+                    cmd!(sh, "open target/doc/amplifier_api/index.html").run()?;
+                    cmd!(sh, "open target/doc/amplifier_ingester/index.html").run()?;
+                    cmd!(sh, "open target/doc/amplifier_subscriber/index.html").run()?;
+                    cmd!(sh, "open target/doc/bin_util/index.html").run()?;
+                    cmd!(sh, "open target/doc/retry/index.html").run()?;
+                    cmd!(sh, "open target/doc/infrastructure/index.html").run()?;
+                }
 
                 #[cfg(target_os = "linux")]
-                cmd!(sh, "xdg-open target/doc/relayer/index.html").run()?;
+                {
+                    cmd!(sh, "xdg-open target/doc/amplifier_api/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/amplifier_ingester/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/amplifier_subscriber/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/bin_util/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/retry/index.html").run()?;
+                    cmd!(sh, "xdg-open target/doc/infrastructure/index.html").run()?;
+                }
             }
         }
         Commands::UnusedDeps => {
