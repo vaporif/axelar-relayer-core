@@ -6,6 +6,7 @@ use eyre::ensure;
 use serde::Deserialize;
 
 /// Top-level configuration for the relayer.
+/// You also need `health_check_port` from `bin_util::health_check::Config`
 #[derive(Debug, Deserialize)]
 pub struct Config {
     /// Configuration for the Amplifier API processor
@@ -18,9 +19,6 @@ pub struct Config {
     #[serde(default)]
     /// Telemetry config
     pub telemetry: Option<bin_util::telemetry::Config>,
-    /// Health check config
-    #[serde(rename = "health_check_server")]
-    pub health_check: bin_util::health_check::Config,
     /// Maximum consecutive errors allowed before application termination.
     #[serde(default = "default_max_errors")]
     pub max_errors: u32,

@@ -51,9 +51,10 @@ use axum::extract::Extension;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Json};
 use axum::routing::get;
-use eyre::Result;
+use eyre::Context as _;
 use serde::Deserialize;
 use serde_json::json;
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 /// Trait for types that can perform health checks.
@@ -69,12 +70,12 @@ pub trait CheckHealth: Send + Sync + 'static {
     ///
     /// * `Ok(())` - If the service is healthy
     /// * `Err(...)` - If there are any issues with the service's health
-    fn check_health(&self) -> impl Future<Output = Result<()>> + Send;
+    fn check_health(&self) -> impl Future<Output = eyre::Result<()>> + Send;
 }
 
 /// Implement `CheckHealth` for `Arc<T>` where T implements `CheckHealth`
 impl<T: CheckHealth> CheckHealth for Arc<T> {
-    async fn check_health(&self) -> Result<()> {
+    async fn check_health(&self) -> eyre::Result<()> {
         T::check_health(self).await
     }
 }
@@ -83,7 +84,60 @@ impl<T: CheckHealth> CheckHealth for Arc<T> {
 #[derive(Debug, Deserialize)]
 pub struct Config {
     /// Port for the health check server
-    pub port: u16,
+    pub health_check_port: u16,
+}
+
+impl crate::ValidateConfig for Config {
+    fn validate(&self) -> eyre::Result<()> {
+        eyre::ensure!(
+            self.health_check_port > 0,
+            "specific port expected for health check"
+        );
+        eyre::Ok(())
+    }
+}
+
+/// Spawns a health check server that runs until cancellation.
+///
+/// This function loads health check configuration from a file and starts an HTTP server
+/// that responds to health and readiness probes. The server runs asynchronously in a
+/// separate task and can be gracefully shut down using the provided cancellation token.
+///
+/// # Arguments
+///
+/// * `config_path` - Path to the configuration file containing health check settings
+/// * `service` - The service implementing health check logic, shared across threads
+/// * `cancel_token` - Token for graceful shutdown of the health check server
+///
+/// # Returns
+///
+/// Returns a `JoinHandle` to the spawned task, allowing the caller to await completion
+/// or check if the server is still running.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The configuration file cannot be read or parsed
+/// - The configuration format is invalid
+pub fn run_health_check_server<Service: CheckHealth>(
+    config_path: &str,
+    service: Arc<Service>,
+    cancel_token: CancellationToken,
+) -> eyre::Result<JoinHandle<()>> {
+    let config: Config =
+        crate::try_deserialize(config_path).wrap_err("health check config parse error")?;
+
+    let handle = tokio::task::spawn(async move {
+        tracing::trace!("Starting health check server...");
+
+        Server::new(config.health_check_port, service)
+            .run(cancel_token)
+            .await;
+
+        tracing::warn!("Shutting down health check server...");
+    });
+
+    Ok(handle)
 }
 
 /// A server that handles health check and readiness probe requests.
@@ -200,9 +254,9 @@ mod tests {
     impl<F, Fut> CheckHealth for TestChecker<F>
     where
         F: Fn() -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
+        Fut: Future<Output = eyre::Result<()>> + Send + 'static,
     {
-        async fn check_health(&self) -> Result<()> {
+        async fn check_health(&self) -> eyre::Result<()> {
             (self.check_fn)().await
         }
     }
@@ -210,7 +264,7 @@ mod tests {
     async fn run_server<F, Fut>(port: u16, health_check: F) -> CancellationToken
     where
         F: Fn() -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<()>> + Send + 'static,
+        Fut: Future<Output = eyre::Result<()>> + Send + 'static,
     {
         let cancel_token = CancellationToken::new();
         let token_clone = cancel_token.clone();

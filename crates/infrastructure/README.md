@@ -65,6 +65,32 @@ pub trait Store: Send + Sync {
 }
 ```
 
+## Custom Message Types
+
+To add custom message types (separate from amplifier task/event), implement `infrastructure::interfaces::publisher::QueueMsgId`. The `id()` method should return a unique identifier that will be used for message deduplication:
+
+```rust
+use infrastructure::interfaces::publisher::QueueMsgId;
+
+#[derive(Debug)]
+struct MyCustomMessage {
+    transaction_id: String,  // Must be unique for deduplication
+    amount: u64,
+    timestamp: u64,
+}
+
+impl QueueMsgId for MyCustomMessage {
+    type MessageId = String;
+
+    fn id(&self) -> Self::MessageId {
+        self.transaction_id.clone()  // Used as deduplication ID
+    }
+}
+
+// Publish using the From trait conversion
+publisher.publish(my_message.into()).await?;
+```
+
 ## Usage Examples
 
 ### Using GCP Backend

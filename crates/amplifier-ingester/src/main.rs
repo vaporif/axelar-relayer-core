@@ -36,7 +36,6 @@ compile_error!("Either 'nats' or 'gcp' feature must be enabled. Please choose on
 use std::sync::Arc;
 
 use amplifier_ingester::config::Config;
-use bin_util::health_check;
 use clap::{Parser, crate_name, crate_version};
 use tokio_util::sync::CancellationToken;
 
@@ -120,19 +119,9 @@ async fn run_ingester(config_path: &str, config: Config, cancel_token: Cancellat
         }
     });
 
-    let health_check_handle = tokio::task::spawn({
-        let port = config.health_check.port;
-
-        async move {
-            tracing::trace!("Starting health check server...");
-
-            health_check::Server::new(port, ingester)
-                .run(cancel_token)
-                .await;
-
-            tracing::warn!("Shutting down health check server...");
-        }
-    });
+    let health_check_handle =
+        bin_util::health_check::run_health_check_server(config_path, ingester, cancel_token)
+            .expect("health check server should start");
 
     tokio::try_join!(worker_handle, health_check_handle)
         .expect("Failed to join main loop and health server tasks");
