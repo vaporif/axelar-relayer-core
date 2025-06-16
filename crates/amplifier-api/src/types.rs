@@ -3,14 +3,14 @@
 
 use core::fmt::{Display, Formatter};
 
-pub use big_int::BigInt;
+pub use amount::Amount;
 use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::{DateTime, Utc};
 pub use id::*;
 use infrastructure::interfaces::publisher::QueueMsgId;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
-pub use {bnum, uuid};
+pub use uuid;
 
 /// Represents an address as a non-empty string.
 pub type Address = String;
@@ -392,7 +392,7 @@ pub struct Token {
         serialize_with = "crate::util::serialize_bigint",
         deserialize_with = "crate::util::deserialize_bigint"
     )]
-    pub amount: BigInt,
+    pub amount: Amount,
 }
 
 impl Display for Token {
@@ -1185,27 +1185,59 @@ pub struct ErrorResponse {
     pub request_id: Option<RequestId>,
 }
 
-mod big_int {
+mod amount {
+    use core::fmt::{Debug, Display};
+    use core::str::FromStr;
+
+    use borsh::{BorshDeserialize, BorshSerialize};
     use serde::{Deserialize, Deserializer, Serialize};
 
-    /// Represents a big integer as a string matching the pattern `^(0|[1-9]\d*)$`.
+    /// Represents a token amount as a string when serialized.
+    /// The generic type T must support string conversion and serialization.
+    ///
+    /// # Examples
+    ///
+    /// Usage with different numeric types:
+    /// ```ignore
+    /// // Default type (i128) for general use:
+    /// let amount = Amount::from_u64(1000);
+    /// let negative_amount = Amount::new(-100i128);
+    ///
+    /// // For blockchain-specific types:
+    /// type EthereumAmount = Amount<U256>;  // Using ethereum U256 type
+    /// type SolanaAmount = Amount<u128>;    // Solana uses u128
+    /// type CosmosAmount = Amount;    // Using bnum U256 for Cosmos
+    ///
+    /// // For simple string-based amounts:
+    /// type StringAmount = Amount<String>;
+    /// let amount = StringAmount::new("123456789012345678901234567890".to_string());
+    /// ```
     #[derive(Clone, Debug, PartialEq, Eq)]
-    pub struct BigInt(pub bnum::types::I512);
-    impl BigInt {
-        /// Creates a new [`BigInt`].
-        #[must_use]
-        pub const fn new(num: bnum::types::I512) -> Self {
-            Self(num)
-        }
+    pub struct Amount<T = primitive_types::U256>(pub T);
 
-        /// Helper utility to transform u64 into a `BigInt`
+    impl<T> Amount<T> {
+        /// Creates a new [`Amount`].
         #[must_use]
-        pub fn from_u64(num: u64) -> Self {
-            Self(num.into())
+        pub const fn new(num: T) -> Self {
+            Self(num)
         }
     }
 
-    impl Serialize for BigInt {
+    impl<T> Amount<T>
+    where
+        T: From<u64>,
+    {
+        /// Helper utility to transform u64 into an `Amount`
+        #[must_use]
+        pub fn from_u64(num: u64) -> Self {
+            Self(T::from(num))
+        }
+    }
+
+    impl<T> Serialize for Amount<T>
+    where
+        T: Display,
+    {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
@@ -1215,13 +1247,45 @@ mod big_int {
         }
     }
 
-    impl<'de> Deserialize<'de> for BigInt {
+    impl<'de, T> Deserialize<'de> for Amount<T>
+    where
+        T: FromStr,
+        T::Err: Display,
+    {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
             D: Deserializer<'de>,
         {
-            let string = String::deserialize(deserializer)?;
-            let number = bnum::types::I512::parse_str_radix(string.as_str(), 10);
+            let string = <String as Deserialize>::deserialize(deserializer)?;
+            let number = T::from_str(&string)
+                .map_err(|e| serde::de::Error::custom(format!("Failed to parse Amount: {e}")))?;
+            Ok(Self(number))
+        }
+    }
+
+    impl<T> BorshSerialize for Amount<T>
+    where
+        T: Display,
+    {
+        fn serialize<W: borsh::io::Write>(&self, writer: &mut W) -> borsh::io::Result<()> {
+            let string = self.0.to_string();
+            BorshSerialize::serialize(&string, writer)
+        }
+    }
+
+    impl<T> BorshDeserialize for Amount<T>
+    where
+        T: FromStr,
+        T::Err: Display,
+    {
+        fn deserialize_reader<R: borsh::io::Read>(reader: &mut R) -> borsh::io::Result<Self> {
+            let string = <String as BorshDeserialize>::deserialize_reader(reader)?;
+            let number = T::from_str(&string).map_err(|e| {
+                borsh::io::Error::new(
+                    borsh::io::ErrorKind::InvalidData,
+                    format!("Failed to parse Amount: {e}"),
+                )
+            })?;
             Ok(Self(number))
         }
     }
@@ -1312,7 +1376,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: BigInt::from_u64(410_727_029_715_539),
+                amount: Amount::from_u64(410_727_029_715_539),
             },
         };
 
@@ -1366,7 +1430,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: BigInt::from_u64(410_727_029_715_539),
+                amount: Amount::from_u64(410_727_029_715_539),
             },
         };
 

@@ -5,7 +5,7 @@ use borsh::io::{Read, Result, Write};
 use borsh::{BorshDeserialize, BorshSerialize as _};
 use chrono::{DateTime, Utc};
 
-use crate::types::BigInt;
+use crate::types::Amount;
 
 /// Serialize [`DateTime<Utc>`]
 ///
@@ -72,22 +72,34 @@ pub fn deserialize_option_utc<R: Read>(reader: &mut R) -> Result<Option<DateTime
     }
 }
 
-/// Serialize `BigInt`
+/// Serialize `Amount`
 ///
 /// # Errors
 /// Infallible
-pub fn serialize_bigint<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
+pub fn serialize_bigint<T, W: Write>(value: &Amount<T>, writer: &mut W) -> Result<()>
+where
+    T: core::fmt::Display,
+{
     value.0.to_string().serialize(writer)
 }
 
-/// Deserialize `BigInt`
+/// Deserialize `Amount`
 ///
 /// # Errors
 /// wrong input
-pub fn deserialize_bigint<R: Read>(reader: &mut R) -> Result<BigInt> {
+pub fn deserialize_bigint<T, R: Read>(reader: &mut R) -> Result<Amount<T>>
+where
+    T: core::str::FromStr,
+    T::Err: core::fmt::Display,
+{
     let value: String = BorshDeserialize::deserialize_reader(reader)?;
-    let number = bnum::types::I512::parse_str_radix(&value, 10);
-    Ok(BigInt(number))
+    let number = T::from_str(&value).map_err(|e| {
+        borsh::io::Error::new(
+            ErrorKind::InvalidData,
+            format!("Failed to parse Amount: {e}"),
+        )
+    })?;
+    Ok(Amount(number))
 }
 
 #[cfg(test)]
@@ -95,7 +107,7 @@ mod tests {
     use borsh::{BorshDeserialize, BorshSerialize};
     use chrono::{DateTime, Utc};
 
-    use crate::types::BigInt;
+    use crate::types::Amount;
 
     #[derive(BorshSerialize, BorshDeserialize)]
     struct DateTimeContainer {
@@ -116,12 +128,12 @@ mod tests {
     }
 
     #[derive(BorshSerialize, BorshDeserialize)]
-    struct BigIntContainer {
+    struct AmountContainer {
         #[borsh(
             serialize_with = "crate::util::serialize_bigint",
             deserialize_with = "crate::util::deserialize_bigint"
         )]
-        pub value: BigInt,
+        pub value: Amount<String>,
     }
 
     #[test]
@@ -154,17 +166,14 @@ mod tests {
     }
 
     #[test]
-    fn test_bigint_borsh_serialize_and_deserialize() {
-        let value = BigInt::new(bnum::types::I512::parse_str_radix(
-            "423423413123813194728478923748923748923748923749872984732",
-            10,
-        ));
-        let container = BigIntContainer {
+    fn test_amount_borsh_serialize_and_deserialize() {
+        let value = Amount::new("423423413123813194728478923748923748923748923".to_owned());
+        let container = AmountContainer {
             value: value.clone(),
         };
-        let serialized = borsh::to_vec(&container).expect("serialize bigint succeeds");
+        let serialized = borsh::to_vec(&container).expect("serialize amount succeeds");
         let deserialized =
-            BigIntContainer::deserialize(&mut serialized.as_slice()).expect("deserize suceeds");
+            AmountContainer::deserialize(&mut serialized.as_slice()).expect("deserialize succeeds");
 
         assert_eq!(value, deserialized.value);
     }
