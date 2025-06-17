@@ -66,9 +66,9 @@ impl ValidateConfig for GcpSectionConfig {
 /// The configuration file must include:
 /// - General subscriber config (`Config`):
 ///   - `limit_per_request`: Maximum number of tasks to fetch per API request
-///   - `amplifier_component.chain`: The blockchain chain identifier
-///   - `amplifier_component.url`: The Amplifier API URL
-///   - `amplifier_component.tls_public_certificate`: Public certificate for TLS
+///   - `amplifier.chain`: The blockchain chain identifier
+///   - `amplifier.url`: The Amplifier API URL
+///   - `amplifier.tls_public_certificate`: Public certificate for TLS
 /// - GCP-specific config (`GcpSectionConfig`):
 ///   - `gcp.tasks_topic`: GCP Pub/Sub topic name for publishing tasks
 ///   - `gcp.redis_connection`: Redis connection string for state management
@@ -124,7 +124,7 @@ pub async fn new_amplifier_subscriber(
         amplifier_client,
         task_queue_publisher,
         config.limit_per_request,
-        config.amplifier_component.chain.clone(),
+        config.amplifier.chain.clone(),
     ))
 }
 
@@ -134,7 +134,7 @@ async fn amplifier_client(
 ) -> eyre::Result<AmplifierApiClient> {
     let client_config = gcp::connectors::kms_tls_client_config(
         config
-            .amplifier_component
+            .amplifier
             .tls_public_certificate
             .clone()
             .ok_or_else(|| eyre::Report::msg("tls_public_certificate should be set"))?
@@ -145,7 +145,7 @@ async fn amplifier_client(
     .wrap_err("kms connection failed")?;
 
     AmplifierApiClient::new(
-        config.amplifier_component.url.clone(),
+        config.amplifier.url.clone(),
         amplifier_api::TlsType::CustomProvider(client_config),
     )
     .wrap_err("amplifier api client failed to create")

@@ -8,4 +8,6 @@ pub use error::AmplifierApiError;
 pub mod big_int;
 pub mod types;
 pub mod util;
+mod config;
+pub use config::Config;
 pub use chrono;

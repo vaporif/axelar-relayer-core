@@ -50,8 +50,8 @@ export RELAYER_TICKRATE="5s"
 export RELAYER_MAX_ERRORS=10
 
 # Amplifier component
-export RELAYER_AMPLIFIER_COMPONENT_URL="https://amplifier-api.example.com"
-export RELAYER_AMPLIFIER_COMPONENT_CHAIN="ethereum"
+export RELAYER_AMPLIFIER_URL="https://amplifier-api.example.com"
+export RELAYER_AMPLIFIER_CHAIN="ethereum"
 
 # For NATS backend
 export RELAYER_NATS_URLS="nats://localhost:4222"
@@ -72,11 +72,11 @@ Alternatively, you can use a configuration file with the following sections:
 # General subscriber configuration
 limit_per_request = 50
 
-[amplifier_component]
+[amplifier]
 url = "https://amplifier-api.example.com"
 chain = "ethereum"
 
-[amplifier_component.identity]
+[amplifier.identity]
 # TLS identity configuration
 
 # For NATS
@@ -99,7 +99,7 @@ The subscriber supports two message queue backends that are mutually exclusive:
 ```bash
 # Option 1: Using environment variables only (no config file)
 export RELAYER_HEALTH_CHECK_PORT=8080
-export RELAYER_AMPLIFIER_COMPONENT_CHAIN="ethereum"
+export RELAYER_AMPLIFIER_CHAIN="ethereum"
 # ... set other required variables
 
 # With GCP Pub/Sub (default)
@@ -116,7 +116,7 @@ cargo run --bin amplifier-subscriber -- --config config.toml
 cargo run --bin amplifier-subscriber --no-default-features --features nats -- --config config.toml
 
 # Option 3: Mix both (env vars override config file values)
-export RELAYER_AMPLIFIER_COMPONENT_CHAIN="polygon"  # overrides chain in config
+export RELAYER_AMPLIFIER_CHAIN="polygon"  # overrides chain in config
 cargo run --bin amplifier-subscriber --no-default-features --features nats -- --config config.toml
 ```
 

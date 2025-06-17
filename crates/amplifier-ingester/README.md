@@ -42,11 +42,11 @@ The ingester requires a configuration file with the following sections:
 # General ingester configuration
 concurrent_queue_items = 100
 
-[amplifier_component]
+[amplifier]
 url = "https://amplifier-api.example.com"
 chain = "ethereum"
 
-[amplifier_component.identity]
+[amplifier.identity]
 # TLS identity configuration
 
 # For NATS
