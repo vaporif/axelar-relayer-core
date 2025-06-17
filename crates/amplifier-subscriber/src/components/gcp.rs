@@ -1,10 +1,10 @@
+use amplifier_api::{self, AmplifierApiClient};
 use bin_util::ValidateConfig;
 use bin_util::config_defaults::{default_max_bundle_size, default_worker_count};
 use eyre::{Context as _, ensure, eyre};
 use infrastructure::gcp;
 use infrastructure::gcp::connectors::KmsConfig;
 use infrastructure::gcp::publisher::PeekableGcpPublisher;
-use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use serde::Deserialize;
 
 use crate::Subscriber;
