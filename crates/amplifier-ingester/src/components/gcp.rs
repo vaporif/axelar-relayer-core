@@ -1,5 +1,5 @@
-use bin_util::ValidateConfig;
 use amplifier_api::AmplifierApiClient;
+use bin_util::ValidateConfig;
 use eyre::{Context as _, ensure, eyre};
 use infrastructure::gcp;
 use infrastructure::gcp::connectors::KmsConfig;
