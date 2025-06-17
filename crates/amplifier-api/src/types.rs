@@ -1627,7 +1627,7 @@ mod tests {
                     "id": "0192d881-9433-7831-8c67-98eaa7727676",
                     "task": {
                         "availableGasBalance": {
-                            "amount": "-864042"
+                            "amount": "864042"
                         },
                         "message": {
                             "destinationAddress": "memQuKMGBounhwP5yw9qomYNU97Eqcx9c4XwDUo6uGV",
