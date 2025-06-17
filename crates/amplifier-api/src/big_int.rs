@@ -272,7 +272,9 @@ mod tests {
     #[test]
     fn test_bigint_borsh_serialize_and_deserialize_u64() {
         let value = u64::MAX;
-        let container = BigIntContainer { value };
+        let container = BigIntContainer {
+            value: big_int::BigInt(value),
+        };
         let serialized = borsh::to_vec(&container).expect("serialize bigint succeeds");
         let deserialized =
             BigIntContainer::deserialize(&mut serialized.as_slice()).expect("deserize suceeds");
