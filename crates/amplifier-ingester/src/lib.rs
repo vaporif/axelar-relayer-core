@@ -118,7 +118,20 @@ where
         }
     }
 
-    /// consume queue messages and ingest to amplifier api
+    /// Consume queue messages and ingest to amplifier api
+    ///
+    /// This method continuously processes messages from the event queue, forwarding them
+    /// to the Amplifier API. Messages are processed concurrently up to the configured
+    /// concurrency limit.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Failed to retrieve messages from the queue (e.g., connection issues)
+    /// - The underlying queue consumer encounters an unrecoverable error
+    ///
+    /// Note: Individual message processing errors are logged but do not cause this method
+    /// to return an error. Failed messages are acknowledged with NAK for retry.
     #[tracing::instrument(skip_all)]
     pub async fn ingest(&self) -> eyre::Result<()> {
         self.event_queue_consumer

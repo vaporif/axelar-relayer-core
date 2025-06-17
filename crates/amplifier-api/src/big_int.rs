@@ -13,11 +13,14 @@ type InnerType = u128;
 #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
 type InnerType = bnum::types::U256;
 
-/// Represents a big integer as a string matching the pattern `^(0|[1-9]\d*)$`.
-/// The underlying type changes based on features:
-/// - `bigint-u64`: uses u64
-/// - `bigint-u128`: uses u128
-/// - default: uses U256 (256-bit unsigned integer)
+/**
+Represents a big integer as a string matching the pattern `^(0|[1-9]\d*)$`.
+ref: <https://github.com/axelarnetwork/axelar-eds-mirror/blob/main/axelarons-gmp-api/schema/schema.yaml/>
+The underlying type changes based on features:
+- `bigint-u64`: uses u64
+- `bigint-u128`: uses u128
+- default: uses U256 (256-bit unsigned integer)
+*/
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BigInt(InnerType);
 
