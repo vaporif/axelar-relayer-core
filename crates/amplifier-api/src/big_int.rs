@@ -128,8 +128,11 @@ pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
     }
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     {
-        let number = bnum::types::U256::from_str_radix(&value, 10).map_err(|_| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to parse U256")
+        let number = bnum::types::U256::from_str_radix(&value, 10).map_err(|err| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Failed to parse U256, err: {err}"),
+            )
         })?;
         Ok(BigInt(number))
     }
