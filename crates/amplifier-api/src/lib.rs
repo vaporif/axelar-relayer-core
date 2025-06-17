@@ -7,4 +7,6 @@ mod error;
 pub use error::AmplifierApiError;
 pub mod types;
 pub mod util;
+/// Big integer type with configurable underlying type via features
+pub mod bigint;
 pub use chrono;

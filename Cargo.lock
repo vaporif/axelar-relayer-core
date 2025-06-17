@@ -50,6 +50,7 @@ dependencies = [
  "rstest",
  "rustls",
  "serde",
+ "serde_json",
  "simd-json",
  "thiserror 2.0.12",
  "tokio",

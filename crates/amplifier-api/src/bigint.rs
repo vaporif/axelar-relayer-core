@@ -1,0 +1,207 @@
+use std::io::{Read, Result, Write};
+
+use borsh::{BorshDeserialize, BorshSerialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+#[cfg(feature = "bigint-u64")]
+type InnerType = u64;
+#[cfg(feature = "bigint-u128")]
+type InnerType = u128;
+#[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+type InnerType = bnum::types::U256;
+
+/// Represents a big integer as a string matching the pattern `^(0|[1-9]\d*)$`.
+/// The underlying type changes based on features:
+/// - `bigint-u64`: uses u64
+/// - `bigint-u128`: uses u128
+/// - default: uses U256 (256-bit unsigned integer)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BigInt(pub InnerType);
+
+impl BigInt {
+    /// Creates a new [`BigInt`].
+    #[must_use]
+    pub const fn new(num: InnerType) -> Self {
+        Self(num)
+    }
+
+    /// Helper utility to transform u64 into a `BigInt`
+    #[must_use]
+    pub fn from_u64(num: u64) -> Self {
+        #[cfg(feature = "bigint-u64")]
+        {
+            Self(num)
+        }
+        #[cfg(feature = "bigint-u128")]
+        {
+            Self(num as u128)
+        }
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+        {
+            Self(num.into())
+        }
+    }
+}
+
+impl Serialize for BigInt {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let string = self.0.to_string();
+        serializer.serialize_str(&string)
+    }
+}
+
+impl<'de> Deserialize<'de> for BigInt {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string = <String as serde::Deserialize>::deserialize(deserializer)?;
+
+        #[cfg(feature = "bigint-u64")]
+        {
+            let number = string.parse::<u64>().map_err(|err| {
+                serde::de::Error::custom(format!("Failed to parse u64, err: {err}"))
+            })?;
+            Ok(Self(number))
+        }
+        #[cfg(feature = "bigint-u128")]
+        {
+            let number = string.parse::<u128>().map_err(|err| {
+                serde::de::Error::custom(format!("Failed to parse u128, err: {err}"))
+            })?;
+            Ok(Self(number))
+        }
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+        {
+            let number = bnum::types::U256::from_str_radix(&string, 10).map_err(|err| {
+                serde::de::Error::custom(format!("Failed to parse U256, err: {err}"))
+            })?;
+            Ok(Self(number))
+        }
+    }
+}
+
+/// Serialize `BigInt` for Borsh
+///
+/// # Errors
+/// Infallible
+pub fn serialize_bigint<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
+    <String as BorshSerialize>::serialize(&value.0.to_string(), writer)
+}
+
+/// Deserialize `BigInt` for Borsh
+///
+/// # Errors
+/// wrong input
+pub fn deserialize_bigint<R: Read>(reader: &mut R) -> Result<BigInt> {
+    let value: String = BorshDeserialize::deserialize_reader(reader)?;
+
+    #[cfg(feature = "bigint-u64")]
+    {
+        let number = value
+            .parse::<u64>()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        Ok(BigInt(number))
+    }
+    #[cfg(feature = "bigint-u128")]
+    {
+        let number = value
+            .parse::<u128>()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        Ok(BigInt(number))
+    }
+    #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+    {
+        let number = bnum::types::U256::from_str_radix(&value, 10).map_err(|_| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to parse U256")
+        })?;
+        Ok(BigInt(number))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bigint_creation() {
+        let bigint = BigInt::from_u64(42);
+        assert_eq!(bigint.0.to_string(), "42");
+    }
+
+    #[test]
+    fn test_bigint_serialization() {
+        let bigint = BigInt::from_u64(12345);
+        let serialized = serde_json::to_string(&bigint).unwrap();
+        assert_eq!(serialized, "\"12345\"");
+    }
+
+    #[test]
+    fn test_bigint_deserialization() {
+        let json = "\"98765\"";
+        let bigint: BigInt = serde_json::from_str(json).unwrap();
+        assert_eq!(bigint.0.to_string(), "98765");
+    }
+
+    #[test]
+    fn test_borsh_serialization() {
+        let bigint = BigInt::from_u64(999);
+        let mut buffer = Vec::new();
+        serialize_bigint(&bigint, &mut buffer).unwrap();
+
+        let deserialized = deserialize_bigint(&mut buffer.as_slice()).unwrap();
+        assert_eq!(bigint, deserialized);
+    }
+
+    #[test]
+    fn test_large_numbers() {
+        // Test with a number that fits in u64
+        let json = "\"18446744073709551615\""; // u64::MAX
+        let bigint: BigInt = serde_json::from_str(json).unwrap();
+        assert_eq!(bigint.0.to_string(), "18446744073709551615");
+
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+        {
+            // Test with a number larger than u128 (only for U256)
+            let large_json = "\"340282366920938463463374607431768211456\""; // u128::MAX + 1
+            let large_bigint: BigInt = serde_json::from_str(large_json).unwrap();
+            assert_eq!(
+                large_bigint.0.to_string(),
+                "340282366920938463463374607431768211456"
+            );
+        }
+    }
+
+    #[test]
+    fn test_zero() {
+        let bigint = BigInt::from_u64(0);
+        assert_eq!(bigint.0.to_string(), "0");
+
+        let serialized = serde_json::to_string(&bigint).unwrap();
+        assert_eq!(serialized, "\"0\"");
+    }
+
+    #[cfg(feature = "bigint-u64")]
+    #[test]
+    fn test_u64_specific() {
+        let max = BigInt::new(u64::MAX);
+        assert_eq!(max.0, u64::MAX);
+    }
+
+    #[cfg(feature = "bigint-u128")]
+    #[test]
+    fn test_u128_specific() {
+        let max = BigInt::new(u128::MAX);
+        assert_eq!(max.0, u128::MAX);
+    }
+
+    #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+    #[test]
+    fn test_u256_specific() {
+        let max = BigInt::new(bnum::types::U256::MAX);
+        assert_eq!(max.0, bnum::types::U256::MAX);
+    }
+}
