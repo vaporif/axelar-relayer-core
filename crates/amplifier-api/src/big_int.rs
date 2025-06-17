@@ -30,6 +30,7 @@ impl BigInt {
 
     /// Helper utility to transform u64 into a `BigInt`
     #[must_use]
+    #[allow(clippy::missing_const_for_fn, reason = "not const in other variants")]
     pub fn from_u64(num: u64) -> Self {
         #[cfg(feature = "bigint-u64")]
         {
@@ -103,6 +104,7 @@ impl<'de> Deserialize<'de> for BigInt {
 ///
 /// # Errors
 /// Infallible
+#[allow(clippy::trivially_copy_pass_by_ref, reason = "needs by ref")]
 pub fn serialize<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
     <String as BorshSerialize>::serialize(&value.0.to_string(), writer)
 }
