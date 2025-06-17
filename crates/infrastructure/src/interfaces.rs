@@ -112,7 +112,7 @@ pub mod publisher {
         /// Publish batch to queue
         fn publish_batch(
             &self,
-            msg: Vec<PublishMessage<T>>,
+            batch: Vec<PublishMessage<T>>,
         ) -> impl Future<Output = Result<Vec<Self::Return>, impl Error + Send + Sync + 'static>>;
 
         /// Checks the health status of the publisher connection.
