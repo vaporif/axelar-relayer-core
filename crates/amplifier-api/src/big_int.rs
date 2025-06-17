@@ -129,6 +129,8 @@ pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
 
 #[cfg(test)]
 mod tests {
+    use bnum::types::U256;
+
     use super::*;
 
     #[derive(BorshSerialize, BorshDeserialize)]
@@ -139,13 +141,13 @@ mod tests {
 
     #[test]
     fn test_bigint_creation() {
-        let bigint: BigInt = 42_u64.into();
+        let bigint: BigInt = U256::from(42_u64).into();
         assert_eq!(bigint.0.to_string(), "42");
     }
 
     #[test]
     fn test_bigint_serialization() {
-        let bigint = BigInt::from(12345_u64);
+        let bigint: BigInt = U256::from(12345_u64).into();
         let serialized = serde_json::to_string(&bigint).unwrap();
         assert_eq!(serialized, "\"12345\"");
     }
@@ -179,7 +181,7 @@ mod tests {
     #[cfg(feature = "bigint-u128")]
     #[test]
     fn test_borsh_serialization_u128() {
-        let bigint: BigInt = 999_u64.into();
+        let bigint: BigInt = 999_u128.into();
         let mut buffer = Vec::new();
         serialize(&bigint, &mut buffer).unwrap();
 
@@ -198,7 +200,7 @@ mod tests {
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     #[test]
     fn test_borsh_serialization_u256() {
-        let bigint: BigInt = 999_u64.into();
+        let bigint: BigInt = U256::from(999_u64).into();
         let mut buffer = Vec::new();
         serialize(&bigint, &mut buffer).unwrap();
 
@@ -238,7 +240,7 @@ mod tests {
 
     #[test]
     fn test_zero() {
-        let bigint: BigInt = 0_u64.into();
+        let bigint: BigInt = U256::from(0_u64).into();
         assert_eq!(bigint.0.to_string(), "0");
 
         let serialized = serde_json::to_string(&bigint).unwrap();

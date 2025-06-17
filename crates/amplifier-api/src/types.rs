@@ -1190,6 +1190,7 @@ pub struct ErrorResponse {
 #[cfg(test)]
 mod tests {
     use base64::prelude::*;
+    use bnum::types::U256;
     use pretty_assertions::assert_eq;
     use serde::de::DeserializeOwned;
     use simd_json::{from_slice, json, to_owned_value, to_string};
@@ -1272,7 +1273,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: 410_727_029_715_539_u64.into(),
+                amount: U256::from(410_727_029_715_539_u64).into(),
             },
         };
 
@@ -1326,7 +1327,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: 410_727_029_715_539_u64.into(),
+                amount: U256::from(410_727_029_715_539_u64).into(),
             },
         };
 
