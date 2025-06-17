@@ -1,9 +1,9 @@
+use amplifier_api::{self, AmplifierApiClient};
 use bin_util::ValidateConfig;
 use bin_util::nats::{EVENTS_CONSUME_GROUP, EVENTS_PUBLISH_SUBJECT, EVENTS_STREAM};
 use eyre::{Context as _, ensure, eyre};
 use infrastructure::nats::consumer::NatsConsumer;
 use infrastructure::nats::{self, StreamArgs};
-use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use serde::Deserialize;
 use url::Url;
 
