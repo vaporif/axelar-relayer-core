@@ -85,25 +85,71 @@ The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for eac
 
 #### BigInt Precision for Token Amounts
 
-Different blockchains use different numeric types for token balances and amounts. The `amplifier-api` crate provides compile-time configuration to optimize for your specific blockchain:
+The `amplifier-api` crate provides compile-time configuration to optimize numeric precision for your specific blockchain. See the [amplifier-api README](./crates/amplifier-api/README.md#bigint-type-configuration) for details.
 
-- **Ethereum/EVM chains**: Use the default U256 (256-bit unsigned integer)
-- **Solana**: Use U64 feature flag (`bigint-u64`) as Solana uses 64-bit integers for all token amounts
-- **Other chains**: Use U128 feature flag (`bigint-u128`) for intermediate precision
+#### TLS Certificate Configuration
 
-This optimization prevents unnecessary overhead from parsing large numbers when your blockchain doesn't require them. For example, Solana will never have token amounts larger than U64, so parsing U256 values adds unnecessary complexity.
+The relayer requires TLS certificates to authenticate with the Amplifier API. You have two options:
 
-To configure for your blockchain, add the appropriate feature when depending on `amplifier-api`:
+##### Option 1: Direct Certificate (Development/Testing)
+
+Store the certificate and private key directly in the configuration:
 
 ```toml
-# For Ethereum/EVM (default)
-amplifier-api = { workspace = true }
+[amplifier]
+# Certificate + private key in PEM format
+identity = '''
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+'''
+```
 
-# For Solana
-amplifier-api = { workspace = true, features = ["bigint-u64"] }
+**⚠️ Warning**: This method stores the private key in plaintext and should only be used for development.
 
-# For chains needing u128
-amplifier-api = { workspace = true, features = ["bigint-u128"] }
+##### Option 2: Google Cloud KMS (Production)
+
+For production deployments, use Google Cloud KMS to secure your private keys:
+
+```toml
+[amplifier]
+# Only the public certificate is stored locally
+tls_public_certificate = '''
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+'''
+
+[gcp.kms]
+project_id = "your-gcp-project"
+location = "global"
+keyring = "amplifier_api_keyring"
+cryptokey = "amplifier_api_signing_key"
+```
+
+With KMS:
+- Private keys never leave Google Cloud
+- All signing operations happen within KMS
+- Keys can be rotated without changing the relayer configuration
+- Access is controlled through GCP IAM
+
+##### Environment Variables
+
+TLS configuration can also be provided via environment variables:
+
+```bash
+# For direct certificate (base64 encoded)
+export RELAYER_AMPLIFIER_IDENTITY="<base64-encoded-pem>"
+
+# For KMS with public certificate
+export RELAYER_AMPLIFIER_TLS_PUBLIC_CERTIFICATE="<base64-encoded-cert>"
+export RELAYER_GCP_KMS_PROJECT_ID="your-project"
+export RELAYER_GCP_KMS_LOCATION="global"
+export RELAYER_GCP_KMS_KEYRING="amplifier_api_keyring"
+export RELAYER_GCP_KMS_CRYPTOKEY="amplifier_api_signing_key"
 ```
 
 ### Core Libraries
@@ -185,16 +231,17 @@ All tools are automatically available in your PATH when you enter the Nix shell.
 
 ### Configuration
 
-Before running the components, you need to create a configuration file. An example configuration file is provided in `relayer-config-example.toml`. You can copy this file and modify it according to your needs:
+Before running the components, you need to create a configuration file. An example configuration file is provided in `config-example.toml`. You can copy this file and modify it according to your needs:
 
 ```bash
-cp relayer-config-example.toml relayer-config.toml
+cp config-example.toml relayer-config.toml
 ```
 
-Edit the `config-example.toml` file to configure:
+Edit the `relayer-config.toml` file to configure:
 
-- Amplifier API configuration (notably your chain name)
+- Amplifier API configuration (chain name, URL, TLS certificates)
 - Backend configuration (NATS or GCP Pub/Sub)
+- TLS authentication (direct certificate or GCP KMS)
 - Tickrate for processing events
 - Health check endpoints
 

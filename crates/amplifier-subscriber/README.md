@@ -77,7 +77,10 @@ url = "https://amplifier-api.example.com"
 chain = "ethereum"
 
 [amplifier.identity]
-# TLS identity configuration
+# TLS identity configuration - see main README for details
+# Option 1: Direct certificate (development)
+# identity = "..."
+# Option 2: Use with GCP KMS (production) - configure [gcp.kms] section
 
 # For NATS
 [nats]
@@ -131,26 +134,15 @@ cargo run --bin amplifier-subscriber --no-default-features --features nats -- --
 
 ### Blockchain-Specific BigInt Configuration
 
-The subscriber forwards BigInt feature flags to the `amplifier-api` crate, allowing you to optimize numeric precision for your specific blockchain:
-
-- **Default (U256)**: For Ethereum and EVM-compatible chains
-- **`bigint-u64`**: For Solana (uses 64-bit integers for all token amounts)
-- **`bigint-u128`**: For chains requiring intermediate precision
-
-To build with a specific BigInt type:
+The subscriber forwards BigInt features to `amplifier-api`. See the [main README](../../README.md#bigint-precision-for-token-amounts) for details.
 
 ```bash
-# For Solana (with GCP backend)
+# Solana with GCP
 cargo build --bin amplifier-subscriber --features bigint-u64
 
-# For Solana (with NATS backend)
+# Solana with NATS
 cargo build --bin amplifier-subscriber --no-default-features --features "nats,bigint-u64"
-
-# For chains using u128
-cargo build --bin amplifier-subscriber --features bigint-u128
 ```
-
-This feature selection is passed through to the `amplifier-api` dependency, ensuring consistent numeric handling throughout the system.
 
 ## Development
 

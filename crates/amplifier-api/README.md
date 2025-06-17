@@ -6,26 +6,24 @@ Rust client library for interacting with the Axelar Amplifier API. This crate pr
 
 ### BigInt Type Configuration
 
-The `BigInt` type used for token amounts can be configured at compile-time to match your blockchain's native precision requirements:
+The `BigInt` type used for token amounts can be configured at compile-time to match your blockchain's native precision:
 
-- **Default (U256)**: 256-bit unsigned integer - suitable for Ethereum and EVM-compatible chains
-- **`bigint-u64`**: 64-bit unsigned integer - suitable for Solana and similar chains
-- **`bigint-u128`**: 128-bit unsigned integer - suitable for chains with intermediate precision requirements
-
-This feature allows you to optimize for your specific blockchain without handling unnecessary large number parsing. For example, Solana uses u64 for all token amounts, so enabling the `bigint-u64` feature avoids the overhead of parsing U256 values.
-
-#### Usage Examples
+- **Default**: U256 (256-bit) for Ethereum/EVM chains
+- **`bigint-u64`**: 64-bit for Solana
+- **`bigint-u128`**: 128-bit for intermediate precision
 
 ```toml
-# Default - uses U256 for Ethereum/EVM chains
+# Default (Ethereum/EVM)
 amplifier-api = "0.1"
 
-# For Solana integration
+# Solana
 amplifier-api = { version = "0.1", features = ["bigint-u64"] }
 
-# For chains requiring u128 precision
+# Custom u128
 amplifier-api = { version = "0.1", features = ["bigint-u128"] }
 ```
+
+This avoids unnecessary overhead - e.g., Solana never uses values larger than u64.
 
 ## API Types
 
