@@ -15,8 +15,8 @@ type InnerType = bnum::types::U256;
 /// - `bigint-u64`: uses u64
 /// - `bigint-u128`: uses u128
 /// - default: uses U256 (256-bit unsigned integer)
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BigInt(pub InnerType);
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct BigInt(InnerType);
 
 impl BigInt {
     /// Creates a new [`BigInt`].
@@ -40,6 +40,17 @@ impl BigInt {
         {
             Self(num.into())
         }
+    }
+
+    #[must_use]
+    pub fn inner(&self) -> InnerType {
+        self.0
+    }
+}
+
+impl ToString for BigInt {
+    fn to_string(&self) -> String {
+        self.0.to_string()
     }
 }
 
@@ -88,7 +99,7 @@ impl<'de> Deserialize<'de> for BigInt {
 ///
 /// # Errors
 /// Infallible
-pub fn serialize_bigint<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
+pub fn serialize<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
     <String as BorshSerialize>::serialize(&value.0.to_string(), writer)
 }
 
@@ -96,7 +107,7 @@ pub fn serialize_bigint<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> 
 ///
 /// # Errors
 /// wrong input
-pub fn deserialize_bigint<R: Read>(reader: &mut R) -> Result<BigInt> {
+pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
     let value: String = BorshDeserialize::deserialize_reader(reader)?;
 
     #[cfg(feature = "bigint-u64")]
@@ -126,6 +137,12 @@ pub fn deserialize_bigint<R: Read>(reader: &mut R) -> Result<BigInt> {
 mod tests {
     use super::*;
 
+    #[derive(BorshSerialize, BorshDeserialize)]
+    struct BigIntContainer {
+        #[borsh(serialize_with = "serialize", deserialize_with = "deserialize")]
+        pub value: BigInt,
+    }
+
     #[test]
     fn test_bigint_creation() {
         let bigint = BigInt::from_u64(42);
@@ -150,9 +167,9 @@ mod tests {
     fn test_borsh_serialization() {
         let bigint = BigInt::from_u64(999);
         let mut buffer = Vec::new();
-        serialize_bigint(&bigint, &mut buffer).unwrap();
+        serialize(&bigint, &mut buffer).unwrap();
 
-        let deserialized = deserialize_bigint(&mut buffer.as_slice()).unwrap();
+        let deserialized = deserialize(&mut buffer.as_slice()).unwrap();
         assert_eq!(bigint, deserialized);
     }
 
@@ -203,5 +220,21 @@ mod tests {
     fn test_u256_specific() {
         let max = BigInt::new(bnum::types::U256::MAX);
         assert_eq!(max.0, bnum::types::U256::MAX);
+    }
+
+    #[test]
+    fn test_bigint_borsh_serialize_and_deserialize() {
+        let value = BigInt::new(bnum::types::I512::parse_str_radix(
+            "423423413123813194728478923748923748923748923749872984732",
+            10,
+        ));
+        let container = BigIntContainer {
+            value: value.clone(),
+        };
+        let serialized = borsh::to_vec(&container).expect("serialize bigint succeeds");
+        let deserialized =
+            BigIntContainer::deserialize(&mut serialized.as_slice()).expect("deserize suceeds");
+
+        assert_eq!(value, deserialized.value);
     }
 }
