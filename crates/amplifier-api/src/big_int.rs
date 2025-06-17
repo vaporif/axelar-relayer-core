@@ -38,12 +38,6 @@ impl From<InnerType> for BigInt {
     }
 }
 
-impl From<u64> for BigInt {
-    fn from(value: u64) -> Self {
-        Self(InnerType::from(value))
-    }
-}
-
 impl Display for BigInt {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.0)
