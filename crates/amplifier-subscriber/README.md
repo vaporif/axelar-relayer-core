@@ -94,25 +94,30 @@ topic_id = "amplifier-tasks"
 
 ### Running
 
+The subscriber supports two message queue backends that are mutually exclusive:
+
 ```bash
 # Option 1: Using environment variables only (no config file)
 export RELAYER_HEALTH_CHECK_PORT=8080
 export RELAYER_AMPLIFIER_COMPONENT_CHAIN="ethereum"
 # ... set other required variables
 
-# With NATS
-cargo run --bin amplifier-subscriber --features nats
+# With GCP Pub/Sub (default)
+cargo run --bin amplifier-subscriber
 
-# With GCP Pub/Sub  
-cargo run --bin amplifier-subscriber --features gcp
+# With NATS (requires disabling default features)
+cargo run --bin amplifier-subscriber --no-default-features --features nats
 
 # Option 2: Using a configuration file
-cargo run --bin amplifier-subscriber --features nats -- --config config.toml
-cargo run --bin amplifier-subscriber --features gcp -- --config config.toml
+# With GCP (default)
+cargo run --bin amplifier-subscriber -- --config config.toml
+
+# With NATS
+cargo run --bin amplifier-subscriber --no-default-features --features nats -- --config config.toml
 
 # Option 3: Mix both (env vars override config file values)
 export RELAYER_AMPLIFIER_COMPONENT_CHAIN="polygon"  # overrides chain in config
-cargo run --bin amplifier-subscriber --features nats -- --config config.toml
+cargo run --bin amplifier-subscriber --no-default-features --features nats -- --config config.toml
 ```
 
 ## Features
@@ -136,9 +141,14 @@ To add support for a new message queue system:
 
 ### Testing
 
+Since GCP and NATS features are mutually exclusive, test each backend separately:
+
 ```bash
-cargo test --features nats
-cargo test --features gcp
+# Test with GCP (default)
+cargo test
+
+# Test with NATS
+cargo test --no-default-features --features nats
 ```
 
 ## Performance Considerations

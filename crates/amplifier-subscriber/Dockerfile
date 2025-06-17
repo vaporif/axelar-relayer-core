@@ -24,7 +24,7 @@ ENV OPENSSL_INCLUDE_DIR=/usr/include
 COPY . .
 
 # Build with optional features (default: "default")
-ARG FEATURES=gcp
+ARG FEATURES=default
 RUN cargo build --release --bin amplifier-subscriber --no-default-features --features ${FEATURES} && \
     strip target/release/amplifier-subscriber
 

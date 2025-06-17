@@ -81,8 +81,34 @@ The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for eac
 
 **Implementation Reference**: When implementing blockchain-specific ingester and subscriber components, refer to the [amplifier-ingester](./crates/amplifier-ingester/) and [amplifier-subscriber](./crates/amplifier-subscriber/) implementations as examples of how to structure your components, handle message queues, implement health checks, and integrate with the infrastructure layer.
 
+### Blockchain-Specific Configuration
+
+#### BigInt Precision for Token Amounts
+
+Different blockchains use different numeric types for token balances and amounts. The `amplifier-api` crate provides compile-time configuration to optimize for your specific blockchain:
+
+- **Ethereum/EVM chains**: Use the default U256 (256-bit unsigned integer)
+- **Solana**: Use U64 feature flag (`bigint-u64`) as Solana uses 64-bit integers for all token amounts
+- **Other chains**: Use U128 feature flag (`bigint-u128`) for intermediate precision
+
+This optimization prevents unnecessary overhead from parsing large numbers when your blockchain doesn't require them. For example, Solana will never have token amounts larger than U64, so parsing U256 values adds unnecessary complexity.
+
+To configure for your blockchain, add the appropriate feature when depending on `amplifier-api`:
+
+```toml
+# For Ethereum/EVM (default)
+amplifier-api = { workspace = true }
+
+# For Solana
+amplifier-api = { workspace = true, features = ["bigint-u64"] }
+
+# For chains needing u128
+amplifier-api = { workspace = true, features = ["bigint-u128"] }
+```
+
 ### Core Libraries
 
+- **[amplifier-api](./crates/amplifier-api/README.md)**: Rust client for the Axelar Amplifier API with configurable BigInt precision for different blockchains
 - **[bin-util](./crates/bin-util/README.md)**: Common binary utilities for all relayer components including configuration management, health checks, telemetry, logging, and metrics
 - **[infrastructure](./crates/infrastructure/README.md)**: Storage bus implementations providing abstraction for message queuing (GCP Pub/Sub, NATS) and key-value storage
 - **[terraform](./terraform/README.md)**: Infrastructure as Code for provisioning GCP resources (Pub/Sub, KMS, Memorystore, IAM, K8s)
@@ -210,12 +236,12 @@ export RELAYER_TICKRATE="5s"
 
 ### Running with Specific Backend
 
-By default, both components are built with GCP support. To use NATS as the backend, compile with the `nats` feature:
+By default, both components are built with GCP support as the message queue backend. To use NATS instead, compile with the `nats` feature:
 
 ```bash
-# Build with nats backend support
-cargo build --bin amplifier-ingester --features nats --no-default-features
-cargo build --bin amplifier-subscriber --features nats --no-default-features
+# Build with NATS backend support (requires disabling default GCP features)
+cargo build --bin amplifier-ingester --no-default-features --features nats
+cargo build --bin amplifier-subscriber --no-default-features --features nats
 ```
 
 ### Health Checks
@@ -248,7 +274,7 @@ docker build -t axelar-amplifier-subscriber -f crates/amplifier-subscriber/Docke
 
 ### Using NATS Instead of GCP
 
-You can build with NATS support instead of the default GCP by using build arguments:
+Since GCP is the default backend, you can build with NATS support instead by using build arguments:
 
 ```bash
 # Build with NATS backend

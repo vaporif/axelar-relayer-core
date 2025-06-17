@@ -66,12 +66,14 @@ subscription_id = "amplifier-events-sub"
 
 ### Running
 
-```bash
-# With NATS
-cargo run --bin amplifier-ingester --features nats -- --config config.toml
+The ingester supports two message queue backends that are mutually exclusive:
 
-# With GCP Pub/Sub
-cargo run --bin amplifier-ingester --features gcp -- --config config.toml
+```bash
+# With GCP Pub/Sub (default)
+cargo run --bin amplifier-ingester -- --config config.toml
+
+# With NATS (requires disabling default features)
+cargo run --bin amplifier-ingester --no-default-features --features nats -- --config config.toml
 ```
 
 ## Features
@@ -95,9 +97,14 @@ To add support for a new message queue system:
 
 ### Testing
 
+Since GCP and NATS features are mutually exclusive, test each backend separately:
+
 ```bash
-cargo test --features nats
-cargo test --features gcp
+# Test with GCP (default)
+cargo test
+
+# Test with NATS
+cargo test --no-default-features --features nats
 ```
 
 ## Related Components
