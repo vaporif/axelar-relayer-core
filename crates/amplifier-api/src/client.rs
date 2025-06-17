@@ -42,6 +42,12 @@ impl AmplifierApiClient {
     }
 
     /// Send a request to Axelars Amplifier API
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - URL construction fails
+    /// - JSON serialization of the request payload fails
     #[instrument(name = "build_request", skip(self, request))]
     pub fn build_request<T>(
         &self,
@@ -78,6 +84,12 @@ pub struct AmplifierRequest<T, E> {
 
 impl<T, E> AmplifierRequest<T, E> {
     /// execute an Amplifier API request
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Request building fails
+    /// - Network request execution fails
     #[instrument(name = "execute_request", skip(self))]
     pub async fn execute(self) -> Result<AmplifierResponse<T, E>, AmplifierApiError> {
         let (client, request) = self.request.build_split();
@@ -113,6 +125,10 @@ impl<T, E> AmplifierResponse<T, E> {
     /// Only check if the returtned HTTP response is of error type; don't parse the data
     ///
     /// Useful when you don't care about the actual response besides if it was an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP response status indicates an error (4xx or 5xx)
     #[instrument(name = "response_ok", skip(self), err, parent = &self.span)]
     pub fn ok(self) -> Result<(), AmplifierApiError> {
         self.response.error_for_status()?;
@@ -123,6 +139,12 @@ impl<T, E> AmplifierResponse<T, E> {
     /// Only parse the error type if we received an error.
     ///
     /// Useful when you don't care about the actual response besides if it was an error.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Reading response bytes fails
+    /// - JSON deserialization of error response fails
     #[instrument(name = "parse_response_json_err", skip(self), err, parent = &self.span)]
     pub async fn json_err(self) -> Result<Result<(), E>, AmplifierApiError>
     where
@@ -139,6 +161,12 @@ impl<T, E> AmplifierResponse<T, E> {
     }
 
     /// Parse the response json
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Reading response bytes fails
+    /// - JSON deserialization of response fails (either success or error type)
     #[instrument(name = "parse_response_json", skip(self), err, parent = &self.span)]
     pub async fn json(self) -> Result<Result<T, E>, AmplifierApiError>
     where
