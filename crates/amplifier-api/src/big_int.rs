@@ -30,7 +30,7 @@ impl BigInt {
 
     /// Helper utility to transform u64 into a `BigInt`
     #[must_use]
-    pub fn from_u64(num: u64) -> Self {
+    pub const fn from_u64(num: u64) -> Self {
         #[cfg(feature = "bigint-u64")]
         {
             Self(num)
@@ -47,7 +47,7 @@ impl BigInt {
 
     /// Get underlying value
     #[must_use]
-    pub const fn inner(&self) -> InnerType {
+    pub const fn inner(self) -> InnerType {
         self.0
     }
 }
@@ -103,7 +103,7 @@ impl<'de> Deserialize<'de> for BigInt {
 ///
 /// # Errors
 /// Infallible
-pub fn serialize<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
+pub fn serialize<W: Write>(value: BigInt, writer: &mut W) -> Result<()> {
     <String as BorshSerialize>::serialize(&value.0.to_string(), writer)
 }
 
