@@ -43,6 +43,12 @@ fn main() -> eyre::Result<()> {
 
             cmd!(sh, "cargo test --doc -p retry").run()?;
             cmd!(sh, "cargo test --doc -p amplifier-api").run()?;
+            cmd!(sh, "cargo test --doc -p amplifier-api --features=bigint-64").run()?;
+            cmd!(
+                sh,
+                "cargo test --doc -p amplifier-api --features=bigint-128"
+            )
+            .run()?;
             cmd!(sh, "cargo test --doc -p infrastructure").run()?;
             cmd!(sh, "cargo test --doc -p bin-util").run()?;
             cmd!(sh, "cargo test --doc -p common-serde-utils").run()?;

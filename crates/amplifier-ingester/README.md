@@ -83,6 +83,30 @@ cargo run --bin amplifier-ingester --no-default-features --features nats -- --co
 - **TLS Authentication**: Secure communication with Amplifier API
 - **Error Handling**: Automatic retries with exponential backoff
 - **Observability**: Integrated metrics and tracing
+- **BigInt Precision**: Supports forwarding BigInt features to amplifier-api for blockchain-specific numeric precision (see below)
+
+### Blockchain-Specific BigInt Configuration
+
+The ingester forwards BigInt feature flags to the `amplifier-api` crate, allowing you to optimize numeric precision for your specific blockchain:
+
+- **Default (U256)**: For Ethereum and EVM-compatible chains
+- **`bigint-u64`**: For Solana (uses 64-bit integers for all token amounts)
+- **`bigint-u128`**: For chains requiring intermediate precision
+
+To build with a specific BigInt type:
+
+```bash
+# For Solana (with GCP backend)
+cargo build --bin amplifier-ingester --features bigint-u64
+
+# For Solana (with NATS backend)
+cargo build --bin amplifier-ingester --no-default-features --features "nats,bigint-u64"
+
+# For chains using u128
+cargo build --bin amplifier-ingester --features bigint-u128
+```
+
+This feature selection is passed through to the `amplifier-api` dependency, ensuring consistent numeric handling throughout the system.
 
 ## Development
 
