@@ -87,7 +87,6 @@ dependencies = [
  "clap",
  "eyre",
  "infrastructure",
- "relayer-amplifier-api-integration",
  "serde",
  "supervisor",
  "tokio",

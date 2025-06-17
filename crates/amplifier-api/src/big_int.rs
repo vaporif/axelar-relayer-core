@@ -28,28 +28,16 @@ impl BigInt {
         Self(num)
     }
 
-    /// Helper utility to transform u64 into a `BigInt`
-    #[must_use]
-    #[allow(clippy::missing_const_for_fn, reason = "not const in other variants")]
-    pub fn from_u64(num: u64) -> Self {
-        #[cfg(feature = "bigint-u64")]
-        {
-            Self(num)
-        }
-        #[cfg(feature = "bigint-u128")]
-        {
-            Self(num as u128)
-        }
-        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
-        {
-            Self(num.into())
-        }
-    }
-
     /// Get underlying value
     #[must_use]
     pub const fn inner(self) -> InnerType {
         self.0
+    }
+}
+
+impl From<u64> for BigInt {
+    fn from(value: u64) -> Self {
+        Self::new(InnerType::from(value))
     }
 }
 
@@ -154,13 +142,13 @@ mod tests {
 
     #[test]
     fn test_bigint_creation() {
-        let bigint = BigInt::from_u64(42);
+        let bigint = BigInt::from(42_u64);
         assert_eq!(bigint.0.to_string(), "42");
     }
 
     #[test]
     fn test_bigint_serialization() {
-        let bigint = BigInt::from_u64(12345);
+        let bigint = BigInt::from(12345_u64);
         let serialized = serde_json::to_string(&bigint).unwrap();
         assert_eq!(serialized, "\"12345\"");
     }
@@ -175,7 +163,7 @@ mod tests {
     #[cfg(feature = "bigint-u64")]
     #[test]
     fn test_borsh_serialization_u64() {
-        let bigint = BigInt::from_u64(999);
+        let bigint = BigInt::from(999_u64);
         let mut buffer = Vec::new();
         serialize(&bigint, &mut buffer).unwrap();
 
@@ -194,7 +182,7 @@ mod tests {
     #[cfg(feature = "bigint-u128")]
     #[test]
     fn test_borsh_serialization_u128() {
-        let bigint = BigInt::from_u64(999);
+        let bigint = BigInt::from(999_u64);
         let mut buffer = Vec::new();
         serialize(&bigint, &mut buffer).unwrap();
 
@@ -213,7 +201,7 @@ mod tests {
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     #[test]
     fn test_borsh_serialization_u256() {
-        let bigint = BigInt::from_u64(999);
+        let bigint = BigInt::from(999_u64);
         let mut buffer = Vec::new();
         serialize(&bigint, &mut buffer).unwrap();
 
@@ -253,7 +241,7 @@ mod tests {
 
     #[test]
     fn test_zero() {
-        let bigint = BigInt::from_u64(0);
+        let bigint = BigInt::from(0_u64);
         assert_eq!(bigint.0.to_string(), "0");
 
         let serialized = serde_json::to_string(&bigint).unwrap();
@@ -284,7 +272,7 @@ mod tests {
     #[cfg(feature = "bigint-u64")]
     #[test]
     fn test_bigint_borsh_serialize_and_deserialize_u64() {
-        let value = BigInt::from_u64(u64::MAX);
+        let value = BigInt::from(u64::MAX);
         let container = BigIntContainer {
             value: value.clone(),
         };

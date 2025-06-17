@@ -1273,7 +1273,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: BigInt::from_u64(410_727_029_715_539),
+                amount: BigInt::from(410_727_029_715_539_u64),
             },
         };
 
@@ -1327,7 +1327,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: BigInt::from_u64(410_727_029_715_539),
+                amount: BigInt::from(410_727_029_715_539_u64),
             },
         };
 

@@ -16,7 +16,6 @@ infrastructure = { workspace = true, features = [
   "storage-interfaces",
 ] }
 bin-util.workspace = true
-relayer-amplifier-api-integration.workspace = true
 
 tracing.workspace = true
 eyre.workspace = true
