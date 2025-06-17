@@ -3,6 +3,7 @@
 use core::fmt::Display;
 use std::io::{Read, Result, Write};
 
+#[allow(unused_imports, reason = "simplifies imports")]
 use bnum::types::U256;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Deserializer, Serialize};
