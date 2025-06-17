@@ -1,3 +1,5 @@
+//! BigInt type with configurable precision for blockchain-specific token amounts.
+
 use core::fmt::Display;
 use std::io::{Read, Result, Write};
 
