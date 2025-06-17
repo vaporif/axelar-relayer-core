@@ -3,6 +3,7 @@
 use core::fmt::Display;
 use std::io::{Read, Result, Write};
 
+use bnum::types::U256;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -77,7 +78,7 @@ impl<'de> Deserialize<'de> for BigInt {
         }
         #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
         {
-            let number = bnum::types::U256::from_str_radix(&string, 10).map_err(|err| {
+            let number = U256::from_str_radix(&string, 10).map_err(|err| {
                 serde::de::Error::custom(format!("Failed to parse U256, err: {err}"))
             })?;
             Ok(Self(number))
@@ -117,7 +118,7 @@ pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
     }
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     {
-        let number = bnum::types::U256::from_str_radix(&value, 10).map_err(|err| {
+        let number = U256::from_str_radix(&value, 10).map_err(|err| {
             std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!("Failed to parse U256, err: {err}"),
@@ -141,13 +142,13 @@ mod tests {
 
     #[test]
     fn test_bigint_creation() {
-        let bigint: BigInt = U256::from(42_u64).into();
+        let bigint: BigInt = BigInt::from(U256::from(42_u64));
         assert_eq!(bigint.0.to_string(), "42");
     }
 
     #[test]
     fn test_bigint_serialization() {
-        let bigint: BigInt = U256::from(12345_u64).into();
+        let bigint: BigInt = BigInt::from(U256::from(12345_u64));
         let serialized = serde_json::to_string(&bigint).unwrap();
         assert_eq!(serialized, "\"12345\"");
     }
@@ -209,8 +210,7 @@ mod tests {
 
         // Test with a value larger than u128::MAX
         let large_value =
-            bnum::types::U256::from_str_radix("340282366920938463463374607431768211456", 10)
-                .unwrap();
+            U256::from_str_radix("340282366920938463463374607431768211456", 10).unwrap();
         let large_bigint: BigInt = large_value.into();
         let mut large_buffer = Vec::new();
         serialize(&large_bigint, &mut large_buffer).unwrap();
@@ -264,8 +264,8 @@ mod tests {
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     #[test]
     fn test_u256_specific() {
-        let max: BigInt = bnum::types::U256::MAX.into();
-        assert_eq!(max.0, bnum::types::U256::MAX);
+        let max: BigInt = U256::MAX.into();
+        assert_eq!(max.0, U256::MAX);
     }
 
     #[cfg(feature = "bigint-u64")]
@@ -273,7 +273,7 @@ mod tests {
     fn test_bigint_borsh_serialize_and_deserialize_u64() {
         let value = u64::MAX;
         let container = BigIntContainer {
-            value: big_int::BigInt(value),
+            value: BigInt::from(value),
         };
         let serialized = borsh::to_vec(&container).expect("serialize bigint succeeds");
         let deserialized =
@@ -286,7 +286,9 @@ mod tests {
     #[test]
     fn test_bigint_borsh_serialize_and_deserialize_u128() {
         let value = u128::MAX;
-        let container = BigIntContainer { value };
+        let container = BigIntContainer {
+            value: BigInt::from(value),
+        };
         let serialized = borsh::to_vec(&container).expect("serialize bigint succeeds");
         let deserialized =
             BigIntContainer::deserialize(&mut serialized.as_slice()).expect("deserize suceeds");
@@ -297,7 +299,7 @@ mod tests {
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     #[test]
     fn test_bigint_borsh_serialize_and_deserialize_u256() {
-        let value = bnum::types::U256::from_str_radix(
+        let value = U256::from_str_radix(
             "423423413123813194728478923748923748923748923749872984732",
             10,
         )
