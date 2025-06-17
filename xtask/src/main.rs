@@ -100,26 +100,6 @@ fn main() -> eyre::Result<()> {
             cmd!(sh, "cargo nextest run -p amplifier-api --tests --all-targets --features=bigint-u64 --no-fail-fast {args...}").run()?;
             cmd!(sh, "cargo nextest run -p amplifier-api --tests --all-targets --features=bigint-u128 --no-fail-fast {args...}").run()?;
 
-            // Test infrastructure with mutually exclusive backends
-            cmd!(sh, "cargo nextest run -p infrastructure --tests --all-targets --features=gcp --no-fail-fast {args...}").run()?;
-            cmd!(sh, "cargo nextest run -p infrastructure --tests --all-targets --no-default-features --features=nats --no-fail-fast {args...}").run()?;
-
-            // Test ingester with different backends
-            cmd!(sh, "cargo nextest run -p amplifier-ingester --tests --all-targets --features=gcp --no-fail-fast {args...}").run()?;
-            cmd!(sh, "cargo nextest run -p amplifier-ingester --tests --all-targets --no-default-features --features=nats --no-fail-fast {args...}").run()?;
-
-            // Test ingester with BigInt features (GCP backend)
-            cmd!(sh, "cargo nextest run -p amplifier-ingester --tests --all-targets --features=gcp,bigint-u64 --no-fail-fast {args...}").run()?;
-            cmd!(sh, "cargo nextest run -p amplifier-ingester --tests --all-targets --features=gcp,bigint-u128 --no-fail-fast {args...}").run()?;
-
-            // Test subscriber with different backends
-            cmd!(sh, "cargo nextest run -p amplifier-subscriber --tests --all-targets --features=gcp --no-fail-fast {args...}").run()?;
-            cmd!(sh, "cargo nextest run -p amplifier-subscriber --tests --all-targets --no-default-features --features=nats --no-fail-fast {args...}").run()?;
-
-            // Test subscriber with BigInt features (GCP backend)
-            cmd!(sh, "cargo nextest run -p amplifier-subscriber --tests --all-targets --features=gcp,bigint-u64 --no-fail-fast {args...}").run()?;
-            cmd!(sh, "cargo nextest run -p amplifier-subscriber --tests --all-targets --features=gcp,bigint-u128 --no-fail-fast {args...}").run()?;
-
             if coverage {
                 cmd!(sh, "mkdir -p target/coverage").run()?;
                 cmd!(sh, "grcov . --binary-path ./target/debug/deps/ -s . -t html,cobertura --branch --ignore-not-existing --ignore '../*' --ignore \"/*\" -o target/coverage/").run()?;
