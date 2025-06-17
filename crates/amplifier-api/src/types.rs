@@ -12,6 +12,9 @@ use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 pub use {bnum, uuid};
 
+/// U256 is default type used for amount
+pub type U256 = bnum::types::U256;
+
 /// Represents an address as a non-empty string.
 pub type Address = String;
 

@@ -1,10 +1,11 @@
 //! Bindings for the Amplifier API REST [paths](https://github.com/axelarnetwork/axelar-eds-mirror/blob/3dcef3bc08ecb51af79c6223605d4fbc01660847/oapi/gmp/schema.yaml#L6-L77)
 
 use core::ops::Add as _;
+use std::marker::PhantomData;
 
 use crate::error::AmplifierApiError;
 use crate::types::{
-    ErrorResponse, GetTasksResult, PublishEventsRequest, PublishEventsResult, TaskItemId,
+    ErrorResponse, GetTasksResult, PublishEventsRequest, PublishEventsResult, TaskItemId, U256,
 };
 
 /// The trailing slash is significant when constructing the URL for Amplifier API calls!
@@ -67,7 +68,7 @@ impl AmplifierApiRequest for HealthCheck {
 
 /// Translation of GET `/chains/{chain}/tasks` [endpoint](https://github.com/axelarnetwork/axelar-eds-mirror/blob/3dcef3bc08ecb51af79c6223605d4fbc01660847/oapi/gmp/schema.yaml#L7-L13)
 #[derive(Debug, Clone, typed_builder::TypedBuilder)]
-pub struct GetChains<'a> {
+pub struct GetChains<'a, Amount = U256> {
     /// The name of the cain that we want to query and get the tasks for
     pub chain: &'a WithTrailingSlash,
     #[builder(default)]
@@ -79,9 +80,11 @@ pub struct GetChains<'a> {
     /// the amount of results to return
     #[builder(setter(strip_option), default)]
     pub limit: Option<u8>,
+    /// amount type used in `TaskItem` response (Refund/Execute)
+    pub response_amount: PhantomData<Amount>,
 }
 
-impl AmplifierApiRequest for GetChains<'_> {
+impl<Amount> AmplifierApiRequest for GetChains<'_, Amount> {
     type Res = GetTasksResult;
     type Error = ErrorResponse;
     type Payload = ();
