@@ -46,6 +46,7 @@ fn main() -> eyre::Result<()> {
             cmd!(sh, "cargo test --doc -p amplifier-api").run()?;
             cmd!(sh, "cargo test --doc -p infrastructure").run()?;
             cmd!(sh, "cargo test --doc -p bin-util").run()?;
+            cmd!(sh, "cargo test --doc -p common-serde-utils").run()?;
 
             // Doc tests for mutually exclusive features
             cmd!(
@@ -89,7 +90,6 @@ fn main() -> eyre::Result<()> {
                 "cargo nextest run -p bin-util --tests --all-targets --no-fail-fast {args...}"
             )
             .run()?;
-            cmd!(sh, "cargo nextest run -p common-serde-utils --tests --all-targets --no-fail-fast {args...}").run()?;
 
             // Test amplifier-api with different BigInt features
             cmd!(
