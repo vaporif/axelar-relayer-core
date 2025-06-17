@@ -6,6 +6,7 @@ pub use client::*;
 mod error;
 pub use error::AmplifierApiError;
 pub mod big_int;
+pub use big_int::BigInt;
 mod config;
 pub mod types;
 pub mod util;

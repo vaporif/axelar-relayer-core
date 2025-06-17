@@ -1195,7 +1195,6 @@ mod tests {
     use simd_json::{from_slice, json, to_owned_value, to_string};
 
     use super::*;
-    use crate::big_int::BigInt;
 
     const BASE64_PAYLOAD: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASaGVsbG8gdGVzdC1zZXBvbGlhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
     const BASE64_PAYLOAD_HASH: &str = "Y2YO3UuCRRackxbPYX9dWmNTYcnAMOommp9g4ydb3i4=";
@@ -1273,7 +1272,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: BigInt::from(410_727_029_715_539_u64),
+                amount: 410_727_029_715_539_u64.into(),
             },
         };
 
@@ -1327,7 +1326,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: BigInt::from(410_727_029_715_539_u64),
+                amount: 410_727_029_715_539_u64.into(),
             },
         };
 
