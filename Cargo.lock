@@ -64,12 +64,12 @@ dependencies = [
 name = "amplifier-ingester"
 version = "0.1.1"
 dependencies = [
+ "amplifier-api",
  "bin-util",
  "clap",
  "eyre",
  "futures",
  "infrastructure",
- "relayer-amplifier-api-integration",
  "serde",
  "supervisor",
  "tokio",

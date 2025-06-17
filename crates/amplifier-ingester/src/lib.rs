@@ -1,14 +1,14 @@
 //! Crate with amplifier ingester component
 use std::sync::Arc;
 
+use amplifier_api::requests::{self, WithTrailingSlash};
+use amplifier_api::types::{Event, PublishEventsRequest};
+use amplifier_api::{self, AmplifierApiClient};
 use bin_util::SimpleMetrics;
 use bin_util::health_check::CheckHealth;
 use eyre::Context as _;
 use futures::StreamExt as _;
 use infrastructure::interfaces::consumer::{AckKind, Consumer, QueueMessage};
-use relayer_amplifier_api_integration::amplifier_api::requests::{self, WithTrailingSlash};
-use relayer_amplifier_api_integration::amplifier_api::types::{Event, PublishEventsRequest};
-use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use tracing::Instrument as _;
 
 mod components;
