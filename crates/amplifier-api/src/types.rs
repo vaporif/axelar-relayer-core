@@ -9,7 +9,7 @@ pub use id::*;
 use infrastructure::interfaces::publisher::QueueMsgId;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
-pub use {bnum, uuid};
+pub use uuid;
 
 use crate::big_int::BigInt;
 
@@ -1190,8 +1190,6 @@ pub struct ErrorResponse {
 #[cfg(test)]
 mod tests {
     use base64::prelude::*;
-    #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
-    use bnum::types::U256;
     use pretty_assertions::assert_eq;
     use serde::de::DeserializeOwned;
     use simd_json::{from_slice, json, to_owned_value, to_string};
@@ -1274,15 +1272,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: {
-                    #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
-                    let amount = BigInt::from(410_727_029_715_539_u64);
-                    #[cfg(feature = "bigint-u128")]
-                    let amount = BigInt::from(410_727_029_715_539_u128);
-                    #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
-                    let amount = BigInt::from(U256::from(410_727_029_715_539_u64));
-                    amount
-                },
+                amount: BigInt::from(410_727_029_715_539_i128),
             },
         };
 
@@ -1336,15 +1326,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: {
-                    #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
-                    let amount = BigInt::from(410_727_029_715_539_u64);
-                    #[cfg(feature = "bigint-u128")]
-                    let amount = BigInt::from(410_727_029_715_539_u128);
-                    #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
-                    let amount = BigInt::from(U256::from(410_727_029_715_539_u64));
-                    amount
-                },
+                amount: BigInt::from(410_727_029_715_539_i128),
             },
         };
 
