@@ -181,4 +181,3 @@ mod tests {
         assert_eq!(BigInt::from(value), deserialized.value);
     }
 }
-
