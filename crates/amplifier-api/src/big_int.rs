@@ -131,7 +131,10 @@ mod tests {
         // Test with a large positive number
         let json = "\"170141183460469231731687303715884105727\""; // i128::MAX
         let bigint: BigInt = serde_json::from_str(json).unwrap();
-        assert_eq!(bigint.0.to_string(), "170141183460469231731687303715884105727");
+        assert_eq!(
+            bigint.0.to_string(),
+            "170141183460469231731687303715884105727"
+        );
     }
 
     #[test]
@@ -178,3 +181,4 @@ mod tests {
         assert_eq!(BigInt::from(value), deserialized.value);
     }
 }
+
