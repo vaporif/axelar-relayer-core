@@ -96,29 +96,21 @@ pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
     let value: String = BorshDeserialize::deserialize_reader(reader)?;
 
     #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
-    {
-        let number = value
-            .parse::<u64>()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        return Ok(BigInt(number));
-    }
+    let number = value
+        .parse::<u64>()
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     #[cfg(feature = "bigint-u128")]
-    {
-        let number = value
-            .parse::<u128>()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        return Ok(BigInt(number));
-    }
+    let number = value
+        .parse::<u128>()
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
-    {
-        let number = U256::from_str_radix(&value, 10).map_err(|err| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!("Failed to parse U256, err: {err}"),
-            )
-        })?;
-        Ok(BigInt(number))
-    }
+    let number = U256::from_str_radix(&value, 10).map_err(|err| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Failed to parse U256, err: {err}"),
+        )
+    })?;
+    Ok(BigInt(number))
 }
 
 #[cfg(test)]
