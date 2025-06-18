@@ -64,26 +64,18 @@ impl<'de> Deserialize<'de> for BigInt {
         let string = <String as serde::Deserialize>::deserialize(deserializer)?;
 
         #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
-        {
-            let number = string.parse::<u64>().map_err(|err| {
-                serde::de::Error::custom(format!("Failed to parse u64, err: {err}"))
-            })?;
-            return Ok(Self(number));
-        }
+        let number = string
+            .parse::<u64>()
+            .map_err(|err| serde::de::Error::custom(format!("Failed to parse u64, err: {err}")))?;
         #[cfg(feature = "bigint-u128")]
-        {
-            let number = string.parse::<u128>().map_err(|err| {
-                serde::de::Error::custom(format!("Failed to parse u128, err: {err}"))
-            })?;
-            return Ok(Self(number));
-        }
+        let number = string
+            .parse::<u128>()
+            .map_err(|err| serde::de::Error::custom(format!("Failed to parse u128, err: {err}")))?;
         #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
-        {
-            let number = U256::from_str_radix(&string, 10).map_err(|err| {
-                serde::de::Error::custom(format!("Failed to parse U256, err: {err}"))
-            })?;
-            Ok(Self(number))
-        }
+        let number = U256::from_str_radix(&string, 10)
+            .map_err(|err| serde::de::Error::custom(format!("Failed to parse U256, err: {err}")))?;
+
+        Ok(Self(number))
     }
 }
 
