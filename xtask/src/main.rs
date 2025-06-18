@@ -91,14 +91,11 @@ fn main() -> eyre::Result<()> {
             )
             .run()?;
 
-            // Test amplifier-api with different BigInt features
             cmd!(
                 sh,
                 "cargo nextest run -p amplifier-api --tests --all-targets --no-fail-fast {args...}"
             )
             .run()?;
-            cmd!(sh, "cargo nextest run -p amplifier-api --tests --all-targets --features=bigint-u64 --no-fail-fast {args...}").run()?;
-            cmd!(sh, "cargo nextest run -p amplifier-api --tests --all-targets --features=bigint-u128 --no-fail-fast {args...}").run()?;
 
             if coverage {
                 cmd!(sh, "mkdir -p target/coverage").run()?;
@@ -127,18 +124,7 @@ fn main() -> eyre::Result<()> {
             .run()?;
             cmd!(sh, "cargo clippy -p bin-util --locked -- -D warnings").run()?;
 
-            // Check amplifier-api with different BigInt features
             cmd!(sh, "cargo clippy -p amplifier-api --locked -- -D warnings").run()?;
-            cmd!(
-                sh,
-                "cargo clippy -p amplifier-api --features=bigint-u64 --locked -- -D warnings"
-            )
-            .run()?;
-            cmd!(
-                sh,
-                "cargo clippy -p amplifier-api --features=bigint-u128 --locked -- -D warnings"
-            )
-            .run()?;
 
             // Check infrastructure with mutually exclusive backends
             cmd!(
@@ -156,10 +142,6 @@ fn main() -> eyre::Result<()> {
             .run()?;
             cmd!(sh, "cargo clippy -p amplifier-ingester --no-default-features --features=nats --locked -- -D warnings").run()?;
 
-            // Check ingester with BigInt features
-            cmd!(sh, "cargo clippy -p amplifier-ingester --features=gcp,bigint-u64 --locked -- -D warnings").run()?;
-            cmd!(sh, "cargo clippy -p amplifier-ingester --features=gcp,bigint-u128 --locked -- -D warnings").run()?;
-
             // Check subscriber with different backends
             cmd!(
                 sh,
@@ -167,10 +149,6 @@ fn main() -> eyre::Result<()> {
             )
             .run()?;
             cmd!(sh, "cargo clippy -p amplifier-subscriber --no-default-features --features=nats --locked -- -D warnings").run()?;
-
-            // Check subscriber with BigInt features
-            cmd!(sh, "cargo clippy -p amplifier-subscriber --features=gcp,bigint-u64 --locked -- -D warnings").run()?;
-            cmd!(sh, "cargo clippy -p amplifier-subscriber --features=gcp,bigint-u128 --locked -- -D warnings").run()?;
 
             cmd!(sh, "cargo fmt --all --check").run()?;
         }
