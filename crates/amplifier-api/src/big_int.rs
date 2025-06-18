@@ -8,7 +8,7 @@ use bnum::types::U256;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Deserializer, Serialize};
 
-#[cfg(feature = "bigint-u64")]
+#[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
 type InnerType = u64;
 #[cfg(feature = "bigint-u128")]
 type InnerType = u128;
@@ -63,19 +63,19 @@ impl<'de> Deserialize<'de> for BigInt {
     {
         let string = <String as serde::Deserialize>::deserialize(deserializer)?;
 
-        #[cfg(feature = "bigint-u64")]
+        #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
         {
             let number = string.parse::<u64>().map_err(|err| {
                 serde::de::Error::custom(format!("Failed to parse u64, err: {err}"))
             })?;
-            Ok(Self(number))
+            return Ok(Self(number));
         }
         #[cfg(feature = "bigint-u128")]
         {
             let number = string.parse::<u128>().map_err(|err| {
                 serde::de::Error::custom(format!("Failed to parse u128, err: {err}"))
             })?;
-            Ok(Self(number))
+            return Ok(Self(number));
         }
         #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
         {
@@ -103,19 +103,19 @@ pub fn serialize<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
 pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
     let value: String = BorshDeserialize::deserialize_reader(reader)?;
 
-    #[cfg(feature = "bigint-u64")]
+    #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
     {
         let number = value
             .parse::<u64>()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        Ok(BigInt(number))
+        return Ok(BigInt(number));
     }
     #[cfg(feature = "bigint-u128")]
     {
         let number = value
             .parse::<u128>()
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        Ok(BigInt(number))
+        return Ok(BigInt(number));
     }
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     {
@@ -131,6 +131,7 @@ pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     use bnum::types::U256;
 
     use super::*;
@@ -143,12 +144,22 @@ mod tests {
 
     #[test]
     fn test_bigint_creation() {
+        #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
+        let bigint: BigInt = BigInt::from(42_u64);
+        #[cfg(feature = "bigint-u128")]
+        let bigint: BigInt = BigInt::from(42_u128);
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
         let bigint: BigInt = BigInt::from(U256::from(42_u64));
         assert_eq!(bigint.0.to_string(), "42");
     }
 
     #[test]
     fn test_bigint_serialization() {
+        #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
+        let bigint: BigInt = BigInt::from(12345_u64);
+        #[cfg(feature = "bigint-u128")]
+        let bigint: BigInt = BigInt::from(12345_u128);
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
         let bigint: BigInt = BigInt::from(U256::from(12345_u64));
         let serialized = serde_json::to_string(&bigint).unwrap();
         assert_eq!(serialized, "\"12345\"");
@@ -161,7 +172,7 @@ mod tests {
         assert_eq!(bigint.0.to_string(), "98765");
     }
 
-    #[cfg(feature = "bigint-u64")]
+    #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
     #[test]
     fn test_borsh_serialization_u64() {
         let bigint: BigInt = 999_u64.into();
@@ -241,6 +252,11 @@ mod tests {
 
     #[test]
     fn test_zero() {
+        #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
+        let bigint: BigInt = 0_u64.into();
+        #[cfg(feature = "bigint-u128")]
+        let bigint: BigInt = 0_u128.into();
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
         let bigint: BigInt = U256::from(0_u64).into();
         assert_eq!(bigint.0.to_string(), "0");
 
@@ -248,7 +264,7 @@ mod tests {
         assert_eq!(serialized, "\"0\"");
     }
 
-    #[cfg(feature = "bigint-u64")]
+    #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
     #[test]
     fn test_u64_specific() {
         let max: BigInt = u64::MAX.into();
@@ -269,7 +285,7 @@ mod tests {
         assert_eq!(max.0, U256::MAX);
     }
 
-    #[cfg(feature = "bigint-u64")]
+    #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
     #[test]
     fn test_bigint_borsh_serialize_and_deserialize_u64() {
         let value = u64::MAX;
@@ -280,7 +296,7 @@ mod tests {
         let deserialized =
             BigIntContainer::deserialize(&mut serialized.as_slice()).expect("deserize suceeds");
 
-        assert_eq!(value, deserialized.value);
+        assert_eq!(BigInt::from(value), deserialized.value);
     }
 
     #[cfg(feature = "bigint-u128")]
@@ -294,7 +310,7 @@ mod tests {
         let deserialized =
             BigIntContainer::deserialize(&mut serialized.as_slice()).expect("deserize suceeds");
 
-        assert_eq!(value, deserialized.value);
+        assert_eq!(BigInt::from(value), deserialized.value);
     }
 
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
