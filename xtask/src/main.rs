@@ -41,17 +41,24 @@ fn main() -> eyre::Result<()> {
             println!("cargo test");
             cmd!(sh, "cargo install cargo-nextest").run()?;
 
+            // Doc tests
             cmd!(sh, "cargo test --doc -p retry").run()?;
             cmd!(sh, "cargo test --doc -p amplifier-api").run()?;
             cmd!(sh, "cargo test --doc -p infrastructure").run()?;
             cmd!(sh, "cargo test --doc -p bin-util").run()?;
             cmd!(sh, "cargo test --doc -p common-serde-utils").run()?;
+
+            // Doc tests for mutually exclusive features
             cmd!(
                 sh,
-                "cargo test --doc -p amplifier-subscriber --features=nats"
+                "cargo test --doc -p amplifier-subscriber --no-default-features --features=nats"
             )
             .run()?;
-            cmd!(sh, "cargo test --doc -p amplifier-ingester --features=nats").run()?;
+            cmd!(
+                sh,
+                "cargo test --doc -p amplifier-ingester --no-default-features --features=nats"
+            )
+            .run()?;
             cmd!(
                 sh,
                 "cargo test --doc -p amplifier-subscriber --features=gcp"
@@ -71,6 +78,8 @@ fn main() -> eyre::Result<()> {
             }
 
             let args = &args;
+
+            // Test basic crates
             cmd!(
                 sh,
                 "cargo nextest run -p retry --tests --all-targets --no-fail-fast {args...}"
@@ -78,12 +87,13 @@ fn main() -> eyre::Result<()> {
             .run()?;
             cmd!(
                 sh,
-                "cargo nextest run -p amplifier-api --tests --all-targets --no-fail-fast {args...}"
+                "cargo nextest run -p bin-util --tests --all-targets --no-fail-fast {args...}"
             )
             .run()?;
+
             cmd!(
                 sh,
-                "cargo nextest run -p bin-util --tests --all-targets --no-fail-fast {args...}"
+                "cargo nextest run -p amplifier-api --tests --all-targets --no-fail-fast {args...}"
             )
             .run()?;
 
@@ -104,6 +114,8 @@ fn main() -> eyre::Result<()> {
 
         Commands::Check => {
             println!("cargo check");
+
+            // Basic crates
             cmd!(sh, "cargo clippy -p retry --locked -- -D warnings").run()?;
             cmd!(
                 sh,
@@ -111,22 +123,33 @@ fn main() -> eyre::Result<()> {
             )
             .run()?;
             cmd!(sh, "cargo clippy -p bin-util --locked -- -D warnings").run()?;
+
             cmd!(sh, "cargo clippy -p amplifier-api --locked -- -D warnings").run()?;
+
+            // Check infrastructure with mutually exclusive backends
             cmd!(
                 sh,
-                "cargo clippy -p infrastructure --features=gcp,nats --locked -- -D warnings"
+                "cargo clippy -p infrastructure --features=gcp --locked -- -D warnings"
             )
             .run()?;
+            cmd!(sh, "cargo clippy -p infrastructure --no-default-features --features=nats --locked -- -D warnings").run()?;
+
+            // Check ingester with different backends
             cmd!(
                 sh,
-                "cargo clippy -p amplifier-subscriber --features=nats --no-default-features --locked -- -D warnings"
+                "cargo clippy -p amplifier-ingester --features=gcp --locked -- -D warnings"
             )
             .run()?;
+            cmd!(sh, "cargo clippy -p amplifier-ingester --no-default-features --features=nats --locked -- -D warnings").run()?;
+
+            // Check subscriber with different backends
             cmd!(
                 sh,
-                "cargo clippy -p amplifier-ingester --features=nats --no-default-features --locked -- -D warnings"
+                "cargo clippy -p amplifier-subscriber --features=gcp --locked -- -D warnings"
             )
             .run()?;
+            cmd!(sh, "cargo clippy -p amplifier-subscriber --no-default-features --features=nats --locked -- -D warnings").run()?;
+
             cmd!(sh, "cargo fmt --all --check").run()?;
         }
         Commands::Fmt => {
@@ -150,11 +173,7 @@ fn main() -> eyre::Result<()> {
                 "cargo doc --workspace --no-deps --no-default-features --features=nats"
             )
             .run()?;
-            cmd!(
-                sh,
-                "cargo doc --workspace --no-deps --no-default-features --features=gcp"
-            )
-            .run()?;
+            cmd!(sh, "cargo doc --workspace --no-deps --features=gcp").run()?;
 
             if std::option_env!("CI").is_none() {
                 #[cfg(target_os = "macos")]

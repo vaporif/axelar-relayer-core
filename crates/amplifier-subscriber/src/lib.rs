@@ -50,7 +50,20 @@ where
         }
     }
 
-    /// subscribe and process
+    /// Subscribe to Amplifier API and process tasks
+    ///
+    /// Fetches tasks from the Amplifier API for the configured chain and publishes
+    /// them to the task queue. Tasks are retrieved in batches based on the configured
+    /// limit and are sorted by timestamp before publishing.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Failed to retrieve the last processed task ID from the publisher
+    /// - Failed to build the Amplifier API request
+    /// - Network request to Amplifier API failed
+    /// - Failed to decode the API response
+    /// - Failed to publish tasks to the queue
     #[tracing::instrument(skip_all)]
     pub async fn subscribe(&self) -> eyre::Result<()> {
         let chain_with_trailing_slash = WithTrailingSlash::new(self.chain.clone());

@@ -50,8 +50,8 @@ export RELAYER_TICKRATE="5s"
 export RELAYER_MAX_ERRORS=10
 
 # Amplifier component
-export RELAYER_AMPLIFIER_COMPONENT_URL="https://amplifier-api.example.com"
-export RELAYER_AMPLIFIER_COMPONENT_CHAIN="ethereum"
+export RELAYER_AMPLIFIER_URL="https://amplifier-api.example.com"
+export RELAYER_AMPLIFIER_CHAIN="ethereum"
 
 # For NATS backend
 export RELAYER_NATS_URLS="nats://localhost:4222"
@@ -72,12 +72,15 @@ Alternatively, you can use a configuration file with the following sections:
 # General subscriber configuration
 limit_per_request = 50
 
-[amplifier_component]
+[amplifier]
 url = "https://amplifier-api.example.com"
 chain = "ethereum"
 
-[amplifier_component.identity]
-# TLS identity configuration
+[amplifier.identity]
+# TLS identity configuration - see main README for details
+# Option 1: Direct certificate (development)
+# identity = "..."
+# Option 2: Use with GCP KMS (production) - configure [gcp.kms] section
 
 # For NATS
 [nats]
@@ -94,25 +97,30 @@ topic_id = "amplifier-tasks"
 
 ### Running
 
+The subscriber supports two message queue backends that are mutually exclusive:
+
 ```bash
 # Option 1: Using environment variables only (no config file)
 export RELAYER_HEALTH_CHECK_PORT=8080
-export RELAYER_AMPLIFIER_COMPONENT_CHAIN="ethereum"
+export RELAYER_AMPLIFIER_CHAIN="ethereum"
 # ... set other required variables
 
-# With NATS
-cargo run --bin amplifier-subscriber --features nats
+# With GCP Pub/Sub (default)
+cargo run --bin amplifier-subscriber
 
-# With GCP Pub/Sub  
-cargo run --bin amplifier-subscriber --features gcp
+# With NATS (requires disabling default features)
+cargo run --bin amplifier-subscriber --no-default-features --features nats
 
 # Option 2: Using a configuration file
-cargo run --bin amplifier-subscriber --features nats -- --config config.toml
-cargo run --bin amplifier-subscriber --features gcp -- --config config.toml
+# With GCP (default)
+cargo run --bin amplifier-subscriber -- --config config.toml
+
+# With NATS
+cargo run --bin amplifier-subscriber --no-default-features --features nats -- --config config.toml
 
 # Option 3: Mix both (env vars override config file values)
-export RELAYER_AMPLIFIER_COMPONENT_CHAIN="polygon"  # overrides chain in config
-cargo run --bin amplifier-subscriber --features nats -- --config config.toml
+export RELAYER_AMPLIFIER_CHAIN="polygon"  # overrides chain in config
+cargo run --bin amplifier-subscriber --no-default-features --features nats -- --config config.toml
 ```
 
 ## Features
@@ -122,6 +130,19 @@ cargo run --bin amplifier-subscriber --features nats -- --config config.toml
 - **TLS Authentication**: Secure communication with Amplifier API
 - **Reliable Publishing**: Ensures tasks are successfully published to queues
 - **Observability**: Integrated metrics and tracing
+- **BigInt Precision**: Supports forwarding BigInt features to amplifier-api for blockchain-specific numeric precision (see below)
+
+### Blockchain-Specific BigInt Configuration
+
+The subscriber forwards BigInt features to `amplifier-api`. See the [main README](../../README.md#bigint-precision-for-token-amounts) for details.
+
+```bash
+# Solana with GCP
+cargo build --bin amplifier-subscriber --features bigint-u64
+
+# Solana with NATS
+cargo build --bin amplifier-subscriber --no-default-features --features "nats,bigint-u64"
+```
 
 ## Development
 
@@ -136,9 +157,14 @@ To add support for a new message queue system:
 
 ### Testing
 
+Since GCP and NATS features are mutually exclusive, test each backend separately:
+
 ```bash
-cargo test --features nats
-cargo test --features gcp
+# Test with GCP (default)
+cargo test
+
+# Test with NATS
+cargo test --no-default-features --features nats
 ```
 
 ## Performance Considerations

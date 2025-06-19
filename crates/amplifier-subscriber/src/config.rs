@@ -10,7 +10,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct Config {
     /// Configuration for the Amplifier API processor
-    pub amplifier_component: relayer_amplifier_api_integration::Config,
+    pub amplifier: amplifier_api::Config,
     /// Duration (in seconds) to wait between consecutive polling
     /// operations Used to prevent overwhelming the network with requests
     #[serde(rename = "tickrate_secs")]
@@ -30,7 +30,7 @@ pub struct Config {
 impl ValidateConfig for Config {
     fn validate(&self) -> eyre::Result<()> {
         ensure!(
-            !self.amplifier_component.chain.trim().is_empty(),
+            !self.amplifier.chain.trim().is_empty(),
             "chain could not be empty",
         );
 

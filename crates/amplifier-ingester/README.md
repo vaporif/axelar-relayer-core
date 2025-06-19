@@ -42,12 +42,15 @@ The ingester requires a configuration file with the following sections:
 # General ingester configuration
 concurrent_queue_items = 100
 
-[amplifier_component]
+[amplifier]
 url = "https://amplifier-api.example.com"
 chain = "ethereum"
 
-[amplifier_component.identity]
-# TLS identity configuration
+[amplifier.identity]
+# TLS identity configuration - see main README for details
+# Option 1: Direct certificate (development)
+# identity = "..."
+# Option 2: Use with GCP KMS (production) - configure [gcp.kms] section
 
 # For NATS
 [nats]
@@ -66,12 +69,14 @@ subscription_id = "amplifier-events-sub"
 
 ### Running
 
-```bash
-# With NATS
-cargo run --bin amplifier-ingester --features nats -- --config config.toml
+The ingester supports two message queue backends that are mutually exclusive:
 
-# With GCP Pub/Sub
-cargo run --bin amplifier-ingester --features gcp -- --config config.toml
+```bash
+# With GCP Pub/Sub (default)
+cargo run --bin amplifier-ingester -- --config config.toml
+
+# With NATS (requires disabling default features)
+cargo run --bin amplifier-ingester --no-default-features --features nats -- --config config.toml
 ```
 
 ## Features
@@ -81,6 +86,19 @@ cargo run --bin amplifier-ingester --features gcp -- --config config.toml
 - **TLS Authentication**: Secure communication with Amplifier API
 - **Error Handling**: Automatic retries with exponential backoff
 - **Observability**: Integrated metrics and tracing
+- **BigInt Precision**: Supports forwarding BigInt features to amplifier-api for blockchain-specific numeric precision (see below)
+
+### Blockchain-Specific BigInt Configuration
+
+The ingester forwards BigInt features to `amplifier-api`. See the [main README](../../README.md#bigint-precision-for-token-amounts) for details.
+
+```bash
+# Solana with GCP
+cargo build --bin amplifier-ingester --features bigint-u64
+
+# Solana with NATS
+cargo build --bin amplifier-ingester --no-default-features --features "nats,bigint-u64"
+```
 
 ## Development
 
@@ -95,9 +113,14 @@ To add support for a new message queue system:
 
 ### Testing
 
+Since GCP and NATS features are mutually exclusive, test each backend separately:
+
 ```bash
-cargo test --features nats
-cargo test --features gcp
+# Test with GCP (default)
+cargo test
+
+# Test with NATS
+cargo test --no-default-features --features nats
 ```
 
 ## Related Components

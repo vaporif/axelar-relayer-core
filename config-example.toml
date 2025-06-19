@@ -26,7 +26,7 @@ location = "global"
 keyring = "amplifier_api_keyring"
 cryptokey = "amplifier_api_signing_key"
 
-[amplifier_component]
+[amplifier]
 # pem format cert
 tls_public_certificate = '''
 -----BEGIN CERTIFICATE-----

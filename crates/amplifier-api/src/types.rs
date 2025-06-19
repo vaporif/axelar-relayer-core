@@ -3,14 +3,15 @@
 
 use core::fmt::{Display, Formatter};
 
-pub use big_int::BigInt;
 use borsh::{BorshDeserialize, BorshSerialize};
 use chrono::{DateTime, Utc};
 pub use id::*;
 use infrastructure::interfaces::publisher::QueueMsgId;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
-pub use {bnum, uuid};
+pub use uuid;
+
+use crate::big_int::BigInt;
 
 /// Represents an address as a non-empty string.
 pub type Address = String;
@@ -389,8 +390,8 @@ pub struct Token {
     pub token_id: Option<TokenId>,
     /// the amount in token’s denominator
     #[borsh(
-        serialize_with = "crate::util::serialize_bigint",
-        deserialize_with = "crate::util::deserialize_bigint"
+        serialize_with = "crate::big_int::serialize",
+        deserialize_with = "crate::big_int::deserialize"
     )]
     pub amount: BigInt,
 }
@@ -1185,47 +1186,6 @@ pub struct ErrorResponse {
     pub request_id: Option<RequestId>,
 }
 
-mod big_int {
-    use serde::{Deserialize, Deserializer, Serialize};
-
-    /// Represents a big integer as a string matching the pattern `^(0|[1-9]\d*)$`.
-    #[derive(Clone, Debug, PartialEq, Eq)]
-    pub struct BigInt(pub bnum::types::I512);
-    impl BigInt {
-        /// Creates a new [`BigInt`].
-        #[must_use]
-        pub const fn new(num: bnum::types::I512) -> Self {
-            Self(num)
-        }
-
-        /// Helper utility to transform u64 into a `BigInt`
-        #[must_use]
-        pub fn from_u64(num: u64) -> Self {
-            Self(num.into())
-        }
-    }
-
-    impl Serialize for BigInt {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            let string = self.0.to_string();
-            serializer.serialize_str(&string)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for BigInt {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let string = String::deserialize(deserializer)?;
-            let number = bnum::types::I512::parse_str_radix(string.as_str(), 10);
-            Ok(Self(number))
-        }
-    }
-}
 /// reference types are copied from the following documentation [link](https://bright-ambert-2bd.notion.site/Amplifier-GMP-API-EXTERNAL-911e740b570b4017826c854338b906c8#e8a7398607bd496eb0b8e95e887d6574)
 #[cfg(test)]
 mod tests {
@@ -1312,7 +1272,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: BigInt::from_u64(410_727_029_715_539),
+                amount: BigInt::from(410_727_029_715_539_i128),
             },
         };
 
@@ -1366,7 +1326,7 @@ mod tests {
             refund_address: "0xEA12282BaC49497793622d67e2CD43bf1065a819".to_owned(),
             payment: Token {
                 token_id: None,
-                amount: BigInt::from_u64(410_727_029_715_539),
+                amount: BigInt::from(410_727_029_715_539_i128),
             },
         };
 
@@ -1666,7 +1626,7 @@ mod tests {
                     "id": "0192d881-9433-7831-8c67-98eaa7727676",
                     "task": {
                         "availableGasBalance": {
-                            "amount": "-864042"
+                            "amount": "864042"
                         },
                         "message": {
                             "destinationAddress": "memQuKMGBounhwP5yw9qomYNU97Eqcx9c4XwDUo6uGV",

@@ -16,7 +16,6 @@ infrastructure = { workspace = true, features = [
   "storage-interfaces",
 ] }
 bin-util.workspace = true
-relayer-amplifier-api-integration.workspace = true
 
 tracing.workspace = true
 eyre.workspace = true
@@ -27,6 +26,7 @@ clap.workspace = true
 url.workspace = true
 
 [features]
+default = ["gcp"]
 nats = ["infrastructure/nats"]
 gcp = ["infrastructure/gcp"]
 consumer-interfaces = []

@@ -1,9 +1,9 @@
+use amplifier_api::{self, AmplifierApiClient};
 use bin_util::ValidateConfig;
 use bin_util::nats::{TASKS_PUBLISH_SUBJECT, TASKS_STREAM};
 use eyre::{Context as _, ensure, eyre};
 use infrastructure::nats::publisher::NatsPublisher;
 use infrastructure::nats::{self, StreamArgs};
-use relayer_amplifier_api_integration::amplifier_api::{self, AmplifierApiClient};
 use serde::Deserialize;
 use url::Url;
 
@@ -51,7 +51,7 @@ impl ValidateConfig for NatsSectionConfig {
 /// # Configuration
 ///
 /// The configuration file must contain:
-/// - General subscriber configuration (`limit_per_request`, `amplifier_component`)
+/// - General subscriber configuration (`limit_per_request`, `amplifier`)
 /// - NATS configuration section with:
 ///   - `urls`: List of NATS server URLs
 ///
@@ -88,16 +88,16 @@ pub async fn new_amplifier_subscriber(
         amplifier_client,
         task_queue_publisher,
         config.limit_per_request,
-        config.amplifier_component.chain.clone(),
+        config.amplifier.chain.clone(),
     ))
 }
 
 fn amplifier_client(config: &Config) -> eyre::Result<AmplifierApiClient> {
     AmplifierApiClient::new(
-        config.amplifier_component.url.clone(),
+        config.amplifier.url.clone(),
         amplifier_api::TlsType::Certificate(Box::new(
             config
-                .amplifier_component
+                .amplifier
                 .identity
                 .clone()
                 .ok_or_else(|| eyre::Report::msg("identity not set"))?,

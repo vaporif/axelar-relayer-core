@@ -81,8 +81,76 @@ The relayer is designed as 4 components: 2 ingesters & 2 subscribers - 1 for eac
 
 **Implementation Reference**: When implementing blockchain-specific ingester and subscriber components, refer to the [amplifier-ingester](./crates/amplifier-ingester/) and [amplifier-subscriber](./crates/amplifier-subscriber/) implementations as examples of how to structure your components, handle message queues, implement health checks, and integrate with the infrastructure layer.
 
+### Blockchain-Specific Configuration
+
+#### TLS Certificate Configuration
+
+The relayer requires TLS certificates to authenticate with the Amplifier API. You have two options:
+
+##### Option 1: Direct Certificate (Development/Testing)
+
+Store the certificate and private key directly in the configuration:
+
+```toml
+[amplifier]
+# Certificate + private key in PEM format
+identity = '''
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+-----BEGIN PRIVATE KEY-----
+...
+-----END PRIVATE KEY-----
+'''
+```
+
+**⚠️ Warning**: This method stores the private key in plaintext and should only be used for development.
+
+##### Option 2: Google Cloud KMS (Production)
+
+For production deployments, use Google Cloud KMS to secure your private keys:
+
+```toml
+[amplifier]
+# Only the public certificate is stored locally
+tls_public_certificate = '''
+-----BEGIN CERTIFICATE-----
+...
+-----END CERTIFICATE-----
+'''
+
+[gcp.kms]
+project_id = "your-gcp-project"
+location = "global"
+keyring = "amplifier_api_keyring"
+cryptokey = "amplifier_api_signing_key"
+```
+
+With KMS:
+- Private keys never leave Google Cloud
+- All signing operations happen within KMS
+- Keys can be rotated without changing the relayer configuration
+- Access is controlled through GCP IAM
+
+##### Environment Variables
+
+TLS configuration can also be provided via environment variables:
+
+```bash
+# For direct certificate (base64 encoded)
+export RELAYER_AMPLIFIER_IDENTITY="<base64-encoded-pem>"
+
+# For KMS with public certificate
+export RELAYER_AMPLIFIER_TLS_PUBLIC_CERTIFICATE="<base64-encoded-cert>"
+export RELAYER_GCP_KMS_PROJECT_ID="your-project"
+export RELAYER_GCP_KMS_LOCATION="global"
+export RELAYER_GCP_KMS_KEYRING="amplifier_api_keyring"
+export RELAYER_GCP_KMS_CRYPTOKEY="amplifier_api_signing_key"
+```
+
 ### Core Libraries
 
+- **[amplifier-api](./crates/amplifier-api/README.md)**: Rust client for the Axelar Amplifier API with configurable BigInt precision for different blockchains
 - **[bin-util](./crates/bin-util/README.md)**: Common binary utilities for all relayer components including configuration management, health checks, telemetry, logging, and metrics
 - **[infrastructure](./crates/infrastructure/README.md)**: Storage bus implementations providing abstraction for message queuing (GCP Pub/Sub, NATS) and key-value storage
 - **[terraform](./terraform/README.md)**: Infrastructure as Code for provisioning GCP resources (Pub/Sub, KMS, Memorystore, IAM, K8s)
@@ -159,16 +227,17 @@ All tools are automatically available in your PATH when you enter the Nix shell.
 
 ### Configuration
 
-Before running the components, you need to create a configuration file. An example configuration file is provided in `relayer-config-example.toml`. You can copy this file and modify it according to your needs:
+Before running the components, you need to create a configuration file. An example configuration file is provided in `config-example.toml`. You can copy this file and modify it according to your needs:
 
 ```bash
-cp relayer-config-example.toml relayer-config.toml
+cp config-example.toml relayer-config.toml
 ```
 
-Edit the `config-example.toml` file to configure:
+Edit the `relayer-config.toml` file to configure:
 
-- Amplifier API configuration (notably your chain name)
+- Amplifier API configuration (chain name, URL, TLS certificates)
 - Backend configuration (NATS or GCP Pub/Sub)
+- TLS authentication (direct certificate or GCP KMS)
 - Tickrate for processing events
 - Health check endpoints
 
@@ -210,12 +279,12 @@ export RELAYER_TICKRATE="5s"
 
 ### Running with Specific Backend
 
-By default, both components are built with GCP support. To use NATS as the backend, compile with the `nats` feature:
+By default, both components are built with GCP support as the message queue backend. To use NATS instead, compile with the `nats` feature:
 
 ```bash
-# Build with nats backend support
-cargo build --bin amplifier-ingester --features nats --no-default-features
-cargo build --bin amplifier-subscriber --features nats --no-default-features
+# Build with NATS backend support (requires disabling default GCP features)
+cargo build --bin amplifier-ingester --no-default-features --features nats
+cargo build --bin amplifier-subscriber --no-default-features --features nats
 ```
 
 ### Health Checks
@@ -248,7 +317,7 @@ docker build -t axelar-amplifier-subscriber -f crates/amplifier-subscriber/Docke
 
 ### Using NATS Instead of GCP
 
-You can build with NATS support instead of the default GCP by using build arguments:
+Since GCP is the default backend, you can build with NATS support instead by using build arguments:
 
 ```bash
 # Build with NATS backend

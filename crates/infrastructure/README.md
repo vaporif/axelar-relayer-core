@@ -181,18 +181,17 @@ bucket = "my-bucket"
 
 ## Feature Flags
 
-Build with specific backends:
+The GCP and NATS features are mutually exclusive. Build with specific backends:
 
 ```bash
 # GCP only (default)
-cargo build --features gcp
+cargo build
 
-# NATS only
-cargo build --features nats --no-default-features
-
-# Both backends
-cargo build --features gcp,nats
+# NATS only (requires disabling default features)
+cargo build --no-default-features --features nats
 ```
+
+Note: You cannot enable both `gcp` and `nats` features simultaneously as they are mutually exclusive backends.
 
 ## Design Philosophy
 

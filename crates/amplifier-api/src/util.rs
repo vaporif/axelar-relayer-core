@@ -5,8 +5,6 @@ use borsh::io::{Read, Result, Write};
 use borsh::{BorshDeserialize, BorshSerialize as _};
 use chrono::{DateTime, Utc};
 
-use crate::types::BigInt;
-
 /// Serialize [`DateTime<Utc>`]
 ///
 /// # Errors
@@ -72,30 +70,10 @@ pub fn deserialize_option_utc<R: Read>(reader: &mut R) -> Result<Option<DateTime
     }
 }
 
-/// Serialize `BigInt`
-///
-/// # Errors
-/// Infallible
-pub fn serialize_bigint<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
-    value.0.to_string().serialize(writer)
-}
-
-/// Deserialize `BigInt`
-///
-/// # Errors
-/// wrong input
-pub fn deserialize_bigint<R: Read>(reader: &mut R) -> Result<BigInt> {
-    let value: String = BorshDeserialize::deserialize_reader(reader)?;
-    let number = bnum::types::I512::parse_str_radix(&value, 10);
-    Ok(BigInt(number))
-}
-
 #[cfg(test)]
 mod tests {
     use borsh::{BorshDeserialize, BorshSerialize};
     use chrono::{DateTime, Utc};
-
-    use crate::types::BigInt;
 
     #[derive(BorshSerialize, BorshDeserialize)]
     struct DateTimeContainer {
@@ -113,15 +91,6 @@ mod tests {
             deserialize_with = "crate::util::deserialize_option_utc"
         )]
         pub timestamp: Option<DateTime<Utc>>,
-    }
-
-    #[derive(BorshSerialize, BorshDeserialize)]
-    struct BigIntContainer {
-        #[borsh(
-            serialize_with = "crate::util::serialize_bigint",
-            deserialize_with = "crate::util::deserialize_bigint"
-        )]
-        pub value: BigInt,
     }
 
     #[test]
@@ -151,21 +120,5 @@ mod tests {
             .expect("deserize suceeds");
 
         assert_eq!(None, deserialized.timestamp);
-    }
-
-    #[test]
-    fn test_bigint_borsh_serialize_and_deserialize() {
-        let value = BigInt::new(bnum::types::I512::parse_str_radix(
-            "423423413123813194728478923748923748923748923749872984732",
-            10,
-        ));
-        let container = BigIntContainer {
-            value: value.clone(),
-        };
-        let serialized = borsh::to_vec(&container).expect("serialize bigint succeeds");
-        let deserialized =
-            BigIntContainer::deserialize(&mut serialized.as_slice()).expect("deserize suceeds");
-
-        assert_eq!(value, deserialized.value);
     }
 }

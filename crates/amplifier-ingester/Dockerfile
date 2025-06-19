@@ -25,7 +25,7 @@ ENV OPENSSL_INCLUDE_DIR=/usr/include
 COPY . .
 
 # Allow feature override at build time (defaults to "default")
-ARG FEATURES=gcp
+ARG FEATURES=default
 RUN cargo build --release --bin amplifier-ingester --no-default-features --features ${FEATURES} && \
     strip target/release/amplifier-ingester
 
