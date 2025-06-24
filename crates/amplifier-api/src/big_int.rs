@@ -114,6 +114,7 @@ pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
             "Attempted to deserialize negative value '{}' into BigInt, using 0 instead",
             value
         );
+        #[allow(clippy::default_trait_access, reason = "works with all features")]
         return Ok(BigInt(Default::default()));
     }
 
