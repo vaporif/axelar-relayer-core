@@ -68,7 +68,10 @@ impl<'de> Deserialize<'de> for BigInt {
 
         // Check if the string starts with a negative sign
         if string.starts_with('-') {
-            warn!("Attempted to deserialize negative value '{}' into BigInt, using 0 instead", string);
+            warn!(
+                "Attempted to deserialize negative value '{}' into BigInt, using 0 instead",
+                string
+            );
             return Ok(Self(Default::default()));
         }
 
@@ -106,7 +109,10 @@ pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
 
     // Check if the string starts with a negative sign
     if value.starts_with('-') {
-        warn!("Attempted to deserialize negative value '{}' into BigInt, using 0 instead", value);
+        warn!(
+            "Attempted to deserialize negative value '{}' into BigInt, using 0 instead",
+            value
+        );
         return Ok(BigInt(Default::default()));
     }
 
@@ -330,11 +336,8 @@ mod tests {
     #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
     #[test]
     fn test_bigint_borsh_serialize_and_deserialize_u256() {
-        let value = U256::from_str_radix(
-            "423423413123813194728478923748923748923749872984732",
-            10,
-        )
-        .unwrap();
+        let value = U256::from_str_radix("423423413123813194728478923748923748923749872984732", 10)
+            .unwrap();
         let container = BigIntContainer {
             value: value.into(),
         };
