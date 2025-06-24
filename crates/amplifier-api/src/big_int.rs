@@ -7,6 +7,7 @@ use std::io::{Read, Result, Write};
 use bnum::types::U256;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Deserializer, Serialize};
+use tracing::warn;
 
 #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
 type InnerType = u64;
@@ -22,8 +23,10 @@ The underlying type changes based on features:
 - `bigint-u64`: uses u64
 - `bigint-u128`: uses u128
 - default: uses U256 (256-bit unsigned integer)
+
+Note: Negative values are treated as 0 with a warning during deserialization.
 */
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct BigInt(InnerType);
 
 impl BigInt {
@@ -63,6 +66,12 @@ impl<'de> Deserialize<'de> for BigInt {
     {
         let string = <String as serde::Deserialize>::deserialize(deserializer)?;
 
+        // Check if the string starts with a negative sign
+        if string.starts_with('-') {
+            warn!("Attempted to deserialize negative value '{}' into BigInt, using 0 instead", string);
+            return Ok(Self(Default::default()));
+        }
+
         #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
         let number = string
             .parse::<u64>()
@@ -94,6 +103,12 @@ pub fn serialize<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
 /// wrong input
 pub fn deserialize<R: Read>(reader: &mut R) -> Result<BigInt> {
     let value: String = BorshDeserialize::deserialize_reader(reader)?;
+
+    // Check if the string starts with a negative sign
+    if value.starts_with('-') {
+        warn!("Attempted to deserialize negative value '{}' into BigInt, using 0 instead", value);
+        return Ok(BigInt(Default::default()));
+    }
 
     #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
     let number = value
@@ -246,6 +261,21 @@ mod tests {
 
         let serialized = serde_json::to_string(&bigint).unwrap();
         assert_eq!(serialized, "\"0\"");
+    }
+
+    #[test]
+    fn test_negative_values_treated_as_zero() {
+        // Test JSON deserialization with negative value
+        let negative_json = "\"-12345\"";
+        let bigint: BigInt = serde_json::from_str(negative_json).unwrap();
+        assert_eq!(bigint.0.to_string(), "0");
+
+        // Test Borsh deserialization with negative value
+        let negative_string = "-98765".to_string();
+        let mut buffer = Vec::new();
+        <String as BorshSerialize>::serialize(&negative_string, &mut buffer).unwrap();
+        let deserialized = deserialize(&mut buffer.as_slice()).unwrap();
+        assert_eq!(deserialized.0.to_string(), "0");
     }
 
     #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
