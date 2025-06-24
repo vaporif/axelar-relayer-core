@@ -72,6 +72,7 @@ impl<'de> Deserialize<'de> for BigInt {
                 "Attempted to deserialize negative value '{}' into BigInt, using 0 instead",
                 string
             );
+            #[allow(clippy::default_trait_access, reason = "works with all features")]
             return Ok(Self(Default::default()));
         }
 
