@@ -35,6 +35,23 @@ impl BigInt {
     pub const fn inner(self) -> Option<InnerType> {
         self.0
     }
+
+    /// Get the value, returning None if it's None (negative)
+    #[must_use]
+    pub const fn value(self) -> Option<InnerType> {
+        self.0
+    }
+
+    /// Set the value
+    pub const fn set_value(&mut self, value: InnerType) {
+        self.0 = Some(value);
+    }
+
+    /// Check if the value is negative (None)
+    #[must_use]
+    pub const fn is_negative(self) -> bool {
+        self.0.is_none()
+    }
 }
 
 impl From<InnerType> for BigInt {
@@ -378,5 +395,44 @@ mod tests {
             BigIntContainer::deserialize(&mut serialized.as_slice()).expect("deserize suceeds");
 
         assert_eq!(Some(value), deserialized.value.inner());
+    }
+
+    #[test]
+    fn test_getter_setter() {
+        #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
+        let mut bigint = BigInt::from(100_u64);
+        #[cfg(feature = "bigint-u128")]
+        let mut bigint = BigInt::from(100_u128);
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+        let mut bigint = BigInt::from(U256::from(100_u64));
+
+        // Test getter
+        #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
+        assert_eq!(bigint.value(), Some(100_u64));
+        #[cfg(feature = "bigint-u128")]
+        assert_eq!(bigint.value(), Some(100_u128));
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+        assert_eq!(bigint.value(), Some(U256::from(100_u64)));
+
+        // Test is_negative for positive value
+        assert!(!bigint.is_negative());
+
+        // Test setter
+        #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
+        bigint.set_value(200_u64);
+        #[cfg(feature = "bigint-u128")]
+        bigint.set_value(200_u128);
+        #[cfg(all(not(feature = "bigint-u64"), not(feature = "bigint-u128")))]
+        bigint.set_value(U256::from(200_u64));
+
+        assert_eq!(bigint.to_string(), "200");
+        assert!(!bigint.is_negative());
+        
+        // Test that negative values return None via getter and true for is_negative
+        let negative_json = "\"-123\"";
+        let negative_bigint: BigInt = serde_json::from_str(negative_json).unwrap();
+        
+        assert_eq!(negative_bigint.value(), None);
+        assert!(negative_bigint.is_negative());
     }
 }
