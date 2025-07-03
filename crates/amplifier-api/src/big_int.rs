@@ -48,8 +48,7 @@ impl Display for BigInt {
         match self.0 {
             Some(value) => write!(f, "{}", value),
             None => {
-                warn!("Displaying negative BigInt value as '0'");
-                write!(f, "0")
+                write!(f, "Negative")
             }
         }
     }
@@ -112,11 +111,10 @@ impl<'de> Deserialize<'de> for BigInt {
 #[allow(clippy::trivially_copy_pass_by_ref, reason = "needs by ref")]
 pub fn serialize<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
     match value.0 {
-        Some(inner_value) => <String as BorshSerialize>::serialize(&inner_value.to_string(), writer),
-        None => {
-            warn!("Serializing negative BigInt value as '0' (Borsh)");
-            <String as BorshSerialize>::serialize(&"0".to_string(), writer)
+        Some(inner_value) => {
+            <String as BorshSerialize>::serialize(&inner_value.to_string(), writer)
         }
+        None => <String as BorshSerialize>::serialize(&"0".to_string(), writer),
     }
 }
 
@@ -294,14 +292,14 @@ mod tests {
         // Test JSON deserialization with negative value
         let negative_json = "\"-12345\"";
         let bigint: BigInt = serde_json::from_str(negative_json).unwrap();
-        assert_eq!(bigint.to_string(), "0");
+        assert_eq!(bigint.to_string(), "Negative");
 
         // Test Borsh deserialization with negative value
         let negative_string = "-98765".to_string();
         let mut buffer = Vec::new();
         <String as BorshSerialize>::serialize(&negative_string, &mut buffer).unwrap();
         let deserialized = deserialize(&mut buffer.as_slice()).unwrap();
-        assert_eq!(deserialized.to_string(), "0");
+        assert_eq!(deserialized.to_string(), "Negative");
     }
 
     #[test]
@@ -317,8 +315,8 @@ mod tests {
         let serialized = serde_json::to_string(&bigint).unwrap();
         assert_eq!(serialized, "\"0\"");
 
-        // Verify display shows "0"
-        assert_eq!(bigint.to_string(), "0");
+        // Verify display shows "Negative"
+        assert_eq!(bigint.to_string(), "Negative");
     }
 
     #[cfg(all(feature = "bigint-u64", not(feature = "bigint-u128")))]
