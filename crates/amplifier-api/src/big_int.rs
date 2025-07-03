@@ -46,7 +46,7 @@ impl From<InnerType> for BigInt {
 impl Display for BigInt {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self.0 {
-            Some(value) => write!(f, "{}", value),
+            Some(value) => write!(f, "{value}"),
             None => {
                 write!(f, "Negative")
             }
@@ -59,15 +59,12 @@ impl Serialize for BigInt {
     where
         S: serde::Serializer,
     {
-        match self.0 {
-            Some(value) => {
-                let string = value.to_string();
-                serializer.serialize_str(&string)
-            }
-            None => {
-                warn!("Serializing negative BigInt value as '0'");
-                serializer.serialize_str("0")
-            }
+        if let Some(value) = self.0 {
+            let string = value.to_string();
+            serializer.serialize_str(&string)
+        } else {
+            warn!("Serializing negative BigInt value as '0'");
+            serializer.serialize_str("0")
         }
     }
 }
@@ -114,7 +111,7 @@ pub fn serialize<W: Write>(value: &BigInt, writer: &mut W) -> Result<()> {
         Some(inner_value) => {
             <String as BorshSerialize>::serialize(&inner_value.to_string(), writer)
         }
-        None => <String as BorshSerialize>::serialize(&"0".to_string(), writer),
+        None => <String as BorshSerialize>::serialize(&"0".to_owned(), writer),
     }
 }
 
