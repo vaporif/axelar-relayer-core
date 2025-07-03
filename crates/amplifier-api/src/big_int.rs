@@ -427,11 +427,11 @@ mod tests {
 
         assert_eq!(bigint.to_string(), "200");
         assert!(!bigint.is_negative());
-        
+
         // Test that negative values return None via getter and true for is_negative
         let negative_json = "\"-123\"";
         let negative_bigint: BigInt = serde_json::from_str(negative_json).unwrap();
-        
+
         assert_eq!(negative_bigint.value(), None);
         assert!(negative_bigint.is_negative());
     }
